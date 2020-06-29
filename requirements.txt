@@ -1,0 +1,4 @@
+numpy
+scipy
+scikit_learn
+biosppy
