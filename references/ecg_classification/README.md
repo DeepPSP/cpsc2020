@@ -325,10 +325,10 @@ https://physionet.org/cgi-bin/atm/ATM
 * 100 series: 23 samples
 * 200 series: 25 samples. **Contains uncommon but clinically important arrhythmias**
 
-| Symbol|   Meaning                                   |
-|-------|---------------------------------------------|
+| Symbol|   Meaning                                     |
+|-------|-----------------------------------------------|
 |· or N |	Normal beat                                 |
-|L      |   Left bundle branch block beat             |
+|L      |   Left bundle branch block beat               |
 |R      |	Right bundle branch block beat              |
 |A      |	Atrial premature beat                       |
 |a      |	Aberrated atrial premature beat             |
