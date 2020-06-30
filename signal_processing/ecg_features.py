@@ -1,4 +1,8 @@
 """
+References:
+-----------
+[1] https://github.com/mondejar/ecg-classification
+[2] to add
 """
 import pywt
 import numpy as np

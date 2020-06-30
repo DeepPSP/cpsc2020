@@ -1,6 +1,11 @@
 """
 preprocess of (single lead) ecg signal:
     band pass () --> remove baseline --> find rpeaks
+
+References:
+-----------
+[1] https://github.com/PIA-Group/BioSPPy
+[2] to add
 """
 import os
 import multiprocessing as mp
