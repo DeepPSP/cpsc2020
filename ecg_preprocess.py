@@ -11,6 +11,7 @@ import numpy as np
 from easydict import EasyDict as ED
 from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect, gqrs_detect
 from scipy.ndimage.filters import median_filter
+from scipy.signal.signaltools import resample
 # from scipy.signal import medfilt
 # https://github.com/scipy/scipy/issues/9680
 try:
@@ -18,7 +19,7 @@ try:
 except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
-from cfg import PreprocessCfg
+from .cfg import PreprocessCfg
 
 
 __all__ = [
