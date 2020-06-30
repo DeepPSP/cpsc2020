@@ -1,4 +1,8 @@
+"""
+"""
 import numpy as np
+
+from ecg_preprocess import preprocess_signal, parallel_preprocess_signal
 
 
 def CPSC2020_challenge(ECG, fs):
@@ -30,5 +34,6 @@ def CPSC2020_challenge(ECG, fs):
 
 #    S_pos = np.zeros([1, ])
 #    V_pos = np.zeros([1, ])
+    filtered_ecg = parallel_preprocess_signal(ECG, fs)
     raise NotImplementedError
     return S_pos, V_pos
