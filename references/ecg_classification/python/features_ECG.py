@@ -14,7 +14,19 @@ import scipy.stats
 import pywt
 import operator
 
-from mit_db import *
+from .mit_db import *
+
+
+__all__ = [
+    "compute_RR_intervals",
+    "compute_wavelet_descriptor",
+    "compute_my_own_descriptor",
+    "compute_hos_descriptor",
+    "compute_Uniform_LBP",
+    "compute_LBP",
+    "compute_HBF",
+]
+
 
 # Input: the R-peaks from a signal
 # Return: the features RR intervals 

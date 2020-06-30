@@ -13,7 +13,7 @@ Mondejar Guerra, Victor M.
 """
 
 import numpy as np
-from evaluation_AAMI import *
+from .evaluation_AAMI import *
 from sklearn import svm
 import time
 

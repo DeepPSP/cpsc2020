@@ -9,7 +9,7 @@ Mondejar Guerra, Victor M.
 """
 from evaluation_AAMI import *
 from sklearn import svm
-from aggregation_voting_strategies import *
+from .aggregation_voting_strategies import *
 
 
 # Eval the SVM model and export the results

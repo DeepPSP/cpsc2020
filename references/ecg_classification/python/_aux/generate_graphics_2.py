@@ -16,7 +16,7 @@ import sklearn
 from sklearn import decomposition
 from sklearn.decomposition import PCA, IncrementalPCA
 
-from features_ECG import *
+from ..features_ECG import *
 
 
 # DS: contains the patient list for load

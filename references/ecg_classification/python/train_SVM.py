@@ -8,12 +8,12 @@ Mondejar Guerra, Victor M.
 23 Oct 2017
 """
 
-from load_MITBIH import *
-from evaluation_AAMI import *
-from aggregation_voting_strategies import *
-from oversampling import *
-from cross_validation import *
-from feature_selection import *
+from .load_MITBIH import *
+from .evaluation_AAMI import *
+from .aggregation_voting_strategies import *
+from .oversampling import *
+from .cross_validation import *
+from .feature_selection import *
 
 import sklearn
 from sklearn.externals import joblib

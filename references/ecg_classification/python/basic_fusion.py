@@ -8,7 +8,7 @@ Mondejar Guerra, Victor M.
 30 Oct 2017
 """
 
-from train_SVM import *
+from .train_SVM import *
 
 # Compute the basic rule from the list of probs 
 # selected by rule index:

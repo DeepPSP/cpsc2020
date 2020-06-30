@@ -26,7 +26,7 @@ import sklearn
 from sklearn import decomposition
 from sklearn.decomposition import PCA, IncrementalPCA
 
-from features_ECG import *
+from .features_ECG import *
 
 from numpy.polynomial.hermite import hermfit, hermval
 

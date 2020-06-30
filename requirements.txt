@@ -3,3 +3,4 @@ scipy
 scikit_learn
 biosppy
 wfdb
+pywt

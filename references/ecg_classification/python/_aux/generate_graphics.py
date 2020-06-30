@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from load_MITBIH import *
+from ..load_MITBIH import *
 
 # Generate graphics for paper
 

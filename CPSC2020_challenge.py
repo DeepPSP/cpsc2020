@@ -34,6 +34,9 @@ def CPSC2020_challenge(ECG, fs):
 
 #    S_pos = np.zeros([1, ])
 #    V_pos = np.zeros([1, ])
-    filtered_ecg = parallel_preprocess_signal(ECG, fs)
+    pr = parallel_preprocess_signal(ECG, fs)
+    filtered_ecg = pr['filtered_ecg']
+    rpeaks = pr['rpeaks']
+    
     raise NotImplementedError
     return S_pos, V_pos

@@ -7,7 +7,7 @@ VARPA, University of Coruna
 Mondejar Guerra, Victor M.
 15 Dec 2017
 """
-from train_SVM import *
+from .train_SVM import *
 
 
 # Run the cross val for all the modules (RR, Wavlets, HOS)

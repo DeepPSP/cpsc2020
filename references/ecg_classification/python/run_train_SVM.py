@@ -8,7 +8,7 @@ Mondejar Guerra, Victor M.
 27 Oct 2017
 """
 
-from train_SVM import *
+from .train_SVM import *
 
 # Call different configurations for train_SVM.py 
 
