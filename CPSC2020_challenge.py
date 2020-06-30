@@ -2,9 +2,10 @@
 """
 import numpy as np
 
-from ecg_preprocess import preprocess_signal, parallel_preprocess_signal
-from ecg_features import compute_ecg_features
+from signal_processing.ecg_preprocess import preprocess_signal, parallel_preprocess_signal
+from signal_processing.ecg_features import compute_ecg_features
 from models.load_model import load_model
+from models.train_model import train
 
 
 def CPSC2020_challenge(ECG, fs=400):
@@ -42,9 +43,9 @@ def CPSC2020_challenge(ECG, fs=400):
 
     features = compute_ecg_features(filtered_ecg, rpeaks)
 
-    try:
-        model = load_model()
-    except:
+    model = load_model()
+    if model is None:
+        model = train()
 
     raise NotImplementedError
     return S_pos, V_pos

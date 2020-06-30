@@ -1,5 +1,6 @@
 """
 """
+import os
 from easydict import EasyDict as ED
 
 
@@ -30,3 +31,9 @@ FeatureCfg.wt_level = 3
 
 
 TrainCfg = ED()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TrainCfg.model_path = os.path.join(BASE_DIR, "models", "ecg_xgboost.pkl")
+TrainCfg.test_rec_num = 2
+TrainCfg.max_iter = 10
+TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
+TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")

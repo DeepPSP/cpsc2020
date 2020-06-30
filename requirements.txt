@@ -5,3 +5,4 @@ biosppy
 wfdb
 pywt
 xgboost
+joblib==0.13.2
