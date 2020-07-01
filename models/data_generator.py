@@ -5,6 +5,9 @@ from typing import Union, Optional, Any, List, NoReturn
 from numbers import Real
 import numpy as np
 from scipy.io import loadmat
+from easydict import EasyDict as ED
+
+from ..misc import get_optimal_covering
 
 
 class CPSC2020(object):
@@ -81,6 +84,13 @@ class CPSC2020(object):
         self.rec_folder = os.path.join(self.db_dir, "data")
         self.ann_folder = os.path.join(self.db_dir, "ref")
         self.ref_folder = self.ann_folder
+
+        self.subgroups = ED({
+            "N":  ["A01", "A03", "A05", "A06",],
+            "V":  ["A02", "A08"],
+            "S":  ["A09", "A10"],
+            "VS": ["A04", "A07"],
+        })
 
         self.palette = {"spb": "black", "pvc": "red",}
     
@@ -179,10 +189,42 @@ class CPSC2020(object):
                 traceback=True,
                 verbose=self.verbose,
             )
+        # TODO: finishe plot
+        raise NotImplementedError
 
     
-    def train_test_split(self, test_rec_num:int) -> Tuple[np.ndarray]:
+    def train_test_split(self, test_rec_num:int) -> dict:
+        """ finished, checked,
+
+        split the records into train set and test set
+
+        Parameters:
+        -----------
+        test_rec_num: int,
+            number of records for the test set
+
+        Returns:
+        --------
+        split_res: dict,
+            with items `train`, `test`, both being list of record names
         """
-        """
-        x_train, y_train, x_test, y_test = np.array([]), np.array([]), np.array([]), np.array([])
-        raise NotImplementedError
+        if test_rec_num == 1:
+            test_records = random.sample(self.subgroups.VS, 1)
+        elif test_rec_num == 2:
+            test_records = random.sample(self.subgroups.VS, 1) + random.sample(self.subgroups.N, 1)
+        elif test_rec_num == 3:
+            test_records = random.sample(self.subgroups.VS, 1) + random.sample(self.subgroups.N, 2)
+        elif test_rec_num == 4:
+            test_records = []
+            for k in self.subgroups.keys():
+                test_records += random.sample(self.subgroups[k], 1)
+        else:
+            raise ValueError("test data ratio too high")
+        train_records = [r for r in self.all_records if r not in test_records]
+        
+        split_res = ED({
+            "train": train_records,
+            "test": test_records,
+        })
+        
+        return split_res
