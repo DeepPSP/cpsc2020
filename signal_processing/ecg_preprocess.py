@@ -44,6 +44,9 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real) -> np.ndarray:
     """
     filtered_ecg = raw_ecg.copy()
 
+    if fs != PreprocessCfg.fs:
+        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
+
     # remove baseline
     if PreprocessCfg.remove_baseline:
         window1 = 2 * (PreprocessCfg.baseline_window1 // 2) + 1  # window size must be odd
