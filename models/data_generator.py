@@ -85,13 +85,14 @@ class CPSC2020(object):
         self.palette = {"spb": "black", "pvc": "red",}
     
 
-    def load_data(self, rec_no:int, sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True) -> np.ndarray:
+    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
         -----------
-        rec_no: int,
-            number of the record, NOTE that rec_no starts from 1
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
         sampfrom: int, optional,
             start index of the data to be loaded
         sampto: int, optional,
@@ -104,8 +105,13 @@ class CPSC2020(object):
         data: ndarray,
             the ecg data
         """
-        assert rec_no in range(1, self.nb_records+1), "rec_no should be in range(1,{})".format(self.nb_records+1)
-        rec_fp = os.path.join(self.rec_folder, self.all_records[rec_no-1] + self.rec_ext)
+        if isinstance(rec, int):
+            assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
+            rec_name = self.all_records[rec-1]
+        elif isinstance(rec, str):
+            assert rec in self.all_records, "rec should be one of {}".format(self.all_records)
+            rec_name = rec
+        rec_fp = os.path.join(self.rec_folder, rec_name + self.rec_ext)
         data = (1000 * loadmat(rec_fp)['ecg']).astype(int)
         sf, st = (sampfrom or 0), (sampto or len(data))
         data = data[sf:st]
@@ -114,28 +120,65 @@ class CPSC2020(object):
         return data
 
 
-    def load_ann(self, rec_no:int, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
+    def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
         """ finished, checked,
 
         Parameters:
         -----------
-        rec_no: int,
-            number of the record, NOTE that rec_no starts from 1
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
         
         Returns:
         --------
         ann: dict,
             with items "SPB_indices" and "PVC_indices", which record the indices of SPBs and PVCs
         """
-        assert rec_no in range(1, self.nb_records+1), "rec_no should be in range(1,{})".format(self.nb_records+1)
-        ann_fp = os.path.join(self.ann_folder, self.all_annotations[rec_no-1] + self.ann_ext)
+        if isinstance(rec, int):
+            assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
+            ann_name = self.all_annotations[rec-1]
+        elif isinstance(rec, str):
+            assert rec in self.all_annotations+self.all_records, "rec should be one of {} or one of {}".format(self.all_records, self.all_annotations)
+            ann_name = rec if rec in self.all_annotations else rec.replace("A", "R")
+        ann_fp = os.path.join(self.ann_folder, ann_name + self.ann_ext)
         ann = loadmat(ann_fp)['ref']
         sf, st = (sampfrom or 0), (sampto or np.inf)
         ann = {
-            "SPB_indices": [p for p in ann['S_ref'][0,0] if sf<=p<st],
-            "PVC_indices": [p for p in ann['V_ref'][0,0] if sf<=p<st],
+            "SPB_indices": [p for p in ann['S_ref'][0,0].flatten() if sf<=p<st],
+            "PVC_indices": [p for p in ann['V_ref'][0,0].flatten() if sf<=p<st],
         }
         return ann
+
+    
+    def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
+        """ not finished, not checked,
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        sampfrom: int, optional,
+            start index of the data to be loaded
+        sampto: int, optional,
+            end index of the data to be loaded
+        ectopic_beats_only: bool, default False,
+            whether or not onpy plot the neighborhoods of the ectopic beats
+        """
+        data = self.load_data(rec, sampfrom=sampfrom, sampto=sampto, keep_dim=False)
+        ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
+        sf, st = (sampfrom or 0), (sampto or len(data))
+        if ectopic_beats_only:
+            ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
+            tot_interval = [sf, st]
+            covering, tb = get_optimal_covering(
+                total_interval=tot_interval,
+                to_cover=ectopic_beat_indices,
+                min_len=3*self.freq,
+                split_threshold=3*self.freq,
+                traceback=True,
+                verbose=self.verbose,
+            )
 
     
     def train_test_split(self, test_rec_num:int) -> Tuple[np.ndarray]:
