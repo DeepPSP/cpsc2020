@@ -21,9 +21,9 @@ class CPSC2020(object):
     ABOUT CPSC2019:
     ---------------
     1. training data consists of 10 single-lead ECG recordings collected from arrhythmia patients, each of the recording last for about 24 hours
-    2. A02, A03, A08 are patient with atrial fibrillation
-    3. sampling frequency = 400 Hz
-    4. about PVC and SPB, ref utils.utils_misc.ecg_arrhythmia_knowledge
+    2. data and annotations are stored in v5 .mat files
+    3. A02, A03, A08 are patient with atrial fibrillation
+    4. sampling frequency = 400 Hz
     5. Detailed information:
         rec   ?AF   Length(h)   # N beats   # V beats   # S beats   # Total beats
         A01   No	25.89       109,062     0           24          109,086
@@ -128,9 +128,9 @@ class CPSC2020(object):
         rec_name = self._get_rec_name(rec)
         if preprocess:
             rec_name = f"{rec_name}-{self._get_rec_suffix(preprocess)}"
-            rec_fp = os.path.join(self.preprocess_dir, rec_name + self.rec_ext)
+            rec_fp = os.path.join(self.preprocess_dir, f"{rec_name}{self.rec_ext}")
         else:
-            rec_fp = os.path.join(self.data_dir, rec_name + self.rec_ext)
+            rec_fp = os.path.join(self.data_dir, f"{rec_name}{self.rec_ext}")
         data = (1000 * loadmat(rec_fp)['ecg']).astype(int)
         sf, st = (sampfrom or 0), (sampto or len(data))
         data = data[sf:st]
@@ -139,7 +139,7 @@ class CPSC2020(object):
         return data
 
 
-    def preprocess_data(self, rec:Union[int,str], preprocess:List[str]):
+    def preprocess_data(self, rec:Union[int,str], preprocess:List[str]) -> NoReturn:
         """
 
         Parameters:
@@ -153,13 +153,15 @@ class CPSC2020(object):
         preprocess = preprocess or [item.lower() for item in preprocess]
         assert preprocess and all([item in self.allowed_preprocess for item in preprocess])
         save_fp = ED()
-        save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}")
-        save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}")
+        save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}{self.rec_ext}")
+        save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}{self.rec_ext}")
         config = ED()
         config.remove_baseline = ('baseline' in preprocess)
         config.filter_signal = ('bandpass' in preprocess)
         pps = parallel_preprocess_signal(self.load_data(rec), fs=self.fs, config=config)
-        # TODO: save mat
+        # save mat, keep in accordance with original mat files
+        savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']}).T, format='5')
+        savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']}).T, format='5')
 
 
     def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
