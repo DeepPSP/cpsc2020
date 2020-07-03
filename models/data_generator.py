@@ -160,8 +160,8 @@ class CPSC2020(object):
         config.filter_signal = ('bandpass' in preprocess)
         pps = parallel_preprocess_signal(self.load_data(rec), fs=self.fs, config=config)
         # save mat, keep in accordance with original mat files
-        savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']}).T, format='5')
-        savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']}).T, format='5')
+        savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
+        savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
     def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
