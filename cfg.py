@@ -13,8 +13,9 @@ __all__ = [
 PreprocessCfg = ED()
 PreprocessCfg.rsmp_fs = 400  # Hz, CPSC data fs
 PreprocessCfg.remove_baseline = True
-PreprocessCfg.baseline_window1 = 200  # ms
-PreprocessCfg.baseline_window2 = 600  # ms
+# 200 ms and 600 ms ref. (TODO)
+PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms
+PreprocessCfg.baseline_window2 = 240  # corr. to 600 ms
 PreprocessCfg.filter_signal = True
 PreprocessCfg.filter_band = [0.5,45]
 PreprocessCfg.parallel_len = 600  # second
