@@ -56,7 +56,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     cfg = deepcopy(PreprocessCfg)
     cfg.update(config or {})
 
-    if fs != cfg.fs:
+    if fs != cfg.rsmp_fs:
         filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
 
     # remove baseline
