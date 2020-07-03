@@ -36,7 +36,7 @@ __all__ = [
 
 QRS_DETECTORS = {
     "xqrs": xqrs_detect,
-    "gqrs", gqrs_detect,
+    "gqrs": gqrs_detect,
 }
 
 
