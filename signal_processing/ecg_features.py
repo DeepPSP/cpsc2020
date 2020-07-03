@@ -15,6 +15,14 @@ __all__ = ["compute_ecg_features"]
 
 def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray) -> np.ndarray:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     beats = []
     for r in rpeaks:
@@ -40,6 +48,14 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray) -> np.ndarray:
 
 def compute_wavelet_descriptor(beat:np.ndarray, family:str='db1', level:int=3) -> np.ndarray:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     wave_family = pywt.Wavelet(family)
     coeffs = pywt.wavedec(beat, wave_family, level=level)
@@ -48,6 +64,14 @@ def compute_wavelet_descriptor(beat:np.ndarray, family:str='db1', level:int=3) -
 
 def compute_rr_descriptor(rpeaks:np.ndarray) -> np.ndarray:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     pre_R = np.array([])
     post_R = np.array([])
@@ -97,6 +121,14 @@ def compute_rr_descriptor(rpeaks:np.ndarray) -> np.ndarray:
 
 def compute_morph_descriptor(beat:np.ndarray) -> np.ndarray:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     R_pos = int((FeatureCfg.beat_winL + FeatureCfg.beat_winR) / 2)
 

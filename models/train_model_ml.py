@@ -12,6 +12,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from easydict import EasyDict as ED
 
 from cfg import TrainCfg
+from signal_processing.ecg_preprocess import parallel_preprocess_signal
+from signal_processing.ecg_features import compute_ecg_features
 from .data_generator import CPSC2020
 
 
@@ -26,7 +28,8 @@ def train(**config):
     verbose = cfg.get("verbose", 0)
     
     data_gen = CPSC2020(db_dir=TrainCfg.training_data, working_dir=TrainCfg.training_workdir)
-    x_train, y_train, x_test, y_test = data_gen.train_test_split(TrainCfg.test_rec_num)
+    train_records, test_records = data_gen.train_test_split(TrainCfg.test_rec_num)
+    
     dtrain = xgb.DMatrix(x_train, label=y_train)
     dtest = xgb.DMatrix(x_test, label=y_test)
 

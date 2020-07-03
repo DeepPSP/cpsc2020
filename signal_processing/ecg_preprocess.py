@@ -9,8 +9,9 @@ References:
 """
 import os
 import multiprocessing as mp
+from copy import deepcopy
 from numbers import Real
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import numpy as np
 from easydict import EasyDict as ED
@@ -39,35 +40,45 @@ QRS_DETECTORS = {
 }
 
 
-def preprocess_signal(raw_ecg:np.ndarray, fs:Real) -> np.ndarray:
+def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     filtered_ecg = raw_ecg.copy()
 
-    if fs != PreprocessCfg.fs:
+    config = deepcopy(PreprocessCfg).update(config or {})
+
+    if fs != config.fs:
         filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
 
     # remove baseline
-    if PreprocessCfg.remove_baseline:
-        window1 = 2 * (PreprocessCfg.baseline_window1 // 2) + 1  # window size must be odd
-        window2 = 2 * (PreprocessCfg.baseline_window2 // 2) + 1
+    if config.remove_baseline:
+        window1 = 2 * (config.baseline_window1 // 2) + 1  # window size must be odd
+        window2 = 2 * (config.baseline_window2 // 2) + 1
         baseline = median_filter(filtered_ecg, size=window1, mode='nearest')
         baseline = median_filter(baseline, size=window2, mode='nearest')
         filtered_ecg = filtered_ecg - baseline
     
     # filter signal
-    if PreprocessCfg.filter_signal:
+    if config.filter_signal:
         filtered_ecg = filter_signal(
             signal=filtered_ecg,
             ftype='FIR',
             band='bandpass',
             order=int(0.3 * fs),
             sampling_rate=fs,
-            frequency=PreprocessCfg.filter_band,
+            frequency=config.filter_band,
         )['signal']
 
-    if PreprocessCfg.rpeaks:
-        detector = QRS_DETECTORS[PreprocessCfg.rpeaks.lower()]
+    if config.rpeaks:
+        detector = QRS_DETECTORS[config.rpeaks.lower()]
         rpeaks = detector(sig=filtered_ecg, fs=fs)
     else:
         rpeaks = np.array([], dtype=int)
@@ -80,15 +91,25 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real) -> np.ndarray:
     return retval
     
 
-def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, save_dir:Optional[str]=None) -> np.ndarray:
+def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None) -> Dict[str, np.ndarray]:
     """
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
-    epoch_len = int(PreprocessCfg.parallel_len * fs)
-    epoch_overlap = 2 * (int(PreprocessCfg.parallel_overpal * fs) // 2)
+    config = deepcopy(PreprocessCfg).update(config or {})
+
+    epoch_len = int(config.parallel_len * fs)
+    epoch_overlap = 2 * (int(config.parallel_overpal * fs) // 2)
     epoch_forward = epoch_len - epoch_overlap
 
     if len(raw_ecg) <= 5 * epoch_len:
-        return preprocess_signal(raw_ecg, fs)
+        return preprocess_signal(raw_ecg, fs, config)
     
     l_epoch = [
         raw_ecg[idx*epoch_forward: (idx+1)*epoch_forward] \
@@ -98,7 +119,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, save_dir:Optional[st
     cpu_num = max(1, mp.cpu_count()-6)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
-            preprocess_signal, [(e, fs) for e in l_epoch]
+            preprocess_signal, [(e, fs, config) for e in l_epoch]
         )
     
     filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap//2]
