@@ -20,7 +20,7 @@ import numpy as np
 
 # local
 from . import tools as st
-from .. import plotting, utils
+from biosppy import plotting, utils
 
 
 def eda(signal=None, sampling_rate=1000., show=True, min_amplitude=0.1):
