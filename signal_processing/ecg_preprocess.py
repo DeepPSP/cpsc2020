@@ -22,9 +22,9 @@ from scipy.signal.signaltools import resample
 try:
     from biosppy.signals.tools import filter_signal
 except:
-    from ..references.biosppy.biosppy.signals.tools import filter_signal
+    from references.biosppy.biosppy.signals.tools import filter_signal
 
-from ..cfg import PreprocessCfg
+from cfg import PreprocessCfg
 
 
 __all__ = [

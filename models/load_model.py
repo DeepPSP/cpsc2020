@@ -1,7 +1,7 @@
 """
 """
 import joblib
-from ..cfg import TrainCfg
+from cfg import TrainCfg
 
 
 __all__ = ["load_model"]

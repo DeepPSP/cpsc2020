@@ -23,7 +23,7 @@ from scipy import interpolate, optimize
 from scipy.stats import stats
 
 # local
-from .. import utils
+from biosppy import utils
 
 
 def _norm_freq(frequency=None, sampling_rate=1000.):

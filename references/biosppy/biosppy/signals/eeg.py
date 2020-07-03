@@ -20,7 +20,7 @@ import numpy as np
 
 # local
 from . import tools as st
-from .. import plotting, utils
+from biosppy import plotting, utils
 
 
 def eeg(signal=None, sampling_rate=1000., labels=None, show=True):

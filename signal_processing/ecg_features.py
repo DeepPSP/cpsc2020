@@ -7,7 +7,7 @@ References:
 import pywt
 import numpy as np
 
-from ..cfg import FeatureCfg
+from cfg import FeatureCfg
 
 
 __all__ = ["compute_ecg_features"]

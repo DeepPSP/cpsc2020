@@ -11,7 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from easydict import EasyDict as ED
 
-from ..cfg import TrainCfg
+from cfg import TrainCfg
 from .data_generator import CPSC2020
 
 

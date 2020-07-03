@@ -1,13 +1,13 @@
 """
 """
 import os
-from typing import Union, Optional, Any, List, NoReturn
+from typing import Union, Optional, Any, List, Dict, NoReturn
 from numbers import Real
 import numpy as np
 from scipy.io import loadmat
 from easydict import EasyDict as ED
 
-from ..misc import get_optimal_covering
+import misc
 
 
 class CPSC2020(object):
@@ -181,7 +181,7 @@ class CPSC2020(object):
         if ectopic_beats_only:
             ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
             tot_interval = [sf, st]
-            covering, tb = get_optimal_covering(
+            covering, tb = misc.get_optimal_covering(
                 total_interval=tot_interval,
                 to_cover=ectopic_beat_indices,
                 min_len=3*self.freq,
