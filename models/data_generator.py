@@ -163,7 +163,7 @@ class CPSC2020(object):
         config = ED()
         config.remove_baseline = ('baseline' in preprocess)
         config.filter_signal = ('bandpass' in preprocess)
-        pps = parallel_preprocess_signal(self.load_data(rec), fs=self.fs, config=config)
+        pps = parallel_preprocess_signal(self.load_data(rec, keep_dim=False), fs=self.fs, config=config)
         # save mat, keep in accordance with original mat files
         savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
