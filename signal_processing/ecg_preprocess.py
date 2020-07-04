@@ -125,11 +125,11 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
             preprocess_signal, [(e, fs, cfg) for e in l_epoch]
         )
     
-    filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap//2]
-    rpeaks = result[0]['rpeaks'][np.where(result[0]['rpeaks']<epoch_len-epoch_overlap//2)[0]]
+    filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap_half]
+    rpeaks = result[0]['rpeaks'][np.where(result[0]['rpeaks']<epoch_len-epoch_overlap_half)[0]]
     for idx, e in enumerate(result[1:]):
-        filtered_ecg = np.append(filtered_ecg, e['filtered_ecg'][epoch_overlap//2: -epoch_overlap//2])
-        epoch_rpeaks = e['rpeaks'][np.where( (e['rpeaks']>=epoch_overlap//2) & (e['rpeaks']<epoch_len-epoch_overlap//2) )[0]]
+        filtered_ecg = np.append(filtered_ecg, e['filtered_ecg'][epoch_overlap_half: -epoch_overlap_half])
+        epoch_rpeaks = e['rpeaks'][np.where( (e['rpeaks'] >= epoch_overlap_half) & (e['rpeaks'] < epoch_len-epoch_overlap_half) )[0]]
         rpeaks = np.append(rpeaks, (idx+1)*epoch_forward + epoch_rpeaks)
 
     if save_dir:
