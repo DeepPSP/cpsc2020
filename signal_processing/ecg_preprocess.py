@@ -182,6 +182,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
 
     if save_dir:
         # NOTE: this part is not tested
+        os.makedirs(save_dir, exist_ok=True)
         if save_fmt.lower() == 'npy':
             np.save(os.path.join(save_dir, "filtered_ecg.npy"), filtered_ecg)
             np.save(os.path.join(save_dir, "rpeaks.npy"), rpeaks)
