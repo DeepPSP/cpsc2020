@@ -13,7 +13,7 @@ __all__ = [
 PreprocessCfg = ED()
 PreprocessCfg.rsmp_fs = 400  # Hz, CPSC data fs
 PreprocessCfg.remove_baseline = True
-# 200 ms and 600 ms ref. (TODO)
+# for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms
 PreprocessCfg.baseline_window2 = 240  # corr. to 600 ms
 PreprocessCfg.filter_signal = True
@@ -34,7 +34,10 @@ FeatureCfg.wt_level = 3
 
 TrainCfg = ED()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TrainCfg.model_path = os.path.join(BASE_DIR, "models", "ecg_xgboost.pkl")
+TrainCfg.model_path = ED({
+    "ml": os.path.join(BASE_DIR, "models", "ecg_ml.pkl"),
+    "dl": os.path.join(BASE_DIR, "models", "ecg_dl.pkl"),
+})
 TrainCfg.test_rec_num = 2
 TrainCfg.max_iter = 10
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")

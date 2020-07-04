@@ -37,7 +37,7 @@ def CPSC2020_challenge(ECG, fs=400):
 
 #    S_pos = np.zeros([1, ])
 #    V_pos = np.zeros([1, ])
-    pr = parallel_preprocess_signal(ECG, fs)
+    pr = parallel_preprocess_signal(ECG, fs)  # use default config in `cfg`
     filtered_ecg = pr['filtered_ecg']
     rpeaks = pr['rpeaks']
 

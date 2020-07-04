@@ -13,31 +13,40 @@ from cfg import FeatureCfg
 __all__ = ["compute_ecg_features"]
 
 
-def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray) -> np.ndarray:
+def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=None) -> np.ndarray:
     """
 
     Parameters:
     -----------
-    to write
+    sig: ndarray,
+        the ecg signal
+    rpeaks: ndarray,
+        indices of R peaks
+    config: dict, optional,
+        extra process configuration,
+        `FeatureCfg` will `update` this `config`
 
     Returns:
     --------
     to write
     """
+    cfg = deepcopy(FeatureCfg)
+    cfg.update(config or {})
+
     beats = []
     for r in rpeaks:
-        beats.append(filtered_ecg[r-beat_winL:r+beat_winR])
+        beats.append(sig[r-cfg.beat_winL:r+cfg.beat_winR])
     features = np.empty((len(beats), 0))
 
-    if 'wavelet' in FeatureCfg.features:
+    if 'wavelet' in cfg.features:
         tmp = []
         for beat in beats:
-            tmp.append(np.array(compute_wavelet_descriptor(beat, 'db1', 3)))
+            tmp.append(np.array(compute_wavelet_descriptor(beat, cfg.wt_family, cfg.wt_level3)))
         features = np.concatenate((features, np.array(tmp)), axis=1)
-    if 'rr' in FeatureCfg.features:
+    if 'rr' in cfg.features:
         tmp = compute_rr_descriptor(rpeaks)
-        features = np.concatenate((features, tmp))
-    if 'morph' in FeatureCfg.features:
+        features = np.concatenate((features, tmp), axis=1)
+    if 'morph' in cfg.features:
         tmp = []
         for beat in beats:
             tmp.append(np.array(compute_morph_descriptor(beat)))
@@ -51,15 +60,26 @@ def compute_wavelet_descriptor(beat:np.ndarray, family:str='db1', level:int=3) -
 
     Parameters:
     -----------
-    to write
-
+    beat: ndarray,
+        a window properly covers the qrs complex, perhaps even the q, t waves
+    family: str, default 'db1',
+        name of the wavelet
+    level: int, default 3,
+        decomposition level
+    
     Returns:
     --------
-    to write
+    coeffs: ndarray,
+        the `level`-th level decomposition coefficients
+
+    References:
+    -----------
+    [1] https://pywavelets.readthedocs.io/en/latest/ref/dwt-discrete-wavelet-transform.html?highlight=wavedec#multilevel-decomposition-using-wavedec
+    [2] https://en.wikipedia.org/wiki/Wavelet
     """
     wave_family = pywt.Wavelet(family)
-    coeffs = pywt.wavedec(beat, wave_family, level=level)
-    return coeffs[0]
+    coeffs = pywt.wavedec(beat, wave_family, level=level)[0]
+    return coeffs
 
 
 def compute_rr_descriptor(rpeaks:np.ndarray) -> np.ndarray:
@@ -67,11 +87,12 @@ def compute_rr_descriptor(rpeaks:np.ndarray) -> np.ndarray:
 
     Parameters:
     -----------
-    to write
+    rpeaks: ndarray,
+        indices of R peaks
 
     Returns:
     --------
-    to write
+    features_RR: ndarray
     """
     pre_R = np.array([])
     post_R = np.array([])
@@ -124,11 +145,12 @@ def compute_morph_descriptor(beat:np.ndarray) -> np.ndarray:
 
     Parameters:
     -----------
-    to write
+    beat: ndarray,
+        a window properly covers the qrs complex, perhaps even the q, t waves
 
     Returns:
     --------
-    to write
+    morph: ndarray
     """
     R_pos = int((FeatureCfg.beat_winL + FeatureCfg.beat_winR) / 2)
 

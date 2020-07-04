@@ -3,3 +3,4 @@ YANG Shuai
 ZHANG Jue
 LIU Xiaolong
 ZHAO Jun
+KUANG Zhexiang
