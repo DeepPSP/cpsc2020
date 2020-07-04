@@ -125,11 +125,24 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
             for idx in range((len(raw_ecg)-epoch_overlap)//epoch_forward)
     ]
 
+    if cfg.parallel_keep_tail:
+        tail_start_idx = epoch_forward * len(l_epoch) + epoch_overlap
+        if len(raw_ecg) - tail_start_idx < 30 * fs:  # less than 30s, make configurable?
+            # append to the last epoch
+            l_epoch[-1] = np.append(l_epoch[-1], raw_ecg[tail_start_idx:])
+        else:  # long enough
+            tail_epoch = raw_ecg[tail_start_idx-epoch_overlap:]
+            l_epoch.append(tail_epoch)
+
     cpu_num = max(1, mp.cpu_count()-6)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
             preprocess_signal, [(e, fs, cfg) for e in l_epoch]
         )
+
+    if cfg.parallel_keep_tail:
+        tail_result = result[-1]
+        result = result[:-1]
     
     filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap_half]
     rpeaks = result[0]['rpeaks'][np.where(result[0]['rpeaks']<epoch_len-epoch_overlap_half)[0]]
@@ -137,6 +150,11 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
         filtered_ecg = np.append(filtered_ecg, e['filtered_ecg'][epoch_overlap_half: -epoch_overlap_half])
         epoch_rpeaks = e['rpeaks'][np.where( (e['rpeaks'] >= epoch_overlap_half) & (e['rpeaks'] < epoch_len-epoch_overlap_half) )[0]]
         rpeaks = np.append(rpeaks, (idx+1)*epoch_forward + epoch_rpeaks)
+
+    if cfg.parallel_keep_tail:
+        filtered_ecg = np.append(filtered_ecg, tail_result['filtered_ecg'][epoch_overlap_half:])
+        tail_rpeaks = tail_result['rpeaks'][np.where(tail_result['rpeaks'] >= epoch_overlap_half)[0]]
+        rpeaks = np.append(rpeaks, len(result)*epoch_forward + epoch_rpeaks)
 
     if save_dir:
         np.save(os.path.join(save_dir, "filtered_ecg.npy"), filtered_ecg)

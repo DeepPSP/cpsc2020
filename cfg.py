@@ -20,6 +20,7 @@ PreprocessCfg.filter_signal = True
 PreprocessCfg.filter_band = [0.5,45]
 PreprocessCfg.parallel_len = 600  # second
 PreprocessCfg.parallel_overlap = 10  # second
+PreprocessCfg.parallel_keep_tail = True
 PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins'
 
 
