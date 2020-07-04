@@ -156,8 +156,6 @@ class CPSC2020(object):
             type of preprocess to perform, should be sublist of `self.allowed_preprocess`
         """
         preprocess = [item.lower() for item in preprocess] if preprocess else []
-        print(f"preprocess = {preprocess}")
-        return
         assert preprocess and all([item in self.allowed_preprocess for item in preprocess])
         rec_name = self._get_rec_name(rec)
         save_fp = ED()
