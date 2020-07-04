@@ -99,8 +99,11 @@ class CPSC2020(object):
 
         self.allowed_preprocess = ['baseline', 'bandpass']
         self.preprocess_dir = os.path.join(self.db_dir, "preprocessed")
+        os.makedirs(self.preprocess_dir, exist_ok=True)
         self.rpeaks_dir = os.path.join(self.db_dir, "rpeaks")
+        os.makedirs(self.rpeaks_dir, exist_ok=True)
         self.feature_dir = os.path.join(self.db_dir, "features")
+        os.makedirs(self.feature_dir, exist_ok=True)
     
 
     def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None) -> np.ndarray:
@@ -142,13 +145,15 @@ class CPSC2020(object):
     def preprocess_data(self, rec:Union[int,str], preprocess:List[str]) -> NoReturn:
         """
 
+        preprocess the ecg data in advance for further use
+
         Parameters:
         -----------
-        to write
-
-        Returns:
-        --------
-        to write
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        preprocess: list of str,
+            type of preprocess to perform, should be sublist of `self.allowed_preprocess`
         """
         preprocess = preprocess or [item.lower() for item in preprocess]
         assert preprocess and all([item in self.allowed_preprocess for item in preprocess])
@@ -199,11 +204,14 @@ class CPSC2020(object):
 
         Parameters:
         -----------
-        to write
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
 
         Returns:
         --------
-        to write
+        ann_name: str,
+            filename of the annotation file
         """
         if isinstance(rec, int):
             assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
@@ -219,11 +227,14 @@ class CPSC2020(object):
 
         Parameters:
         -----------
-        to write
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
 
         Returns:
         --------
-        to write
+        rec_name: str,
+            filename of the record
         """
         if isinstance(rec, int):
             assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
@@ -239,11 +250,13 @@ class CPSC2020(object):
 
         Parameters:
         -----------
-        to write
+        preprocess: list of str,
+            type of preprocess to perform, should be sublist of `self.allowed_preprocess`
 
         Returns:
         --------
-        to write
+        suffix: str,
+            suffix of the filename of the preprocessed ecg signal
         """
         suffix = '-'.join(sorted([item.lower() for item in preprocess]))
         return suffix
