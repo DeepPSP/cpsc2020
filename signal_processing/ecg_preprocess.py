@@ -16,6 +16,7 @@ from typing import Optional, List, Dict
 import numpy as np
 from easydict import EasyDict as ED
 from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect, gqrs_detect
+from wfdb.processing.pantompkins import pantompkins as _pantompkins
 from scipy.ndimage.filters import median_filter
 from scipy.signal.signaltools import resample
 # from scipy.signal import medfilt
@@ -34,9 +35,14 @@ __all__ = [
 ]
 
 
+def pantompkins(sig, fs, *args, **kwargs):
+    return _pantompkins(sig, fs)
+
+
 QRS_DETECTORS = {
     "xqrs": xqrs_detect,
     "gqrs": gqrs_detect,
+    "pantompkins": pantompkins,
 }
 
 
@@ -116,7 +122,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     
     l_epoch = [
         raw_ecg[idx*epoch_forward: idx*epoch_forward + epoch_len] \
-            for idx in range((len(raw_ecg)-epoch_overlap)//epoch_forward - 1)
+            for idx in range((len(raw_ecg)-epoch_overlap)//epoch_forward)
     ]
 
     cpu_num = max(1, mp.cpu_count()-6)

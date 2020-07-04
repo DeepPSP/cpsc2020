@@ -20,7 +20,7 @@ PreprocessCfg.filter_signal = True
 PreprocessCfg.filter_band = [0.5,45]
 PreprocessCfg.parallel_len = 600  # second
 PreprocessCfg.parallel_overlap = 10  # second
-PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs'
+PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins'
 
 
 FeatureCfg = ED()
