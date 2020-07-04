@@ -107,14 +107,15 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     cfg.update(config or {})
 
     epoch_len = int(cfg.parallel_len * fs)
-    epoch_overlap = 2 * (int(cfg.parallel_overlap * fs) // 2)
+    epoch_overlap_half = int(cfg.parallel_overlap * fs) // 2
+    epoch_overlap = 2 * epoch_overlap_half
     epoch_forward = epoch_len - epoch_overlap
 
     if len(raw_ecg) <= 5 * epoch_len:
         return preprocess_signal(raw_ecg, fs, cfg)
     
     l_epoch = [
-        raw_ecg[idx*epoch_forward: (idx+1)*epoch_forward] \
+        raw_ecg[idx*epoch_forward: idx*epoch_forward + epoch_len] \
             for idx in range((len(raw_ecg)-epoch_overlap)//epoch_forward - 1)
     ]
 
