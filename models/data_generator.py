@@ -126,7 +126,7 @@ class CPSC2020(object):
         data: ndarray,
             the ecg data
         """
-        preprocess = preprocess or [item.lower() for item in preprocess]
+        preprocess = [item.lower() for item in preprocess] if preprocess else []
         assert all([item in self.allowed_preprocess for item in preprocess])
         rec_name = self._get_rec_name(rec)
         if preprocess:
@@ -155,8 +155,11 @@ class CPSC2020(object):
         preprocess: list of str,
             type of preprocess to perform, should be sublist of `self.allowed_preprocess`
         """
-        preprocess = preprocess or [item.lower() for item in preprocess]
+        preprocess = [item.lower() for item in preprocess] if preprocess else []
+        print(f"preprocess = {preprocess}")
+        return
         assert preprocess and all([item in self.allowed_preprocess for item in preprocess])
+        rec_name = self._get_rec_name(rec)
         save_fp = ED()
         save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}{self.rec_ext}")
         save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}{self.rec_ext}")
