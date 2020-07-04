@@ -19,6 +19,7 @@ from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect, gqrs_detect
 from wfdb.processing.pantompkins import pantompkins as _pantompkins
 from scipy.ndimage.filters import median_filter
 from scipy.signal.signaltools import resample
+from scipy.io import savemat
 # from scipy.signal import medfilt
 # https://github.com/scipy/scipy/issues/9680
 try:
@@ -36,6 +37,7 @@ __all__ = [
 
 
 def pantompkins(sig, fs, *args, **kwargs):
+    """ to keep in accordance of parameters with `xqrs` and `gqrs` """
     return _pantompkins(sig, fs)
 
 
@@ -51,11 +53,20 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
 
     Parameters:
     -----------
-    to write
+    raw_ecg: ndarray,
+        the raw ecg signal
+    fs: real number,
+        sampling frequency of `raw_ecg`
+    config: dict, optional,
+        extra process configuration,
+        `PreprocessCfg` will `update` this `config`
 
     Returns:
     --------
-    to write
+    retval: dict,
+        with items
+        - 'filtered_ecg': the array of the processed ecg signal
+        - 'rpeaks': the array of indices of rpeaks; empty if 'rpeaks' in `config` is not set
     """
     filtered_ecg = raw_ecg.copy()
 
@@ -98,16 +109,29 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     return retval
     
 
-def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None) -> Dict[str, np.ndarray]:
+def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy') -> Dict[str, np.ndarray]:
     """
 
     Parameters:
     -----------
-    to write
+    raw_ecg: ndarray,
+        the raw ecg signal
+    fs: real number,
+        sampling frequency of `raw_ecg`
+    config: dict, optional,
+        extra process configuration,
+        `PreprocessCfg` will `update` this `config`
+    save_dir: str, optional,
+        directory for saving the outcome ('filtered_ecg' and 'rpeaks')
+    save_fmt: str, default 'npy',
+        format of the save files, 'npy' or 'mat'
 
     Returns:
     --------
-    to write
+    retval: dict,
+        with items
+        - 'filtered_ecg': the array of the processed ecg signal
+        - 'rpeaks': the array of indices of rpeaks; empty if 'rpeaks' in `config` is not set
     """
     cfg = deepcopy(PreprocessCfg)
     cfg.update(config or {})
@@ -117,7 +141,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     epoch_overlap = 2 * epoch_overlap_half
     epoch_forward = epoch_len - epoch_overlap
 
-    if len(raw_ecg) <= 5 * epoch_len:
+    if len(raw_ecg) <= 3 * epoch_len:  # too short, no need for parallel computing
         return preprocess_signal(raw_ecg, fs, cfg)
     
     l_epoch = [
@@ -134,7 +158,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
             tail_epoch = raw_ecg[tail_start_idx-epoch_overlap:]
             l_epoch.append(tail_epoch)
 
-    cpu_num = max(1, mp.cpu_count()-6)
+    cpu_num = max(1, mp.cpu_count()-3)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
             preprocess_signal, [(e, fs, cfg) for e in l_epoch]
@@ -157,8 +181,14 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
         rpeaks = np.append(rpeaks, len(result)*epoch_forward + epoch_rpeaks)
 
     if save_dir:
-        np.save(os.path.join(save_dir, "filtered_ecg.npy"), filtered_ecg)
-        np.save(os.path.join(save_dir, "rpeak.npy"), rpeaks)
+        # NOTE: this part is not tested
+        if save_fmt.lower() == 'npy':
+            np.save(os.path.join(save_dir, "filtered_ecg.npy"), filtered_ecg)
+            np.save(os.path.join(save_dir, "rpeaks.npy"), rpeaks)
+        elif save_fmt.lower() == 'mat':
+            # save into 2 files, keep in accordance
+            savemat(os.path.join(save_dir, "filtered_ecg.mat"), {"filtered_ecg": filtered_ecg}, format='5')
+            savemat(os.path.join(save_dir, "rpeaks.mat"), {"rpeaks": rpeaks}, format='5')
 
     retval = ED({
         "filtered_ecg": filtered_ecg,
