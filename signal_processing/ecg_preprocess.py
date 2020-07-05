@@ -15,7 +15,7 @@ from typing import Optional, List, Dict
 
 import numpy as np
 from easydict import EasyDict as ED
-from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect, gqrs_detect
+from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect as _xqrs_detect, gqrs_detect as _gqrs_detect
 from wfdb.processing.pantompkins import pantompkins as _pantompkins
 from scipy.ndimage.filters import median_filter
 from scipy.signal.signaltools import resample
@@ -36,9 +36,37 @@ __all__ = [
 ]
 
 
-def pantompkins(sig, fs, *args, **kwargs):
+def pantompkins(sig, fs, **kwargs):
     """ to keep in accordance of parameters with `xqrs` and `gqrs` """
-    return _pantompkins(sig, fs)
+    rpeaks = _pantompkins(sig, fs)
+    return rpeaks
+
+def xqrs_detect(sig, fs, **kwargs):
+    """
+    default kwargs:
+        sampfrom=0, sampto='end', conf=None, learn=True, verbose=True
+    """
+    kw = dict(sampfrom=0, sampto='end', conf=None, learn=True, verbose=True)
+    kw = {k: kwargs.get(k,v) for k,v in kw.items()}
+    rpeaks = _xqrs_detect(sig, fs, **kw)
+    return rpeaks
+
+def gqrs_detect(sig, fs, **kwargs):
+    """
+    default kwargs:
+        d_sig=None, adc_gain=None, adc_zero=None,
+        threshold=1.0, hr=75, RRdelta=0.2, RRmin=0.28, RRmax=2.4,
+        QS=0.07, QT=0.35, RTmin=0.25, RTmax=0.33,
+        QRSa=750, QRSamin=130
+    """
+    kw = dict(d_sig=None, adc_gain=None, adc_zero=None,
+        threshold=1.0, hr=75, RRdelta=0.2, RRmin=0.28, RRmax=2.4,
+        QS=0.07, QT=0.35, RTmin=0.25, RTmax=0.33,
+        QRSa=750, QRSamin=130
+    )
+    kw = {k: kwargs.get(k,v) for k,v in kw.items()}
+    rpeaks = _gqrs_detect(sig, fs, **kw)
+    return rpeaks
 
 
 QRS_DETECTORS = {
@@ -197,3 +225,20 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     })
 
     return retval
+
+"""
+to check correctness of the function `parallel_preprocess_signal`,
+say for record A01, one can call
+>>> raw_ecg = loadmat("./data/A01.mat")['ecg'].flatten()
+>>> processed = parallel_preprocess_signal(raw_ecg, 400)
+>>> print(len(processed['filtered_ecg']) - len(raw_ecg))
+>>> start_t = int(3600*24.7811)
+>>> len_t = 10
+>>> fig, ax = plt.subplots(figsize=(20,6))
+>>> ax.plot(hehe['filtered_ecg'][start_t*400:(start_t+len_t)*400])
+>>> for r in [p for p in hehe['rpeaks'] if start_t*400 <= p < (start_t+len_t)*400]:
+>>>    ax.axvline(r-start_t*400,c='red',linestyle='dashed')
+>>> plt.show()
+
+or one can use the 'data_generator' in 'models'
+"""

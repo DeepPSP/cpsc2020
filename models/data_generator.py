@@ -1,6 +1,7 @@
 """
 """
 import os
+import argparse
 from typing import Union, Optional, Any, List, Dict, NoReturn
 from numbers import Real
 import numpy as np
@@ -65,7 +66,7 @@ class CPSC2020(object):
         Parameters:
         -----------
         db_dir: str,
-            storage path of the database
+            directory where the database is stored
         working_dir: str, optional,
             working directory, to store intermediate files and log file
         verbose: int, default 2,
@@ -331,3 +332,39 @@ class CPSC2020(object):
         })
         
         return split_res
+
+
+if __name__ == "__main__":
+    from misc import dict_to_str
+    ap = argparse.ArgumentParser(
+        description="preprocess CPSC2020 data",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    ap.add_argument(
+        "-d", "--db-dir",
+        type=str, required=True,
+        help="directory where the database is stored",
+        dest="db_dir",
+    )
+    ap.add_argument(
+        "-p", "--preprocess",
+        type=str, default="baseline,bandpass",
+        help="process to perform, separated by ','",
+        dest="preprocess",
+    )
+    ap.add_argument(
+        "-r", "--rec",
+        type=str, default=None,
+        help="records (name or numbering) to perform preprocess, separated by ','; if not set, all records will be preprocessed",
+        dest="records",
+    )
+    # TODO: add more args
+
+    kwargs = vars(ap.parse_args())
+    print("passed arguments:")
+    print(f"{dict_to_str(kwargs)}")
+    
+    data_gen = CPSC2020(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
+    preprocess = kwargs.get("preprocess", "").split(",") or data_gen.allowed_preprocess
+    for rec in (kwargs.get("records",None) or data_gen.all_records):
+        data_gen.preprocess_data(rec, preprocess=preprocess)
