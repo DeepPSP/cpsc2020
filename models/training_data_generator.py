@@ -116,6 +116,8 @@ class CPSC2020(object):
         self.allowed_features = ['wavelet', 'rr', 'morph',]
         self.feature_dir = os.path.join(self.db_dir, "features")
         os.makedirs(self.feature_dir, exist_ok=True)
+        self.beat_ann_dir = os.path.join(self.db_dir, "beat_ann")
+        os.makedirs(self.beat_ann_dir, exist_ok=True)
     
 
     def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None, **kwargs) -> np.ndarray:
@@ -140,7 +142,7 @@ class CPSC2020(object):
         data: ndarray,
             the ecg data
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses)
+        preprocesses = self._normalize_preprocess_names(preprocesses, False)
         rec_name = self._get_rec_name(rec)
         if preprocesses:
             rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses)}"
@@ -170,7 +172,7 @@ class CPSC2020(object):
         preprocesses: list of str,
             type of preprocesses to perform, should be sublist of `self.allowed_preprocess`
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses)
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
         save_fp = ED()
         save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses)}{self.rec_ext}")
@@ -183,7 +185,7 @@ class CPSC2020(object):
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
-    def compute_features(self, rec:Union[int,str], features:List[str], preprocesses:List[str], save:bool=False) -> np.ndarray:
+    def compute_features(self, rec:Union[int,str], features:List[str], preprocesses:List[str], save:bool=True) -> np.ndarray:
         """
 
         Parameters:
@@ -195,7 +197,7 @@ class CPSC2020(object):
             list of feature types to compute, should be sublist of `self.allowd_features`
         preprocesses: list of str,
             type of preprocesses to perform, should be sublist of `self.allowed_preprocess`
-        save: bool, default False,
+        save: bool, default True,
             whether or not save the features to the working directory
 
         Returns:
@@ -205,7 +207,7 @@ class CPSC2020(object):
                 m = the number of beats (the number of rpeaks)
                 n = the dimension of the features
         """
-        features = self._normalize_feature_names(features)
+        features = self._normalize_feature_names(features, True)
         rec_name = self._get_rec_name(rec)
         
         try:
@@ -249,7 +251,7 @@ class CPSC2020(object):
         rpeaks: ndarray,
             the indices of rpeaks
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses)
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
         rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
         rpeaks = loadmat(rpeaks_fp)['rpeaks'].astype(int)
@@ -282,8 +284,8 @@ class CPSC2020(object):
                 m = the number of beats (the number of rpeaks)
                 n = the dimension of the features
         """
-        features = self._normalize_feature_names(features)
-        preprocesses = self._normalize_preprocess_names(preprocesses)
+        features = self._normalize_feature_names(features, True)
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
         feature_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}{self.rec_ext}")
         try:
@@ -291,7 +293,7 @@ class CPSC2020(object):
             feature_mat = loadmat(feature_fp)['features']
         except FileNotFoundError:
             print("no precomputed data exist")
-            feature_mat = self.compute_features(rec, features, preprocesses)
+            feature_mat = self.compute_features(rec, features, preprocesses, save=True)
         return feature_mat
 
 
@@ -309,20 +311,57 @@ class CPSC2020(object):
         ann: dict,
             with items "SPB_indices" and "PVC_indices", which record the indices of SPBs and PVCs
         """
-        if isinstance(rec, int):
-            assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
-            ann_name = self.all_annotations[rec-1]
-        elif isinstance(rec, str):
-            assert rec in self.all_annotations+self.all_records, "rec should be one of {} or one of {}".format(self.all_records, self.all_annotations)
-            ann_name = rec.replace("A", "R")
+        ann_name = self._get_ann_name(rec)
         ann_fp = os.path.join(self.ann_dir, ann_name + self.ann_ext)
         ann = loadmat(ann_fp)['ref']
         sf, st = (sampfrom or 0), (sampto or np.inf)
+        spb_indices = ann['S_ref'][0,0].flatten().astype(int)
+        spb_indices = spb_indices[np.where( (spb_indices>=sf) & (spb_indices<st) )[0]]
+        pvc_indices = ann['V_ref'][0,0].flatten().astype(int)
+        pvc_indices = pvc_indices[np.where( (pvc_indices>=sf) & (pvc_indices<st) )[0]]
         ann = {
-            "SPB_indices": [p for p in ann['S_ref'][0,0].flatten() if sf<=p<st],
-            "PVC_indices": [p for p in ann['V_ref'][0,0].flatten() if sf<=p<st],
+            "SPB_indices": spb_indices,
+            "PVC_indices": pvc_indices,
         }
         return ann
+
+    
+    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None) -> np.ndarray:
+        """
+        """
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        fp = os.path.join(self.beat_ann_dir, f"{rec_name}.{self.ann_ext}")
+        try:
+            beat_ann = loadmat(fp)["beat_ann"]
+        except FileNotFoundError:
+            rpeaks = self.load_rpeaks(
+                rec,
+                sampfrom=sampfrom, sampto=sampto,
+                keep_dim=False,
+                preprocesses=preprocesses
+            )
+            ann = self.load_ann(rec, sampfrom, sampto)
+            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses,)
+
+
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int) -> np.ndarray:
+        """
+        """
+        beat_ann = ["N" for _ in range(len(rpeaks))]
+        for idx, r in enumerate(rpeaks):
+            if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
+                beat_ann[idx] = 'S'
+                break
+            if any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
+                beat_ann[idx] = 'P'
+        
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        fp = os.path.join(self.beat_ann_dir, f"{rec_name}.{self.ann_ext}")
+        savemat(fp, {"rpeaks": rpeaks, "beat_ann":beat_ann}, format='5')
+
+        return beat_ann
 
 
     def _get_ann_name(self, rec:Union[int,str]) -> str:
@@ -388,20 +427,24 @@ class CPSC2020(object):
         return suffix
 
 
-    def _normalize_feature_names(self, features:List[str]) -> List[str]:
+    def _normalize_feature_names(self, features:List[str], ensure_nonempty:bool) -> List[str]:
         """
         """
         _f = [item.lower() for item in features] if features else []
+        if ensure_nonempty:
+            _f = _f or self.allowed_features
         # ensure ordering
         _f = [item for item in self.allowed_features if item in _f]
         # assert features and all([item in self.allowed_features for item in features])
         return _f
 
 
-    def _normalize_preprocess_names(self, preprocesses:List[str]) -> List[str]:
+    def _normalize_preprocess_names(self, preprocesses:List[str], ensure_nonempty:bool) -> List[str]:
         """
         """
         _p = [item.lower() for item in preprocesses] if preprocesses else []
+        if ensure_nonempty:
+            _p = _p or self.allowed_preprocess
         # ensure ordering
         _p = [item for item in self.allowed_preprocess if item in _p]
         # assert all([item in self.allowed_preprocess for item in _p])
@@ -495,20 +538,16 @@ class CPSC2020(object):
         """
         cfg = deepcopy(PreprocessCfg)
         cfg.update(config or {})
-        preprocesses = []
-        if cfg.remove_baseline:
-            preprocesses.append("baseline")
-        if cfg.filter_signal:
-            preprocesses.append("bandpass")
         split_rec = self.train_test_split_rec(test_rec_num)
-        X, y = [], []
-        for rec in split_rec.train:
-            data = self.load_features(
-                rec=rec,
-                preprocesses=preprocesses,
-                keep_dim=False,
-            )
-            rpeaks = self.load_rpeaks(rec=rec, keep_dim=False)
+        x = ED({"train": np.array([]), "test": np.array([])})
+        y = ED({"train": np.array([]), "test": np.array([])})
+        for subset in ["train", "test"]:
+            for rec in split_rec[subset]:
+                feature_mat = self.load_features(rec, features=cfg.features, preprocesses=cfg.preprocesses)
+                x[subset] = np.append(x[subset], feature_mat)
+                beat_ann = self.load_beat_ann(rec, preprocesses=cfgpreprocesses)
+                y[subset] = np.append(y[subset], beat_ann)
+        return x["train"], y["train"], x["test"], y["test"]
 
 
 
