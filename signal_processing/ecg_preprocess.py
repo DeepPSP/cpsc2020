@@ -77,7 +77,7 @@ QRS_DETECTORS = {
 
 
 def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------
@@ -138,7 +138,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     
 
 def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy') -> Dict[str, np.ndarray]:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------

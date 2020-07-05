@@ -104,6 +104,10 @@ class CPSC2020(object):
 
         self.palette = {"spb": "black", "pvc": "red",}
 
+        # NOTE:
+        # the ordering of `self.allowed_preprocess` and `self.allowed_features`
+        # should be in accordance with
+        # corresponding items in `PreprocessCfg` and `FeatureCfg`
         self.allowed_preprocess = ['baseline', 'bandpass',]
         self.preprocess_dir = os.path.join(self.db_dir, "preprocessed")
         os.makedirs(self.preprocess_dir, exist_ok=True)
@@ -134,8 +138,7 @@ class CPSC2020(object):
         data: ndarray,
             the ecg data
         """
-        preprocess = [item.lower() for item in preprocess] if preprocess else []
-        assert all([item in self.allowed_preprocess for item in preprocess])
+        preprocess = self._normalize_preprocess_names(preprocess)
         rec_name = self._get_rec_name(rec)
         if preprocess:
             rec_name = f"{rec_name}-{self._get_rec_suffix(preprocess)}"
@@ -165,8 +168,7 @@ class CPSC2020(object):
         preprocess: list of str,
             type of preprocess to perform, should be sublist of `self.allowed_preprocess`
         """
-        preprocess = [item.lower() for item in preprocess] if preprocess else []
-        assert preprocess and all([item in self.allowed_preprocess for item in preprocess])
+        preprocess = self._normalize_preprocess_names(preprocess)
         rec_name = self._get_rec_name(rec)
         save_fp = ED()
         save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocess)}{self.rec_ext}")
@@ -179,33 +181,53 @@ class CPSC2020(object):
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
-    def compute_features(self, rec:Union[int,str], features:List[str], preprocess:List[str], save=False) -> np.ndarray:
+    def compute_features(self, rec:Union[int,str], features:List[str], preprocess:List[str], save:bool=False) -> np.ndarray:
         """
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        features: list of str,
+            list of feature types to compute, should be sublist of `self.allowd_features`
+        preprocess: list of str,
+            type of preprocess to perform, should be sublist of `self.allowed_preprocess`
+        save: bool, default False,
+            whether or not save the features to the working directory
+
+        Returns:
+        --------
+        feature_mat: ndarray,
+            the computed features, of shape (m,n), where
+                m = the number of beats (the number of rpeaks)
+                n = the dimension of the features
         """
-        features = [item.lower() for item in features] if features else []
-        assert features and all([item in self.allowed_features for item in features])
+        features = self._normalize_feature_names(features)
         rec_name = self._get_rec_name(rec)
         
         try:
+            print("try loading precomputed filtered signal and precomputed rpeaks...")
             data = self.load_data(rec, preprocess=preprocess, keep_dim=False)
             rpeaks = self.load_rpeaks(rec, preprocess=preprocess, keep_dim=False)
         except:
+            print("no precomputed data exist")
             self.preprocess_data(rec, preprocess=preprocess)
             data = self.load_data(rec, preprocess=preprocess, keep_dim=False)
             rpeaks = self.load_rpeaks(rec, preprocess=preprocess, keep_dim=False)
         
         config = deepcopy(FeatureCfg)
         config.features = features
-        features = compute_ecg_features(data, rpeaks, config=config)
+        feature_mat = compute_ecg_features(data, rpeaks, config=config)
 
         if save:
-            save_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(features)}{self.rec_ext}")
-            savemat(save_fp, {'features': features}, format='5')
+            save_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocess+features)}{self.rec_ext}")
+            savemat(save_fp, {'features': feature_mat}, format='5')
 
-        return features
+        return feature_mat
 
 
-    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None, **kwargs) -> np.ndarray:
+    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -225,11 +247,10 @@ class CPSC2020(object):
         rpeaks: ndarray,
             the indices of rpeaks
         """
-        preprocess = preprocess or self.allowed_preprocess
-        assert all([item in self.allowed_preprocess for item in preprocess])
+        preprocess = self._normalize_preprocess_names(preprocess)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocess)}"
-        rec_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
-        rpeaks = loadmat(rec_fp)['rpeaks'].astype(int)
+        rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
+        rpeaks = loadmat(rpeaks_fp)['rpeaks'].astype(int)
         sf, st = (sampfrom or 0), (sampto or len(rpeaks))
         rpeaks = rpeaks[np.where( (rpeaks>=sf) & (rpeaks<st) )[0]]
         if not keep_dim:
@@ -237,14 +258,34 @@ class CPSC2020(object):
         return rpeaks
 
 
-    def load_features(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocess:Optional[List[str]]=None, **kwargs) -> np.ndarray:
+    def load_features(self, rec:Union[int,str], features:List[str], preprocess:Optional[List[str]]=None) -> np.ndarray:
         """
-        """
-        features = [item.lower() for item in features] if features else []
-        assert features and all([item in self.allowed_features for item in features])
-        rec_name = self._get_rec_name(rec)
-        raise NotImplementedError
 
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        features: list of str,
+            list of feature types computed, should be sublist of `self.allowd_features`
+        preprocess: list of str,
+            type of preprocess performed, should be sublist of `self.allowed_preprocess`
+        save: bool, default False,
+            whether or not save the features to the working directory
+
+        Returns:
+        --------
+        feature_mat: ndarray,
+            the computed features, of shape (m,n), where
+                m = the number of beats (the number of rpeaks)
+                n = the dimension of the features
+        """
+        features = self._normalize_feature_names(features)
+        preprocess = self._normalize_preprocess_names(preprocess)
+        rec_name = self._get_rec_name(rec)
+        feature_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocess+features)}{self.rec_ext}")
+        feature_mat = loadmat(feature_fp)['features']
+        return feature_mat
 
 
     def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
@@ -334,10 +375,30 @@ class CPSC2020(object):
         Returns:
         --------
         suffix: str,
-            suffix of the filename of the preprocessed ecg signal
+            suffix of the filename of the preprocessed ecg signal, or the features
         """
         suffix = '-'.join(sorted([item.lower() for item in operations]))
         return suffix
+
+
+    def _normalize_feature_names(self, features:List[str]) -> List[str]:
+        """
+        """
+        _f = [item.lower() for item in features] if features else []
+        # ensure ordering
+        _f = [item for item in self.allowed_features if item in _f]
+        # assert features and all([item in self.allowed_features for item in features])
+        return _f
+
+
+    def _normalize_preprocess_names(self, preprocess:List[str]) -> List[str]:
+        """
+        """
+        _p = [item.lower() for item in preprocess] if preprocess else []
+        # ensure ordering
+        _p = [item for item in self.allowed_preprocess if item in _p]
+        # assert all([item in self.allowed_preprocess for item in _p])
+        return _p
 
     
     def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
@@ -369,7 +430,7 @@ class CPSC2020(object):
                 traceback=True,
                 verbose=self.verbose,
             )
-        # TODO: finishe plot
+        # TODO: finish plot
         raise NotImplementedError
 
     
@@ -410,7 +471,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int=2, config:Optional[ED]=None) -> Tuple[np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int=2, config:Optional[ED]=None) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set

@@ -105,7 +105,7 @@ def compute_wavelet_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
 
 
 def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.ndarray:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------
@@ -137,7 +137,7 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     return features_rr
 
 def _compute_pre_rr(rr_intervals:np.ndarray) -> np.ndarray:
-    """
+    """ finished, checked,
     """
     try:
         pre_rr = np.append(rr_intervals[0], rr_intervals)
@@ -155,7 +155,7 @@ def _compute_post_rr(rr_intervals:np.ndarray) -> np.ndarray:
     return post_rr
 
 def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
-    """
+    """ finished, checked,
     """
     local_rr = np.array([], dtype=int)
     for i in range(config.rr_local_range-1):  # head
@@ -167,7 +167,7 @@ def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
     return local_rr
 
 def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:int, epoch_end:int, global_range:int) -> np.ndarray:
-    """
+    """ finished, checked,
     """
     global_rr = []
     for idx in range(epoch_start,epoch_end):
@@ -176,7 +176,7 @@ def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:
     return global_rr
 
 def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.ndarray:
-    """
+    """ finished, checked,
     """
     split_indices = [0]
     one_hour = config.fs*3600
@@ -206,7 +206,7 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
 
 
 def compute_morph_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------
