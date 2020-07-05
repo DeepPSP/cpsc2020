@@ -35,7 +35,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     rpeaks: ndarray,
         indices of R peaks
     config: dict, optional,
-        extra process configuration,
+        extra process configurations,
         `FeatureCfg` will `update` this `config`
 
     Returns:
@@ -63,7 +63,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     if 'morph' in cfg.features:
         tmp = []
         for beat in beats:
-            tmp.append(np.array(compute_morph_descriptor(beat)))
+            tmp.append(np.array(compute_morph_descriptor(beat, cfg)))
         features = np.concatenate((features, np.array(tmp)), axis=1)
 
     return features
@@ -76,8 +76,8 @@ def compute_wavelet_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     -----------
     beat: ndarray,
         a window properly covers the qrs complex, perhaps even the q, t waves
-    config: dict, optional,
-        process configuration,
+    config: dict,
+        process configurations,
     
     Returns:
     --------
@@ -102,7 +102,7 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     rpeaks: ndarray,
         indices of R peaks
     config: dict, optional,
-        extra process configuration,
+        extra process configurations,
         `FeatureCfg` will `update` this `config`
 
     Returns:
@@ -122,6 +122,7 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     global_rr = _compute_global_rr(rpeaks, pre_rr, cfg)
 
     features_rr = np.column_stack((pre_rr, post_rr, local_rr, global_rr))
+    features_rr = features_rr / cfg.fs  #  units to sec
             
     return features_rr
 
@@ -184,19 +185,21 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
     return global_rr
 
 
-def compute_morph_descriptor(beat:np.ndarray) -> np.ndarray:
+def compute_morph_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     """
 
     Parameters:
     -----------
     beat: ndarray,
         a window properly covers the qrs complex, perhaps even the q, t waves
+    config: dict,
+        process configurations,
 
     Returns:
     --------
     morph: ndarray
     """
-    R_pos = int((FeatureCfg.beat_winL + FeatureCfg.beat_winR) / 2)
+    R_pos = int((config.beat_winL + config.beat_winR) / 2)
 
     R_value = beat[R_pos]
     morph = np.zeros((4,))
