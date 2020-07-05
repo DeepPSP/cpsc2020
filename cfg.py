@@ -6,6 +6,7 @@ from easydict import EasyDict as ED
 
 __all__ = [
     "PreprocessCfg",
+    "FeatureCfg",
     "TrainCfg",
 ]
 

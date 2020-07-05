@@ -1,7 +1,10 @@
 """
 """
+import time
+from copy import deepcopy
 from numbers import Real
 from typing import Union, Optional, List, Tuple, NoReturn
+from easydict import EasyDict as ED
 
 import numpy as np
 
@@ -183,6 +186,34 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:int, sp
     return ret, ret_traceback
 
 
+def intervals_intersection(interval_list:GeneralizedInterval, drop_degenerate:bool=True) -> Interval:
+    """ finished, checked,
+
+    calculate the intersection of all intervals in interval_list
+
+    Parameters:
+    -----------
+    interval_list: GeneralizedInterval,
+        the list of intervals to yield intersection
+    drop_degenerate: bool, default True,
+        whether or not drop the degenerate intervals, i.e. intervals with length 0
+    
+    Returns:
+    --------
+    Interval, the intersection of all intervals in `interval_list`
+    """
+    if [] in interval_list:
+        return []
+    for item in interval_list:
+        item.sort()
+    potential_start = max([item[0] for item in interval_list])
+    potential_end = min([item[-1] for item in interval_list])
+    if (potential_end > potential_start) or (potential_end == potential_start and not drop_degenerate):
+        return [potential_start, potential_end]
+    else:
+        return []
+
+
 def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:int=4) -> str:
     """
     """
@@ -226,6 +257,11 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
         sampling frequency of `s`
     use_idx: bool, default False,
         use idx instead of time for the x-axis
+    kwargs: dict,
+        keyword arguments, including
+        - "waves": Dict[str, np.ndarray], consisting of
+            "ppeaks", "qpeaks", "rpeaks", "speaks", "tpeaks",
+            "ponsets", "poffsets", "qonsets", "soffsets", "tonsets", "toffsets"
 
     contributors: Jeethan, and WEN Hao
     """
@@ -234,6 +270,7 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
     default_fig_sz = 120
     line_len = fs * 25  # 25 seconds
     nb_lines, residue = divmod(len(s), line_len)
+    waves = ED(kwargs.get("waves", ED()))
     if residue > 0:
         nb_lines += 1
     for idx in range(nb_lines):
@@ -255,6 +292,11 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
         ax.yaxis.set_minor_locator(plt.MultipleLocator(0.1))
         ax.grid(which='major', linestyle='-', linewidth='0.5', color='red')
         ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+        if waves:
+            for w, w_indices in waves.items():
+                epoch_w = [wi-idx_start for wi in w_indices if idx_start <= wi < idx_end]
+                for wi in epoch_w:
+                    ax.axvline(wi, linestyle='dashed', linewidth=0.7, color='magenta')
         ax.set_xlim(secs[0], secs[-1])
         ax.set_ylim(-1.5, 1.5)
         if use_idx:
