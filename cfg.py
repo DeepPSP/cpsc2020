@@ -12,15 +12,15 @@ __all__ = [
 
 
 PreprocessCfg = ED()
-PreprocessCfg.rsmp_fs = 400  # Hz, CPSC data fs
+PreprocessCfg.fs = 400  # Hz, CPSC data fs
 PreprocessCfg.remove_baseline = True
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms
 PreprocessCfg.baseline_window2 = 240  # corr. to 600 ms
 PreprocessCfg.filter_signal = True
 PreprocessCfg.filter_band = [0.5,45]
-PreprocessCfg.parallel_len = 600  # second
-PreprocessCfg.parallel_overlap = 10  # second
+PreprocessCfg.parallel_epoch_len = 600  # second
+PreprocessCfg.parallel_epoch_overlap = 10  # second
 PreprocessCfg.parallel_keep_tail = True
 PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins' or empty string ''
 """
@@ -30,11 +30,14 @@ for qrs detectors:
 
 
 FeatureCfg = ED()
+FeatureCfg.fs = PreprocessCfg.fs  # Hz, CPSC data fs
 FeatureCfg.beat_winL = 100  # corr. to 250 ms
 FeatureCfg.beat_winR = 100  # corr. to 250 ms
 FeatureCfg.features = ['wavelet', 'rr', 'morph',]
 FeatureCfg.wt_family = 'db1'
 FeatureCfg.wt_level = 3
+FeatureCfg.rr_local_range = 10  # 10 r peaks
+FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 
 
 TrainCfg = ED()

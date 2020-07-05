@@ -7,6 +7,8 @@ References:
 from copy import deepcopy
 from typing import Optional
 import operator
+import multiprocessing as mp
+from functools import reduce
 
 import pywt
 import numpy as np
@@ -15,7 +17,12 @@ from easydict import EasyDict as ED
 from cfg import FeatureCfg
 
 
-__all__ = ["compute_ecg_features"]
+__all__ = [
+    "compute_ecg_features",
+    "compute_wavelet_descriptor",
+    "compute_rr_descriptor",
+    "compute_morph_descriptor",
+]
 
 
 def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=None) -> np.ndarray:
@@ -46,10 +53,10 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     if 'wavelet' in cfg.features:
         tmp = []
         for beat in beats:
-            tmp.append(np.array(compute_wavelet_descriptor(beat, cfg.wt_family, cfg.wt_level3)))
+            tmp.append(np.array(compute_wavelet_descriptor(beat, cfg)))
         features = np.concatenate((features, np.array(tmp)), axis=1)
     if 'rr' in cfg.features:
-        tmp = compute_rr_descriptor(rpeaks)
+        tmp = compute_rr_descriptor(rpeaks, cfg)
         features = np.concatenate((features, tmp), axis=1)
     if 'morph' in cfg.features:
         tmp = []
@@ -60,17 +67,15 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     return features
 
 
-def compute_wavelet_descriptor(beat:np.ndarray, family:str='db1', level:int=3) -> np.ndarray:
+def compute_wavelet_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     """
 
     Parameters:
     -----------
     beat: ndarray,
         a window properly covers the qrs complex, perhaps even the q, t waves
-    family: str, default 'db1',
-        name of the wavelet
-    level: int, default 3,
-        decomposition level
+    config: dict, optional,
+        process configuration,
     
     Returns:
     --------
@@ -82,67 +87,99 @@ def compute_wavelet_descriptor(beat:np.ndarray, family:str='db1', level:int=3) -
     [1] https://pywavelets.readthedocs.io/en/latest/ref/dwt-discrete-wavelet-transform.html?highlight=wavedec#multilevel-decomposition-using-wavedec
     [2] https://en.wikipedia.org/wiki/Wavelet
     """
-    wave_family = pywt.Wavelet(family)
-    coeffs = pywt.wavedec(beat, wave_family, level=level)[0]
+    wave_family = pywt.Wavelet(config.wt_family)
+    coeffs = pywt.wavedec(beat, wave_family, level=config.wt_level)[0]
     return coeffs
 
 
-def compute_rr_descriptor(rpeaks:np.ndarray) -> np.ndarray:
+def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.ndarray:
     """
 
     Parameters:
     -----------
     rpeaks: ndarray,
         indices of R peaks
+    config: dict, optional,
+        extra process configuration,
+        `FeatureCfg` will `update` this `config`
 
     Returns:
     --------
-    features_RR: ndarray
+    features_rr: ndarray
     """
-    pre_R = np.array([])
-    post_R = np.array([])
-    local_R = np.array([])
-    global_R = np.array([])
+    cfg = deepcopy(FeatureCfg)
+    cfg.update(config or {})
+    
+    # NOTE that for np.diff:
+    # The first difference is given by ``out[n] = a[n+1] - a[n]``
+    rr_intervals = np.diff(rpeaks)
 
-    # Pre_R and Post_R
-    pre_R = np.append(pre_R, 0)
-    post_R = np.append(post_R, rpeaks[1] - rpeaks[0])
+    pre_rr = _compute_pre_rr(rr_intervals)
+    post_rr = _compute_post_rr(rr_intervals)
+    local_rr = _compute_local_rr(pre_rr, cfg)
+    global_rr = _compute_global_rr(rpeaks, pre_rr, cfg)
 
-    for i in range(1, len(rpeaks)-1):
-        pre_R = np.append(pre_R, rpeaks[i] - rpeaks[i-1])
-        post_R = np.append(post_R, rpeaks[i+1] - rpeaks[i])
-
-    pre_R[0] = pre_R[1]
-    pre_R = np.append(pre_R, rpeaks[-1] - rpeaks[-2])  
-
-    post_R = np.append(post_R, post_R[-1])
-
-    # Local_R: AVG from last 10 pre_R values
-    for i in range(0, len(rpeaks)):
-        num = 0
-        avg_val = 0
-        for j in range(-9, 1):
-            if j+i >= 0:
-                avg_val = avg_val + pre_R[i+j]
-                num = num +1
-        local_R = np.append(local_R, avg_val / float(num))
-
-	# Global R AVG: from full past-signal
-    # TODO: AVG from past 5 minutes = 108000 samples
-    global_R = np.append(global_R, pre_R[0])    
-    for i in range(1, len(rpeaks)):
-        num = 0
-        avg_val = 0
-
-        for j in range( 0, i):
-            if (rpeaks[i] - rpeaks[j]) < 108000:
-                avg_val = avg_val + pre_R[j]
-                num = num + 1
-        #num = i
-        global_R = np.append(global_R, avg_val / float(num))
-    features_RR = np.column_stack((pre_R, post_R, local_R, global_R))
+    features_rr = np.column_stack((pre_rr, post_rr, local_rr, global_rr))
             
-    return features_RR
+    return features_rr
+
+def _compute_pre_rr(rr_intervals:np.ndarray) -> np.ndarray:
+    """
+    """
+    try:
+        pre_rr = np.append(rr_intervals[0], rr_intervals)
+    except:  # in case empty rr_intervals
+        pre_rr = np.array([], dtype=int)
+    return pre_rr
+
+def _compute_post_rr(rr_intervals:np.ndarray) -> np.ndarray:
+    """
+    """
+    try:
+        post_rr = np.append(rr_intervals, rr_intervals[-1])
+    except:  # in case empty rr_intervals
+        post_rr = np.array([], dtype=int)
+    return post_rr
+
+def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
+    """
+    """
+    local_rr = np.array([], dtype=int)
+    for i in range(config.rr_local_range-1):  # head
+        local_rr = np.append(local_rr, np.mean(prev_rr[:i+1]))
+    local_rr = np.append(
+        local_rr,
+        np.mean(np.array([prev_rr[i:len(prev_rr)-(config.rr_local_range-i-1)] for i in range(config.rr_local_range)]), axis=0)
+    )
+    return local_rr
+
+def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:int, epoch_end:int, global_range:int) -> np.ndarray:
+    """
+    """
+    global_rr = []
+    for idx in range(epoch_start,epoch_end):
+        nb_samples = len(np.where(rpeaks[idx]-rpeaks[:idx]<global_range)[0])
+        global_rr.append(np.mean(prev_rr[idx-nb_samples:idx+1]))
+    return global_rr
+
+def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.ndarray:
+    """
+    """
+    split_indices = [0]
+    one_hour = config.fs*3600
+    for i in range(1, rpeaks[-1]//one_hour):
+        split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
+    if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
+        split_indices.append(len(rpeaks))
+    
+    cpu_num = max(1, mp.cpu_count()-3)
+    with mp.Pool(processes=cpu_num) as pool:
+        result = pool.starmap(
+            _compute_global_rr_epoch,
+            [(rpeaks, prev_rr, split_indices[idx], split_indices[idx+1], config.rr_global_range) for idx in range(len(split_indices)-1)]
+        )
+    global_rr = np.array(reduce(lambda a,b: a+b, result))
+    return global_rr
 
 
 def compute_morph_descriptor(beat:np.ndarray) -> np.ndarray:

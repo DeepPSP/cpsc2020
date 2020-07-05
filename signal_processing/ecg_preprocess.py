@@ -101,7 +101,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     cfg = deepcopy(PreprocessCfg)
     cfg.update(config or {})
 
-    if fs != cfg.rsmp_fs:
+    if fs != cfg.fs:
         filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
 
     # remove baseline
@@ -125,7 +125,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
 
     if cfg.rpeaks:
         detector = QRS_DETECTORS[cfg.rpeaks.lower()]
-        rpeaks = detector(sig=filtered_ecg, fs=fs)
+        rpeaks = detector(sig=filtered_ecg, fs=fs).astype(int)
     else:
         rpeaks = np.array([], dtype=int)
 
@@ -164,8 +164,8 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     cfg = deepcopy(PreprocessCfg)
     cfg.update(config or {})
 
-    epoch_len = int(cfg.parallel_len * fs)
-    epoch_overlap_half = int(cfg.parallel_overlap * fs) // 2
+    epoch_len = int(cfg.parallel_epoch_len * fs)
+    epoch_overlap_half = int(cfg.parallel_epoch_overlap * fs) // 2
     epoch_overlap = 2 * epoch_overlap_half
     epoch_forward = epoch_len - epoch_overlap
 
@@ -189,7 +189,8 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     cpu_num = max(1, mp.cpu_count()-3)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
-            preprocess_signal, [(e, fs, cfg) for e in l_epoch]
+            func=preprocess_signal,
+            iterable=[(e, fs, cfg) for e in l_epoch],
         )
 
     if cfg.parallel_keep_tail:

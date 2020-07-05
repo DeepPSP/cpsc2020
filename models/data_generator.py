@@ -177,6 +177,38 @@ class CPSC2020(object):
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
+    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None, **kwargs) -> np.ndarray:
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        sampfrom: int, optional,
+            start index of the data to be loaded
+        sampto: int, optional,
+            end index of the data to be loaded
+        keep_dim: bool, default True,
+            whether or not to flatten the data of shape (n,1)
+        
+        Returns:
+        --------
+        rpeaks: ndarray,
+            the indices of rpeaks
+        """
+        preprocess = preprocess or self.allowed_preprocess
+        assert all([item in self.allowed_preprocess for item in preprocess])
+        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocess)}"
+        rec_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
+        rpeaks = loadmat(rec_fp)['rpeaks'].astype(int)
+        sf, st = (sampfrom or 0), (sampto or len(rpeaks))
+        rpeaks = rpeaks[np.where( (rpeaks>=sf) & (rpeaks<st) )[0]]
+        if not keep_dim:
+            rpeaks = rpeaks.flatten()
+        return rpeaks
+
+
     def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
         """ finished, checked,
 
