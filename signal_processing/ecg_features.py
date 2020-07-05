@@ -45,8 +45,10 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     cfg = deepcopy(FeatureCfg)
     cfg.update(config or {})
 
+    filtered_rpeaks = rpeaks[np.where( (rpeaks>=cfg.beat_winL) & (rpeaks<len(sig)-cfg.beat_winR) )[0]]
+
     beats = []
-    for r in rpeaks:
+    for r in filtered_rpeaks:
         beats.append(sig[r-cfg.beat_winL:r+cfg.beat_winR])
     features = np.empty((len(beats), 0))
 
@@ -56,7 +58,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
             tmp.append(np.array(compute_wavelet_descriptor(beat, cfg)))
         features = np.concatenate((features, np.array(tmp)), axis=1)
     if 'rr' in cfg.features:
-        tmp = compute_rr_descriptor(rpeaks, cfg)
+        tmp = compute_rr_descriptor(filtered_rpeaks, cfg)
         features = np.concatenate((features, tmp), axis=1)
     if 'morph' in cfg.features:
         tmp = []
