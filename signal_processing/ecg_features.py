@@ -178,10 +178,20 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
     cpu_num = max(1, mp.cpu_count()-3)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
-            _compute_global_rr_epoch,
-            [(rpeaks, prev_rr, split_indices[idx], split_indices[idx+1], config.rr_global_range) for idx in range(len(split_indices)-1)]
+            func=_compute_global_rr_epoch,
+            iterable=[
+                (
+                    rpeaks,
+                    prev_rr,
+                    split_indices[idx],
+                    split_indices[idx+1],
+                    config.rr_global_range
+                )\
+                    for idx in range(len(split_indices)-1)
+            ],
         )
-    global_rr = np.array(reduce(lambda a,b: a+b, result))
+    list_addition = lambda a,b: a+b
+    global_rr = np.array(reduce(list_addition, result))
     return global_rr
 
 
