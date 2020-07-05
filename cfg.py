@@ -23,6 +23,10 @@ PreprocessCfg.parallel_len = 600  # second
 PreprocessCfg.parallel_overlap = 10  # second
 PreprocessCfg.parallel_keep_tail = True
 PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins' or empty string ''
+"""
+for qrs detectors:
+    `xqrs` sometimes detects s peak (valley) as r peak
+"""
 
 
 FeatureCfg = ED()

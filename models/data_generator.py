@@ -1,6 +1,7 @@
 """
 """
 import os
+import random
 import argparse
 from typing import Union, Optional, Any, List, Dict, NoReturn
 from numbers import Real
@@ -59,6 +60,7 @@ class CPSC2020(object):
     -----------
     [1] http://www.icbeb.org/CPSC2020.html
     [2] https://github.com/mondejar/ecg-classification
+    [3] https://github.com/PIA-Group/BioSPPy
     """
     def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
         """ finished, to be improved,
@@ -79,6 +81,8 @@ class CPSC2020(object):
         self.spacing = 1000/self.fs
         self.rec_ext = '.mat'
         self.ann_ext = '.mat'
+
+        self._to_mv = False
 
         self.nb_records = 10
         self.all_records = ["A{0:02d}".format(i) for i in range(1,1+self.nb_records)]
@@ -107,7 +111,7 @@ class CPSC2020(object):
         os.makedirs(self.feature_dir, exist_ok=True)
     
 
-    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None) -> np.ndarray:
+    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocess:Optional[List[str]]=None, **kwargs) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -135,7 +139,9 @@ class CPSC2020(object):
             rec_fp = os.path.join(self.preprocess_dir, f"{rec_name}{self.rec_ext}")
         else:
             rec_fp = os.path.join(self.data_dir, f"{rec_name}{self.rec_ext}")
-        data = (1000 * loadmat(rec_fp)['ecg']).astype(int)
+        data = loadmat(rec_fp)['ecg']
+        if self._to_mv or kwargs.get("to_mv", False):
+            data = (1000 * data).astype(int)
         sf, st = (sampfrom or 0), (sampto or len(data))
         data = data[sf:st]
         if not keep_dim:
