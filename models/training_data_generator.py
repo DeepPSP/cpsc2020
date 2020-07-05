@@ -10,6 +10,7 @@ from scipy.io import loadmat, savemat
 from easydict import EasyDict as ED
 
 import misc
+from cfg import PreprocessCfg, FeatureCfg
 from signal_processing.ecg_preprocess import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 
@@ -335,7 +336,7 @@ class CPSC2020(object):
         raise NotImplementedError
 
     
-    def train_test_split(self, test_rec_num:int=2) -> dict:
+    def train_test_split_rec(self, test_rec_num:int=2) -> Dict[str, List[str]]:
         """ finished, checked,
 
         split the records into train set and test set
@@ -370,6 +371,33 @@ class CPSC2020(object):
         })
         
         return split_res
+
+
+    def train_test_split_data(self, test_rec_num:int=2, config:Optional[ED]=None) -> Tuple[np.ndarray]:
+        """ finished, checked,
+
+        split the data (and the annotations) into train set and test set
+
+        Parameters:
+        -----------
+        test_rec_num: int,
+            number of records for the test set
+
+        Returns:
+        --------
+        x_train, y_train, x_test, y_test: dict,
+            with items `train`, `test`, both being list of record names
+        """
+        split_rec = self.train_test_split_rec(test_rec_num)
+        X, y = [], []
+        for rec in split_rec.train:
+            data = self.load_data(
+                rec=rec,
+                preprocess=data_gen.allowed_preprocess,
+                keep_dim=False
+            )
+
+
 
 
 if __name__ == "__main__":
