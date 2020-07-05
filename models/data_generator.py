@@ -347,6 +347,12 @@ if __name__ == "__main__":
         dest="db_dir",
     )
     ap.add_argument(
+        "-w", "--working-dir",
+        type=str, default=None,
+        help="working directory",
+        dest="working_dir",
+    )
+    ap.add_argument(
         "-p", "--preprocess",
         type=str, default="baseline,bandpass",
         help="process to perform, separated by ','",
@@ -358,13 +364,24 @@ if __name__ == "__main__":
         help="records (name or numbering) to perform preprocess, separated by ','; if not set, all records will be preprocessed",
         dest="records",
     )
+    ap.add_argument(
+        "-v", "--verbose",
+        type=int, default=2,
+        help="verbosity",
+        dest="verbose",
+    )
     # TODO: add more args
 
     kwargs = vars(ap.parse_args())
     print("passed arguments:")
     print(f"{dict_to_str(kwargs)}")
-    
-    data_gen = CPSC2020(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
+
+    # data_gen = CPSC2020(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
+    data_gen = CPSC2020(
+        db_dir=kwargs.get("db_dir"),
+        working_dir=kwargs.get("working_dir"),
+        verbose=kwargs.get("verbose"),
+    )
     preprocess = kwargs.get("preprocess", "").split(",") or data_gen.allowed_preprocess
-    for rec in (kwargs.get("records",None) or data_gen.all_records):
+    for rec in (kwargs.get("records", None) or data_gen.all_records):
         data_gen.preprocess_data(rec, preprocess=preprocess)
