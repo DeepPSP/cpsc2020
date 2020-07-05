@@ -12,7 +12,7 @@ THR = 0.15
 DATA_PATH = '../data/'
 REF_PATH = '../label/'
 
-def load_ans()：
+def load_ans():
     """
     Function for loading the detection results and references
     Input:

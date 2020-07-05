@@ -208,6 +208,8 @@ def compute_morph_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     Returns:
     --------
     morph: ndarray
+
+    TODO: make intervals configurable
     """
     R_pos = int((config.beat_winL + config.beat_winR) / 2)
 
