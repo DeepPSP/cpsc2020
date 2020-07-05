@@ -4,6 +4,7 @@ References:
 [1] https://github.com/mondejar/ecg-classification
 [2] to add
 """
+import os
 from copy import deepcopy
 from typing import Optional
 import operator
@@ -12,6 +13,7 @@ from functools import reduce
 
 import pywt
 import numpy as np
+from scipy.io import savemat
 from easydict import EasyDict as ED
 
 from cfg import FeatureCfg
@@ -25,7 +27,7 @@ __all__ = [
 ]
 
 
-def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=None) -> np.ndarray:
+def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str="npy") -> np.ndarray:
     """
 
     Parameters:
@@ -65,6 +67,14 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
         for beat in beats:
             tmp.append(np.array(compute_morph_descriptor(beat, cfg)))
         features = np.concatenate((features, np.array(tmp)), axis=1)
+
+    if save_dir:
+        save_suffix = "-".join(cfg.features)
+        save_path = os.path.join(save_dir, f"ecg-features-{save_suffix}.{save_fmt.lower()}")
+        if save_fmt.lower() == "npy":
+            np.save(save_path, features)
+        elif save_fmt.lower() == "mat":
+            savemat(save_path, {"features": features}, format='5')
 
     return features
 

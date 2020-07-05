@@ -13,11 +13,12 @@ __all__ = [
 
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC data fs
-PreprocessCfg.remove_baseline = True
+PreprocessCfg.preprocess = ['baseline', 'bandpass',]
+# PreprocessCfg.remove_baseline = True
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms
 PreprocessCfg.baseline_window2 = 240  # corr. to 600 ms
-PreprocessCfg.filter_signal = True
+# PreprocessCfg.filter_signal = True
 PreprocessCfg.filter_band = [0.5,45]
 PreprocessCfg.parallel_epoch_len = 600  # second
 PreprocessCfg.parallel_epoch_overlap = 10  # second
