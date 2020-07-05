@@ -28,11 +28,8 @@ def train(**config):
     cfg.update(config or {})
     verbose = cfg.get("verbose", 0)
     
-    data_gen = CPSC2020(db_dir=TrainCfg.training_data, working_dir=TrainCfg.training_workdir)
-    train_records, test_records = data_gen.train_test_split(TrainCfg.test_rec_num)
-    
-    dtrain = xgb.DMatrix(x_train, label=y_train)
-    dtest = xgb.DMatrix(x_test, label=y_test)
+    data_gen = CPSC2020(db_dir=cfg.training_data, working_dir=cfg.training_workdir)
+    x_train, y_train, x_test, y_test = data_gen.train_test_split_data(cfg.test_rec_num, config)
 
     # params_grid = {
     #     'max_depth':6,
@@ -111,7 +108,7 @@ def train(**config):
     if model is None:
         model = best_model
 
-    joblib.dump(model, config.model_path)
+    joblib.dump(model, config.model_path.ml)
 
 
 if __name__ == "__main__":

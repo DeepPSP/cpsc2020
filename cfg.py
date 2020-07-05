@@ -11,6 +11,7 @@ __all__ = [
 ]
 
 
+#--------------------------------------------------------------
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC data fs
 PreprocessCfg.preprocesses = ['baseline', 'bandpass',]
@@ -26,10 +27,12 @@ PreprocessCfg.parallel_keep_tail = True
 PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins' or empty string ''
 """
 for qrs detectors:
-    `xqrs` sometimes detects s peak (valley) as r peak
+    `xqrs` sometimes detects s peak (valley) as r peak,
+    but according to Jeethan, `xqrs` has the best performance
 """
 
 
+#--------------------------------------------------------------
 FeatureCfg = ED()
 FeatureCfg.fs = PreprocessCfg.fs  # Hz, CPSC data fs
 FeatureCfg.beat_winL = 100  # corr. to 250 ms
@@ -41,6 +44,7 @@ FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 
 
+#--------------------------------------------------------------
 TrainCfg = ED()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TrainCfg.model_path = ED({

@@ -86,4 +86,9 @@ def train(**config):
     """
     NOT finished
     """
-    pass
+    cfg = deepcopy(TrainCfg)
+    cfg.update(config or {})
+    verbose = cfg.get("verbose", 0)
+
+    data_gen = CPSC2020(db_dir=cfg.training_data, working_dir=cfg.training_workdir)
+    

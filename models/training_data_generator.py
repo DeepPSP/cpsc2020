@@ -262,7 +262,7 @@ class CPSC2020(object):
         return rpeaks
 
 
-    def load_features(self, rec:Union[int,str], features:List[str], preprocesses:Optional[List[str]]=None) -> np.ndarray:
+    def load_features(self, rec:Union[int,str], features:List[str], preprocesses:Optional[List[str]]) -> np.ndarray:
         """
 
         Parameters:
@@ -521,7 +521,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int=2, config:Optional[ED]=None) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]]) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set
@@ -536,16 +536,16 @@ class CPSC2020(object):
         x_train, y_train, x_test, y_test: dict,
             with items `train`, `test`, both being list of record names
         """
-        cfg = deepcopy(PreprocessCfg)
-        cfg.update(config or {})
+        features = self._normalize_feature_names(features)
+        preprocesses = self._normalize_preprocess_names(preprocesses)
         split_rec = self.train_test_split_rec(test_rec_num)
         x = ED({"train": np.array([]), "test": np.array([])})
         y = ED({"train": np.array([]), "test": np.array([])})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
-                feature_mat = self.load_features(rec, features=cfg.features, preprocesses=cfg.preprocesses)
+                feature_mat = self.load_features(rec, features=features, preprocesses=preprocesses)
                 x[subset] = np.append(x[subset], feature_mat)
-                beat_ann = self.load_beat_ann(rec, preprocesses=cfgpreprocesses)
+                beat_ann = self.load_beat_ann(rec, preprocesses=preprocesses)
                 y[subset] = np.append(y[subset], beat_ann)
         return x["train"], y["train"], x["test"], y["test"]
 
@@ -574,8 +574,14 @@ if __name__ == "__main__":
     ap.add_argument(
         "-p", "--preprocesses",
         type=str, default="baseline,bandpass",
-        help="process to perform, separated by ','",
+        help="processes to perform, separated by ','",
         dest="preprocesses",
+    )
+    ap.add_argument(
+        "-f", "--features",
+        type=str, default="wavelet,rr,morph",
+        help="features to extract, separated by ','",
+        dest="features",
     )
     ap.add_argument(
         "-r", "--rec",
