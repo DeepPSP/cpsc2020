@@ -13,7 +13,7 @@ __all__ = [
 
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC data fs
-PreprocessCfg.preprocess = ['baseline', 'bandpass',]
+PreprocessCfg.preprocesses = ['baseline', 'bandpass',]
 # PreprocessCfg.remove_baseline = True
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms

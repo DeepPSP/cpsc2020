@@ -105,7 +105,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
 
     # remove baseline
-    if 'baseline' in cfg.preprocess:
+    if 'baseline' in cfg.preprocesses:
         window1 = 2 * (cfg.baseline_window1 // 2) + 1  # window size must be odd
         window2 = 2 * (cfg.baseline_window2 // 2) + 1
         baseline = median_filter(filtered_ecg, size=window1, mode='nearest')
@@ -113,7 +113,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         filtered_ecg = filtered_ecg - baseline
     
     # filter signal
-    if 'bandpass' in cfg.preprocess:
+    if 'bandpass' in cfg.preprocesses:
         filtered_ecg = filter_signal(
             signal=filtered_ecg,
             ftype='FIR',
