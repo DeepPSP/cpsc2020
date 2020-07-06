@@ -43,6 +43,7 @@ FeatureCfg.wt_level = 3
 FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 FeatureCfg.label_map = dict(N=0,S=1,V=2)
+FeatureCfg.beat_ann_bias_thr = int(0.15*TrainCfg.fs)
 
 
 #--------------------------------------------------------------
@@ -56,7 +57,7 @@ TrainCfg.model_path = ED({
 TrainCfg.SEED = 42
 TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 2
-TrainCfg.bias_threshold = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
+TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.max_iter = 10
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")

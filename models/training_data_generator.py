@@ -253,7 +253,7 @@ class CPSC2020(object):
         return feature_mat
 
 
-    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None) -> np.ndarray:
+    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None, augment:bool=False) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -275,16 +275,19 @@ class CPSC2020(object):
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
-        rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
-        rpeaks = loadmat(rpeaks_fp)['rpeaks'].astype(int)
+        if augment:
+            rpeaks_fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.rec_ext}")
+        else:
+            rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
+        rpeaks = loadmat(rpeaks_fp)['rpeaks'].flatten().astype(int)
         sf, st = (sampfrom or 0), (sampto or np.inf)
         rpeaks = rpeaks[np.where( (rpeaks>=sf) & (rpeaks<st) )[0]]
-        if not keep_dim:
-            rpeaks = rpeaks.flatten()
+        if keep_dim:
+            rpeaks = np.atleast_2d(rpeaks).T
         return rpeaks
 
 
-    def load_features(self, rec:Union[int,str], features:List[str], preprocesses:Optional[List[str]]) -> np.ndarray:
+    def load_features(self, rec:Union[int,str], features:List[str], preprocesses:Optional[List[str]], augment:bool=True, force_recompute:bool=False) -> np.ndarray:
         """
 
         Parameters:
@@ -296,8 +299,8 @@ class CPSC2020(object):
             list of feature types computed, should be sublist of `self.allowd_features`
         preprocesses: list of str,
             type of preprocesses performed, should be sublist of `self.allowed_preprocesses`
-        save: bool, default False,
-            whether or not save the features to the working directory
+        augment: bool, default True,
+        force_recompute: bool = False
 
         Returns:
         --------
@@ -310,11 +313,11 @@ class CPSC2020(object):
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
         feature_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}{self.rec_ext}")
-        try:
+        if os.path.isfile(feature_fp) and force_recompute:
             print("try loading precomputed features...")
             feature_mat = loadmat(feature_fp)['features']
-        except FileNotFoundError:
-            print("no precomputed data exist")
+        else:
+            print("recompute features")
             feature_mat = self.compute_features(rec, features, preprocesses, save=True)
         return feature_mat
 
@@ -370,18 +373,18 @@ class CPSC2020(object):
                 preprocesses=preprocesses,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
-            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map, augment=augment, save=True)
+            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_ann_bias_thr, FeatureCfg.label_map, augment=augment, save=True)
         return beat_ann
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int], augment:bool=True, save:bool=False) -> np.ndarray:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], bias_thr:Real, label_map:Dict[str,int], augment:bool=True, save:bool=False) -> np.ndarray:
         """
 
         to write
         """
         one_hour = self.fs*3600
         split_indices = [0]
-        for i in range(1, int(rpeaks[-1]+2*beat_winL)//one_hour):
+        for i in range(1, int(rpeaks[-1]+bias_thr)//one_hour):
             split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
         if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
             split_indices.append(len(rpeaks))
@@ -391,22 +394,22 @@ class CPSC2020(object):
             p = {}
             p['rpeaks'] = rpeaks[split_indices[idx]:split_indices[idx+1]]
             p['ann'] = {
-                k: v[np.where( (v>=p['rpeaks'][0]-beat_winL-1) & (v<p['rpeaks'][-1]+beat_winR+1) )[0]] for k, v in ann.items()
+                k: v[np.where( (v>=p['rpeaks'][0]-bias_thr-1) & (v<p['rpeaks'][-1]+bias_thr+1) )[0]] for k, v in ann.items()
             }
-            if idx == 0:
-                p['prev_r'] = -1
-            else:
-                p['prev_r'] = rpeaks[split_indices[idx]-1]
-            if idx == len(split_indices)-2:
-                p['next_r'] = np.inf
-            else:
-                p['next_r'] = rpeaks[split_indices[idx+1]]
-            epoch_params.append(p)
+            # if idx == 0:
+            #     p['prev_r'] = -1
+            # else:
+            #     p['prev_r'] = rpeaks[split_indices[idx]-1]
+            # if idx == len(split_indices)-2:
+            #     p['next_r'] = np.inf
+            # else:
+            #     p['next_r'] = rpeaks[split_indices[idx+1]]
+            # epoch_params.append(p)
 
         if augment:
-            epoch_func = _ann_to_beat_ann_epoch_v2
+            epoch_func = _ann_to_beat_ann_epoch_v3
         else:
-            epoch_func = _ann_to_beat_ann_epoch
+            epoch_func = _ann_to_beat_ann_epoch_v1
         cpu_num = max(1, mp.cpu_count()-3)
         with mp.Pool(processes=cpu_num) as pool:
             result = pool.starmap(
@@ -415,10 +418,9 @@ class CPSC2020(object):
                     (
                         item['rpeaks'],
                         item['ann'],
-                        beat_winL,
-                        beat_winR,
-                        item['prev_r'],
-                        item['next_r'],
+                        bias_thr,
+                        # item['prev_r'],
+                        # item['next_r'],
                     )\
                         for item in epoch_params
                 ],
@@ -454,7 +456,7 @@ class CPSC2020(object):
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         to_save_mdict = {
-            "rpeaks": augmented_rpeaks.astype(int).flatten(),
+            "rpeaks": augmented_rpeaks.astype(int),
             "beat_ann": beat_ann,
             # "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
             "beat_ann_int": np.vectorize(lambda a:label_map[a])(beat_ann)
@@ -652,22 +654,21 @@ class CPSC2020(object):
         return x["train"], y["train"], x["test"], y["test"]
 
 
-def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:Real, beat_winR:Real, prev_r:Real, next_r:Real) -> Dict[str, np.ndarray]:
+def _ann_to_beat_ann_epoch_v1(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> Dict[str, np.ndarray]:
     """
     to write
     """
     beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     for idx, r in enumerate(rpeaks):
-        if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
+        if any([abs(r-p) < bias_thr for p in ann['SPB_indices']]):
             beat_ann[idx] = 'S'
-        elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
+        elif any([abs(r-p) < bias_thr for p in ann['PVC_indices']]):
             beat_ann[idx] = 'V'
     ann_matched = ann.copy()
     retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
     return retval
 
-
-def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:Real, beat_winR:Real, prev_r:Real, next_r:Real) -> Dict[str, np.ndarray]:
+def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> Dict[str, np.ndarray]:
     """
     to write
     """
@@ -677,7 +678,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
     for idx_r, r in enumerate(rpeaks):
         found = False
         for idx_a, a in enumerate(_ann['SPB_indices']):
-            if -beat_winL <= r-a < beat_winR:
+            if abs(r-a) < bias_thr:
                 found = True
                 beat_ann[idx_r] = 'S'
                 del _ann['SPB_indices'][idx_a]
@@ -685,7 +686,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
         if found:
             continue
         for idx_a, a in enumerate(_ann['PVC_indices']):
-            if -beat_winL <= r-a < beat_winR:
+            if abs(r-a) < bias_thr:
                 found = True
                 beat_ann[idx_r] = 'V'
                 del _ann['PVC_indices'][idx_a]
@@ -706,6 +707,27 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
     # retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
     # return retval
 
+def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> Dict[str, np.ndarray]:
+    """
+    """
+    beat_ann = [["N", -1] for _ in range(len(rpeaks))]
+    for idx_r, r in enumerate(rpeaks):
+        dist_to_spb = np.abs(r-ann["SPB_indices"])
+        dist_to_pvc = np.abs(r-ann["PVC_indices"])
+        argmin = np.argmin([np.min(dist_to_spb), np.min(dist_to_pvc), bias_thr])
+        if argmin == 2:
+            pass
+        elif argmin == 1:
+            beat_ann[idx_r] = ["V", np.argmin(dist_to_pvc)]
+        elif argmin == 0:
+            beat_ann[idx_r] = ["S", np.argmin(dist_to_spb)]
+    ann_matched = {
+        "SPB_indices": np.array([ann["SPB_indices"][item[1] for item in beat_ann if item[0] == 'S']),
+        "PVC_indices": np.array([ann["PVC_indices"][item[1] for item in beat_ann if item[0] == 'V']),
+    }
+    beat_ann = np.array([item[0] for item in beat_ann], dtype='<U1')
+    retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
+    return retval
 
 
 if __name__ == "__main__":
