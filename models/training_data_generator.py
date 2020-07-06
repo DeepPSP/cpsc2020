@@ -370,7 +370,7 @@ class CPSC2020(object):
         return beat_ann
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int], save:bool=False) -> np.ndarray:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int], augment:bool=True, save:bool=False) -> np.ndarray:
         """
         """
         one_hour = self.fs*3600
@@ -389,10 +389,14 @@ class CPSC2020(object):
             }
             epoch_params.append(p)
 
+        if augment:
+            epoch_func = _ann_to_beat_ann_epoch_v2
+        else:
+            epoch_func = _ann_to_beat_ann_epoch
         cpu_num = max(1, mp.cpu_count()-3)
         with mp.Pool(processes=cpu_num) as pool:
             result = pool.starmap(
-                func=_ann_to_beat_ann_epoch,
+                func=epoch_func,
                 iterable=[
                     (
                         item['rpeaks'],
@@ -403,8 +407,8 @@ class CPSC2020(object):
                         for item in epoch_params
                 ],
             )
-        augmented_rpeaks = np.concatenate((item[0] for item in result))
-        beat_ann = np.concatenate((item[1] for item in result))
+        augmented_rpeaks = np.concatenate((item['augmented_rpeaks'] for item in result))
+        beat_ann = np.concatenate((item['beat_ann'] for item in result))
         # list_addition = lambda a,b: a+b
         # beat_ann = reduce(list_addition, result)
 
@@ -417,6 +421,8 @@ class CPSC2020(object):
         
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        if augment:
+            rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         to_save_mdict = {
             "rpeaks": rpeaks,
@@ -656,7 +662,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
     sorted_indices = np.argsort(augmented_rpeaks)
     augmented_rpeaks = augmented_rpeaks[sorted_indices]
     beat_ann = beat_ann[sorted_indices]
-    
+
     retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
     return retval
 
