@@ -4,10 +4,12 @@ import os
 import random
 import argparse
 from copy import deepcopy
+from functools import reduce
 from typing import Union, Optional, Any, List, Tuple, Dict, NoReturn
 from numbers import Real
 import numpy as np
 from scipy.io import loadmat, savemat
+import multiprocessing as mp
 from easydict import EasyDict as ED
 
 import misc
@@ -357,12 +359,45 @@ class CPSC2020(object):
     def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int]) -> np.ndarray:
         """
         """
-        beat_ann = ["N" for _ in range(len(rpeaks))]
-        for idx, r in enumerate(rpeaks):
-            if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
-                beat_ann[idx] = 'S'
-            elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
-                beat_ann[idx] = 'V'
+        one_hour = self.fs*3600
+        split_indices = [0]
+        for i in range(1, rpeaks[-1]//one_hour):
+            split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
+        if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
+            split_indices.append(len(rpeaks))
+
+        epoch_params = []
+        for idx in range(len(split_indices)-1):
+            p = {}
+            p['rpeaks'] = rpeaks[split_indices[idx]:split_indices[idx+1]]
+            p['ann'] = {
+                k: v[np.where( (v>=idx*one_hour-beat_winL) & (v<(idx+1)*one_hour+beat_winR) )[0]] for k, v in ann.items()
+            }
+            epoch_params.append(p)
+
+        cpu_num = max(1, mp.cpu_count()-3)
+        with mp.Pool(processes=cpu_num) as pool:
+            result = pool.starmap(
+                func=_ann_to_beat_ann_epoch,
+                iterable=[
+                    (
+                        item['rpeaks'],
+                        item['ann'],
+                        beat_winL,
+                        beat_winR,
+                    )\
+                        for item in epoch_params
+                ],
+            )
+        list_addition = lambda a,b: a+b
+        beat_ann = reduce(list_addition, result)
+
+        # beat_ann = ["N" for _ in range(len(rpeaks))]
+        # for idx, r in enumerate(rpeaks):
+        #     if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
+        #         beat_ann[idx] = 'S'
+        #     elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
+        #         beat_ann[idx] = 'V'
         
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
@@ -563,6 +598,17 @@ class CPSC2020(object):
         return x["train"], y["train"], x["test"], y["test"]
 
 
+
+def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> np.ndarray:
+    """
+    """
+    beat_ann = ["N" for _ in range(len(rpeaks))]
+    for idx, r in enumerate(rpeaks):
+        if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
+            beat_ann[idx] = 'S'
+        elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
+            beat_ann[idx] = 'V'
+    return beat_ann
 
 
 
