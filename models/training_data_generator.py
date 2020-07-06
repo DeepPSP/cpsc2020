@@ -61,7 +61,7 @@ class CPSC2020(object):
        which might be caused by motion artefacts (or AF?);
        a lot less (more than 1000) rpeaks would be detected for A04.
        numeric details are as follows:
-       ---------------------------
+       ----------------------------------------------
        rec   ?AF    # beats by xqrs     # Total beats
        A01   No     109502              109,086
        A02   Yes    119562              103,490
@@ -366,11 +366,11 @@ class CPSC2020(object):
                 preprocesses=preprocesses,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
-            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map)
+            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map, save=True)
         return beat_ann
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int]) -> np.ndarray:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int], save:bool=False) -> np.ndarray:
         """
         """
         one_hour = self.fs*3600
@@ -403,8 +403,10 @@ class CPSC2020(object):
                         for item in epoch_params
                 ],
             )
-        list_addition = lambda a,b: a+b
-        beat_ann = reduce(list_addition, result)
+        augmented_rpeaks = np.concatenate((item[0] for item in result))
+        beat_ann = np.concatenate((item[1] for item in result))
+        # list_addition = lambda a,b: a+b
+        # beat_ann = reduce(list_addition, result)
 
         # beat_ann = ["N" for _ in range(len(rpeaks))]
         # for idx, r in enumerate(rpeaks):
@@ -612,17 +614,51 @@ class CPSC2020(object):
         return x["train"], y["train"], x["test"], y["test"]
 
 
-
-def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> np.ndarray:
+def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
     """
     """
-    beat_ann = ["N" for _ in range(len(rpeaks))]
+    beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     for idx, r in enumerate(rpeaks):
         if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
             beat_ann[idx] = 'S'
         elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
             beat_ann[idx] = 'V'
-    return beat_ann
+    augmented_rpeaks = rpeaks.copy()
+    retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
+    return retval
+
+
+def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
+    """
+    """
+    beat_ann = np.array(["N" for _ in range(len(rpeaks))])
+    # used to add back those beat that is not detected via proprocess algorithm
+    _ann = deepcopy(ann)
+    for idx_r, r in enumerate(rpeaks):
+        found = False
+        for idx_a, a in enumerate(_ann['SPB_indices']):
+            if -beat_winL <= r-a < beat_winR:
+                found = True
+                beat_ann[idx] = 'S'
+                del _ann['SPB_indices'][idx_a]
+                break
+        if found:
+            continue
+        for idx_a, a in enumerate(_ann['PVC_indices']):
+            if -beat_winL <= r-a < beat_winR:
+                found = True
+                beat_ann[idx] = 'V'
+                del _ann['PVC_indices'][idx_a]
+                break
+    
+    augmented_rpeaks = np.concatenate((rpeaks, _ann['SPB_indices'], _ann['PVC_indices']))
+    beat_ann = np.concatenate((beat_ann, np.array(['S' for _ in _ann['SPB_indices']]), np.array(['V' for _ in _ann['PVC_indices']])))
+    sorted_indices = np.argsort(augmented_rpeaks)
+    augmented_rpeaks = augmented_rpeaks[sorted_indices]
+    beat_ann = beat_ann[sorted_indices]
+    
+    retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
+    return retval
 
 
 
