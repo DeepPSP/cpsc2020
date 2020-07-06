@@ -255,7 +255,7 @@ class CPSC2020(object):
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
         rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
         rpeaks = loadmat(rpeaks_fp)['rpeaks'].astype(int)
-        sf, st = (sampfrom or 0), (sampto or len(rpeaks))
+        sf, st = (sampfrom or 0), (sampto or np.inf)
         rpeaks = rpeaks[np.where( (rpeaks>=sf) & (rpeaks<st) )[0]]
         if not keep_dim:
             rpeaks = rpeaks.flatten()
@@ -574,7 +574,7 @@ if __name__ == "__main__":
     ap.add_argument(
         "-p", "--preprocesses",
         type=str, default="baseline,bandpass",
-        help="processes to perform, separated by ','",
+        help="preprocesses to perform, separated by ','",
         dest="preprocesses",
     )
     ap.add_argument(
