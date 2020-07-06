@@ -361,8 +361,7 @@ class CPSC2020(object):
         for idx, r in enumerate(rpeaks):
             if any([-beat_winL <= r-p < beat_winR for p in ann['SPB_indices']]):
                 beat_ann[idx] = 'S'
-                break
-            if any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
+            elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
                 beat_ann[idx] = 'V'
         
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
@@ -375,7 +374,7 @@ class CPSC2020(object):
         }
         savemat(fp, to_save_mdict, format='5')
 
-        return beat_ann
+        return np.array(beat_ann)
 
 
     def _get_ann_name(self, rec:Union[int,str]) -> str:
