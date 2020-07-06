@@ -337,7 +337,7 @@ class CPSC2020(object):
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
-        fp = os.path.join(self.beat_ann_dir, f"{rec_name}.{self.ann_ext}")
+        fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         try:
             print("try loading precomputed beat_ann")
             beat_ann = loadmat(fp)["beat_ann"]
@@ -367,8 +367,13 @@ class CPSC2020(object):
         
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
-        fp = os.path.join(self.beat_ann_dir, f"{rec_name}.{self.ann_ext}")
-        savemat(fp, {"rpeaks": rpeaks, "beat_ann":beat_ann}, format='5')
+        fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
+        to_save_mdict = {
+            "rpeaks": rpeaks,
+            "beat_ann_str": np.array(beat_ann),
+            "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
+        }
+        savemat(fp, to_save_mdict, format='5')
 
         return beat_ann
 
