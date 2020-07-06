@@ -31,6 +31,7 @@ class CPSC2020(object):
     3. A02, A03, A08 are patient with atrial fibrillation
     4. sampling frequency = 400 Hz
     5. Detailed information:
+        -------------------------------------------------------------------------
         rec   ?AF   Length(h)   # N beats   # V beats   # S beats   # Total beats
         A01   No	25.89       109,062     0           24          109,086
         A02   Yes	22.83       98,936      4,554       0           103,490
@@ -58,7 +59,20 @@ class CPSC2020(object):
     1. currently, using `xqrs` as qrs detector,
        a lot more (more than 1000) rpeaks would be detected for A02, A07, A08,
        which might be caused by motion artefacts (or AF?);
-       a lot less (more than 1000) rpeaks would be detected for A04,
+       a lot less (more than 1000) rpeaks would be detected for A04.
+       numeric details are as follows:
+       ---------------------------
+       rec   ?AF    # beats by xqrs     # Total beats
+       A01   No     109502              109,086
+       A02   Yes    119562              103,490
+       A03   Yes    135912              137,631
+       A04   No     92746               100,302
+       A05   No     94674               94,640
+       A06   No     77955               77,627
+       A07   No     98390               91,956
+       A08   Yes    126908              118,311
+       A09   No     89972               89,693
+       A10   No     83509               82,061
     2. to add
 
     Usage:
@@ -361,7 +375,7 @@ class CPSC2020(object):
         """
         one_hour = self.fs*3600
         split_indices = [0]
-        for i in range(1, int(rpeaks[-1])//one_hour):
+        for i in range(1, int(rpeaks[-1]+2*beat_winL)//one_hour):
             split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
         if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
             split_indices.append(len(rpeaks))
@@ -371,7 +385,7 @@ class CPSC2020(object):
             p = {}
             p['rpeaks'] = rpeaks[split_indices[idx]:split_indices[idx+1]]
             p['ann'] = {
-                k: v[np.where( (v>=idx*one_hour-beat_winL) & (v<(idx+1)*one_hour+beat_winR) )[0]] for k, v in ann.items()
+                k: v[np.where( (v>=p['rpeaks'][0]-2*beat_winL) & (v<p['rpeaks'][-1]+2*beat_winR) )[0]] for k, v in ann.items()
             }
             epoch_params.append(p)
 
