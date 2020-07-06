@@ -109,10 +109,10 @@ class CPSC2020(object):
         self.palette = {"spb": "black", "pvc": "red",}
 
         # NOTE:
-        # the ordering of `self.allowed_preprocess` and `self.allowed_features`
+        # the ordering of `self.allowed_preprocesses` and `self.allowed_features`
         # should be in accordance with
         # corresponding items in `PreprocessCfg` and `FeatureCfg`
-        self.allowed_preprocess = ['baseline', 'bandpass',]
+        self.allowed_preprocesses = ['baseline', 'bandpass',]
         self.preprocess_dir = os.path.join(self.db_dir, "preprocessed")
         os.makedirs(self.preprocess_dir, exist_ok=True)
         self.rpeaks_dir = os.path.join(self.db_dir, "rpeaks")
@@ -139,7 +139,7 @@ class CPSC2020(object):
         keep_dim: bool, default True,
             whether or not to flatten the data of shape (n,1)
         preprocesses: list of str,
-            type of preprocesses to perform, should be sublist of `self.allowed_preprocess`
+            type of preprocesses to perform, should be sublist of `self.allowed_preprocesses`
         
         Returns:
         --------
@@ -174,7 +174,7 @@ class CPSC2020(object):
             number of the record, NOTE that rec_no starts from 1,
             or the record name
         preprocesses: list of str,
-            type of preprocesses to perform, should be sublist of `self.allowed_preprocess`
+            type of preprocesses to perform, should be sublist of `self.allowed_preprocesses`
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
@@ -200,7 +200,7 @@ class CPSC2020(object):
         features: list of str,
             list of feature types to compute, should be sublist of `self.allowd_features`
         preprocesses: list of str,
-            type of preprocesses to perform, should be sublist of `self.allowed_preprocess`
+            type of preprocesses to perform, should be sublist of `self.allowed_preprocesses`
         save: bool, default True,
             whether or not save the features to the working directory
 
@@ -278,7 +278,7 @@ class CPSC2020(object):
         features: list of str,
             list of feature types computed, should be sublist of `self.allowd_features`
         preprocesses: list of str,
-            type of preprocesses performed, should be sublist of `self.allowed_preprocess`
+            type of preprocesses performed, should be sublist of `self.allowed_preprocesses`
         save: bool, default False,
             whether or not save the features to the working directory
 
@@ -421,7 +421,7 @@ class CPSC2020(object):
         Parameters:
         -----------
         operations: list of str,
-            names of operations to perform (or has performed), should be sublist of `self.allowed_preprocess` or `self.allowed_features`
+            names of operations to perform (or has performed), should be sublist of `self.allowed_preprocesses` or `self.allowed_features`
 
         Returns:
         --------
@@ -449,10 +449,10 @@ class CPSC2020(object):
         """
         _p = [item.lower() for item in preprocesses] if preprocesses else []
         if ensure_nonempty:
-            _p = _p or self.allowed_preprocess
+            _p = _p or self.allowed_preprocesses
         # ensure ordering
-        _p = [item for item in self.allowed_preprocess if item in _p]
-        # assert all([item in self.allowed_preprocess for item in _p])
+        _p = [item for item in self.allowed_preprocesses if item in _p]
+        # assert all([item in self.allowed_preprocesses for item in _p])
         return _p
 
     
