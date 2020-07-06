@@ -345,7 +345,7 @@ class CPSC2020(object):
             beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses,)
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int) -> np.ndarray:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int]) -> np.ndarray:
         """
         """
         beat_ann = ["N" for _ in range(len(rpeaks))]
@@ -354,7 +354,7 @@ class CPSC2020(object):
                 beat_ann[idx] = 'S'
                 break
             if any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
-                beat_ann[idx] = 'P'
+                beat_ann[idx] = 'V'
         
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
