@@ -52,7 +52,7 @@ TrainCfg.model_path = ED({
     "dl": os.path.join(BASE_DIR, "models", "ecg_dl.pkl"),
 })
 TrainCfg.SEED = 42
-TrainCfg.label_map = dict(N=0,S=1,N=2)
+TrainCfg.label_map = dict(N=0,S=1,V=2)
 TrainCfg.test_rec_num = 2
 TrainCfg.max_iter = 10
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
