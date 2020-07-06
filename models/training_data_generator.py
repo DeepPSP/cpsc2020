@@ -404,7 +404,7 @@ class CPSC2020(object):
             #     p['next_r'] = np.inf
             # else:
             #     p['next_r'] = rpeaks[split_indices[idx+1]]
-            # epoch_params.append(p)
+            epoch_params.append(p)
 
         if augment:
             epoch_func = _ann_to_beat_ann_epoch_v3
@@ -432,6 +432,7 @@ class CPSC2020(object):
         ann_not_matched = {
             k: [a for a in v if a not in ann_matched[k]] for k, v in ann.items()
         }
+        # print(f"rec = {rec}, ann_not_matched = {ann_not_matched}")
         beat_ann = np.concatenate([item['beat_ann'] for item in result]).astype('<U1')
 
         augmented_rpeaks = np.concatenate((rpeaks, np.array(ann_not_matched['SPB_indices']), np.array(ann_not_matched['PVC_indices'])))
@@ -710,22 +711,25 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias
 def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> Dict[str, np.ndarray]:
     """
     """
-    beat_ann = [["N", -1] for _ in range(len(rpeaks))]
+    beat_ann = np.array(["N" for _ in range(len(rpeaks))], dtype='<U1')
+    ann_matched = {k: [] for k,v in ann.items()}
     for idx_r, r in enumerate(rpeaks):
         dist_to_spb = np.abs(r-ann["SPB_indices"])
         dist_to_pvc = np.abs(r-ann["PVC_indices"])
+        if len(dist_to_spb) == 0:
+            dist_to_spb = np.array([np.inf])
+        if len(dist_to_pvc) == 0:
+            dist_to_pvc = np.array([np.inf])
         argmin = np.argmin([np.min(dist_to_spb), np.min(dist_to_pvc), bias_thr])
         if argmin == 2:
             pass
         elif argmin == 1:
-            beat_ann[idx_r] = ["V", np.argmin(dist_to_pvc)]
+            beat_ann[idx_r] = "V"
+            ann_matched["PVC_indices"].append(ann["PVC_indices"][np.argmin(dist_to_pvc)])
         elif argmin == 0:
-            beat_ann[idx_r] = ["S", np.argmin(dist_to_spb)]
-    ann_matched = {
-        "SPB_indices": ann["SPB_indices"][item[1] for item in beat_ann if item[0] == 'S'],
-        "PVC_indices": ann["PVC_indices"][item[1] for item in beat_ann if item[0] == 'V'],
-    }
-    beat_ann = np.array([item[0] for item in beat_ann], dtype='<U1')
+            beat_ann[idx_r] = "S"
+            ann_matched["SPB_indices"].append(ann["SPB_indices"][np.argmin(dist_to_spb)])
+    ann_matched = {k: np.array(v) for k,v in ann_matched.items()}
     retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
     return retval
 

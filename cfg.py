@@ -43,7 +43,7 @@ FeatureCfg.wt_level = 3
 FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 FeatureCfg.label_map = dict(N=0,S=1,V=2)
-FeatureCfg.beat_ann_bias_thr = int(0.15*TrainCfg.fs)
+FeatureCfg.beat_ann_bias_thr = int(0.15*PreprocessCfg.fs)
 
 
 #--------------------------------------------------------------
