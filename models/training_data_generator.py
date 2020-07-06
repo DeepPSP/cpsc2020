@@ -348,11 +348,15 @@ class CPSC2020(object):
         return ann
 
     
-    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None) -> np.ndarray:
+    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True) -> np.ndarray:
         """
+
+        to write
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        if augment:
+            rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         try:
             print("try loading precomputed beat_ann")
@@ -366,12 +370,14 @@ class CPSC2020(object):
                 preprocesses=preprocesses,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
-            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map, save=True)
+            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map, augment=augment, save=True)
         return beat_ann
 
 
     def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int], augment:bool=True, save:bool=False) -> np.ndarray:
         """
+
+        to write
         """
         one_hour = self.fs*3600
         split_indices = [0]
@@ -499,6 +505,7 @@ class CPSC2020(object):
 
     def _normalize_feature_names(self, features:List[str], ensure_nonempty:bool) -> List[str]:
         """
+        to write
         """
         _f = [item.lower() for item in features] if features else []
         if ensure_nonempty:
@@ -511,6 +518,7 @@ class CPSC2020(object):
 
     def _normalize_preprocess_names(self, preprocesses:List[str], ensure_nonempty:bool) -> List[str]:
         """
+        to write
         """
         _p = [item.lower() for item in preprocesses] if preprocesses else []
         if ensure_nonempty:
@@ -622,6 +630,7 @@ class CPSC2020(object):
 
 def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
     """
+    to write
     """
     beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     for idx, r in enumerate(rpeaks):
@@ -636,6 +645,7 @@ def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_wi
 
 def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
     """
+    to write
     """
     beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     # used to add back those beat that is not detected via proprocess algorithm
