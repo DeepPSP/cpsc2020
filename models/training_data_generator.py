@@ -361,7 +361,7 @@ class CPSC2020(object):
         """
         one_hour = self.fs*3600
         split_indices = [0]
-        for i in range(1, rpeaks[-1]//one_hour):
+        for i in range(1, int(rpeaks[-1])//one_hour):
             split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
         if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
             split_indices.append(len(rpeaks))

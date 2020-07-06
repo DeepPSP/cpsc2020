@@ -180,7 +180,7 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
     """
     split_indices = [0]
     one_hour = config.fs*3600
-    for i in range(1, rpeaks[-1]//one_hour):
+    for i in range(1, int(rpeaks[-1])//one_hour):
         split_indices.append(len(np.where(rpeaks<i*one_hour)[0])+1)
     if len(split_indices) == 1 or split_indices[-1] < len(rpeaks): # tail
         split_indices.append(len(rpeaks))
