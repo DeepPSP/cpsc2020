@@ -348,7 +348,7 @@ class CPSC2020(object):
         return ann
 
     
-    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True) -> np.ndarray:
+    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True, force_recompute:bool=False) -> np.ndarray:
         """
 
         to write
@@ -358,11 +358,11 @@ class CPSC2020(object):
         if augment:
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
-        try:
+        if not force_recompute and os.path.isfile(fp):
             print("try loading precomputed beat_ann")
             beat_ann = loadmat(fp)["beat_ann"]
-        except FileNotFoundError:
-            print("no precomputed beat_ann")
+        else:
+            print("recompute beat_ann")
             rpeaks = self.load_rpeaks(
                 rec,
                 sampfrom=sampfrom, sampto=sampto,
@@ -391,8 +391,16 @@ class CPSC2020(object):
             p = {}
             p['rpeaks'] = rpeaks[split_indices[idx]:split_indices[idx+1]]
             p['ann'] = {
-                k: v[np.where( (v>=p['rpeaks'][0]-2*beat_winL) & (v<p['rpeaks'][-1]+2*beat_winR) )[0]] for k, v in ann.items()
+                k: v[np.where( (v>=p['rpeaks'][0]-beat_winL-1) & (v<p['rpeaks'][-1]+beat_winR+1) )[0]] for k, v in ann.items()
             }
+            if idx == 0:
+                p['prev_r'] = -1
+            else:
+                p['prev_r'] = rpeaks[split_indices[idx]-1]
+            if idx == len(split_indices)-2:
+                p['next_r'] = np.inf
+            else:
+                p['next_r'] = rpeaks[split_indices[idx+1]]
             epoch_params.append(p)
 
         if augment:
@@ -409,12 +417,27 @@ class CPSC2020(object):
                         item['ann'],
                         beat_winL,
                         beat_winR,
+                        item['prev_r'],
+                        item['next_r'],
                     )\
                         for item in epoch_params
                 ],
             )
-        augmented_rpeaks = np.concatenate([item['augmented_rpeaks'] for item in result])
-        beat_ann = np.concatenate([item['beat_ann'] for item in result])
+        ann_matched = {
+            k: np.concatenate([item['ann_matched'][k] for item in result]) \
+                for k in ann.keys()
+        }
+        ann_not_matched = {
+            k: [a for a in v if a not in ann_matched[k]] for k, v in ann.items()
+        }
+        beat_ann = np.concatenate([item['beat_ann'] for item in result]).astype('<U1')
+
+        augmented_rpeaks = np.concatenate((rpeaks, np.array(ann_not_matched['SPB_indices']), np.array(ann_not_matched['PVC_indices'])))
+        beat_ann = np.concatenate((beat_ann, np.array(['S' for _ in ann_not_matched['SPB_indices']], dtype='<U1'), np.array(['V' for _ in ann_not_matched['PVC_indices']], dtype='<U1')))
+        sorted_indices = np.argsort(augmented_rpeaks)
+        augmented_rpeaks = augmented_rpeaks[sorted_indices].astype(int)
+        beat_ann = beat_ann[sorted_indices].astype('<U1')
+
         # list_addition = lambda a,b: a+b
         # beat_ann = reduce(list_addition, result)
 
@@ -431,13 +454,14 @@ class CPSC2020(object):
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         to_save_mdict = {
-            "rpeaks": augmented_rpeaks,
-            "beat_ann": np.array(beat_ann),
-            "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
+            "rpeaks": augmented_rpeaks.astype(int).flatten(),
+            "beat_ann": beat_ann,
+            # "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
+            "beat_ann_int": np.vectorize(lambda a:label_map[a])(beat_ann)
         }
         savemat(fp, to_save_mdict, format='5')
 
-        return np.array(beat_ann)
+        return beat_ann
 
 
     def _get_ann_name(self, rec:Union[int,str]) -> str:
@@ -628,7 +652,7 @@ class CPSC2020(object):
         return x["train"], y["train"], x["test"], y["test"]
 
 
-def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
+def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:Real, beat_winR:Real, prev_r:Real, next_r:Real) -> Dict[str, np.ndarray]:
     """
     to write
     """
@@ -638,16 +662,16 @@ def _ann_to_beat_ann_epoch(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_wi
             beat_ann[idx] = 'S'
         elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
             beat_ann[idx] = 'V'
-    augmented_rpeaks = rpeaks.copy()
-    retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
+    ann_matched = ann.copy()
+    retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
     return retval
 
 
-def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:int, beat_winR:int) -> Dict[str, np.ndarray]:
+def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat_winL:Real, beat_winR:Real, prev_r:Real, next_r:Real) -> Dict[str, np.ndarray]:
     """
     to write
     """
-    beat_ann = np.array(["N" for _ in range(len(rpeaks))])
+    beat_ann = np.array(["N" for _ in range(len(rpeaks))], dtype='<U1')
     # used to add back those beat that is not detected via proprocess algorithm
     _ann = {k: v.astype(int).tolist() for k,v in ann.items()}
     for idx_r, r in enumerate(rpeaks):
@@ -666,15 +690,21 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
                 beat_ann[idx_r] = 'V'
                 del _ann['PVC_indices'][idx_a]
                 break
-    
-    augmented_rpeaks = np.concatenate((rpeaks, np.array(_ann['SPB_indices']), np.array(_ann['PVC_indices'])))
-    beat_ann = np.concatenate((beat_ann, np.array(['S' for _ in _ann['SPB_indices']]), np.array(['V' for _ in _ann['PVC_indices']])))
-    sorted_indices = np.argsort(augmented_rpeaks)
-    augmented_rpeaks = augmented_rpeaks[sorted_indices]
-    beat_ann = beat_ann[sorted_indices]
-
-    retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
+    ann_matched = {
+        k: np.array([a for a in v if a not in _ann[k]], dtype=int) for k,v in ann.items()
+    }
+    retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
     return retval
+    # _ann['SPB_indices'] = [a for a in _ann['SPB_indices'] if prev_r<a<next_r]
+    # _ann['PVC_indices'] = [a for a in _ann['PVC_indices'] if prev_r<a<next_r]
+    # augmented_rpeaks = np.concatenate((rpeaks, np.array(_ann['SPB_indices']), np.array(_ann['PVC_indices'])))
+    # beat_ann = np.concatenate((beat_ann, np.array(['S' for _ in _ann['SPB_indices']], dtype='<U1'), np.array(['V' for _ in _ann['PVC_indices']], dtype='<U1')))
+    # sorted_indices = np.argsort(augmented_rpeaks)
+    # augmented_rpeaks = augmented_rpeaks[sorted_indices].astype(int)
+    # beat_ann = beat_ann[sorted_indices].astype('<U1')
+
+    # retval = dict(augmented_rpeaks=augmented_rpeaks, beat_ann=beat_ann)
+    # return retval
 
 
 
