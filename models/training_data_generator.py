@@ -55,7 +55,8 @@ class CPSC2020(object):
     -------
     1. currently, using `xqrs` as qrs detector,
        a lot more (more than 1000) rpeaks would be detected for A02, A07, A08,
-       which might be caused by motion artefacts (or AF?)
+       which might be caused by motion artefacts (or AF?);
+       a lot less (more than 1000) rpeaks would be detected for A04,
     2. to add
 
     Usage:
@@ -338,16 +339,19 @@ class CPSC2020(object):
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}.{self.ann_ext}")
         try:
+            print("try loading precomputed beat_ann")
             beat_ann = loadmat(fp)["beat_ann"]
         except FileNotFoundError:
+            print("no precomputed beat_ann")
             rpeaks = self.load_rpeaks(
                 rec,
                 sampfrom=sampfrom, sampto=sampto,
                 keep_dim=False,
-                preprocesses=preprocesses
+                preprocesses=preprocesses,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
-            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses,)
+            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_winL, FeatureCfg.beat_winR, FeatureCfg.label_map)
+        return beat_ann
 
 
     def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], beat_winL:int, beat_winR:int, label_map:Dict[str,int]) -> np.ndarray:

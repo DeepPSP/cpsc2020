@@ -13,7 +13,7 @@ __all__ = [
 
 #--------------------------------------------------------------
 PreprocessCfg = ED()
-PreprocessCfg.fs = 400  # Hz, CPSC data fs
+PreprocessCfg.fs = 400  # Hz, CPSC2020 data fs
 PreprocessCfg.preprocesses = ['baseline', 'bandpass',]
 # PreprocessCfg.remove_baseline = True
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
@@ -34,7 +34,7 @@ for qrs detectors:
 
 #--------------------------------------------------------------
 FeatureCfg = ED()
-FeatureCfg.fs = PreprocessCfg.fs  # Hz, CPSC data fs
+FeatureCfg.fs = PreprocessCfg.fs  # Hz, CPSC2020 data fs
 FeatureCfg.beat_winL = 100  # corr. to 250 ms
 FeatureCfg.beat_winR = 100  # corr. to 250 ms
 FeatureCfg.features = ['wavelet', 'rr', 'morph',]
@@ -47,6 +47,7 @@ FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of poin
 #--------------------------------------------------------------
 TrainCfg = ED()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
     "ml": os.path.join(BASE_DIR, "models", "ecg_ml.pkl"),
     "dl": os.path.join(BASE_DIR, "models", "ecg_dl.pkl"),
@@ -54,6 +55,7 @@ TrainCfg.model_path = ED({
 TrainCfg.SEED = 42
 TrainCfg.label_map = dict(N=0,S=1,V=2)
 TrainCfg.test_rec_num = 2
+TrainCfg.bias_threshold = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.max_iter = 10
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
