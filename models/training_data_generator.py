@@ -53,6 +53,10 @@ class CPSC2020(object):
 
     ISSUES:
     -------
+    1. currently, using `xqrs` as qrs detector,
+       a lot more (more than 1000) rpeaks would be detected for A02, A07, A08,
+       which might be caused by motion artefacts (or AF?)
+    2. to add
 
     Usage:
     ------
