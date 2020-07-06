@@ -645,7 +645,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
         for idx_a, a in enumerate(_ann['SPB_indices']):
             if -beat_winL <= r-a < beat_winR:
                 found = True
-                beat_ann[idx] = 'S'
+                beat_ann[idx_r] = 'S'
                 del _ann['SPB_indices'][idx_a]
                 break
         if found:
@@ -653,7 +653,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
         for idx_a, a in enumerate(_ann['PVC_indices']):
             if -beat_winL <= r-a < beat_winR:
                 found = True
-                beat_ann[idx] = 'V'
+                beat_ann[idx_r] = 'V'
                 del _ann['PVC_indices'][idx_a]
                 break
     
