@@ -208,6 +208,7 @@ class CPSC2020(object):
                 n = the dimension of the features
         """
         features = self._normalize_feature_names(features, True)
+        preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
         
         try:
@@ -544,7 +545,7 @@ class CPSC2020(object):
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
                 feature_mat = self.load_features(rec, features=features, preprocesses=preprocesses)
-                x[subset] = np.append(x[subset], feature_mat)
+                x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
                 beat_ann = self.load_beat_ann(rec, preprocesses=preprocesses)
                 y[subset] = np.append(y[subset], beat_ann)
         return x["train"], y["train"], x["test"], y["test"]
