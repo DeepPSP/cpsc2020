@@ -407,8 +407,8 @@ class CPSC2020(object):
                         for item in epoch_params
                 ],
             )
-        augmented_rpeaks = np.concatenate((item['augmented_rpeaks'] for item in result))
-        beat_ann = np.concatenate((item['beat_ann'] for item in result))
+        augmented_rpeaks = np.concatenate([item['augmented_rpeaks'] for item in result])
+        beat_ann = np.concatenate([item['beat_ann'] for item in result])
         # list_addition = lambda a,b: a+b
         # beat_ann = reduce(list_addition, result)
 
@@ -425,7 +425,7 @@ class CPSC2020(object):
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         to_save_mdict = {
-            "rpeaks": rpeaks,
+            "rpeaks": augmented_rpeaks,
             "beat_ann": np.array(beat_ann),
             "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
         }
@@ -639,7 +639,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
     """
     beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     # used to add back those beat that is not detected via proprocess algorithm
-    _ann = {k: v.astype(int).tolist() for k,v in ann}
+    _ann = {k: v.astype(int).tolist() for k,v in ann.items()}
     for idx_r, r in enumerate(rpeaks):
         found = False
         for idx_a, a in enumerate(_ann['SPB_indices']):
@@ -657,7 +657,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
                 del _ann['PVC_indices'][idx_a]
                 break
     
-    augmented_rpeaks = np.concatenate((rpeaks, _ann['SPB_indices'], _ann['PVC_indices']))
+    augmented_rpeaks = np.concatenate((rpeaks, np.array(_ann['SPB_indices']), np.array(_ann['PVC_indices'])))
     beat_ann = np.concatenate((beat_ann, np.array(['S' for _ in _ann['SPB_indices']]), np.array(['V' for _ in _ann['PVC_indices']])))
     sorted_indices = np.argsort(augmented_rpeaks)
     augmented_rpeaks = augmented_rpeaks[sorted_indices]
