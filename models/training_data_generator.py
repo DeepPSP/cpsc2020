@@ -369,7 +369,7 @@ class CPSC2020(object):
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         to_save_mdict = {
             "rpeaks": rpeaks,
-            "beat_ann_str": np.array(beat_ann),
+            "beat_ann": np.array(beat_ann),
             "beat_ann_int": np.array(list(map(lambda a:label_map[a], beat_ann))),
         }
         savemat(fp, to_save_mdict, format='5')
