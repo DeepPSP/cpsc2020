@@ -639,7 +639,7 @@ def _ann_to_beat_ann_epoch_v2(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], beat
     """
     beat_ann = np.array(["N" for _ in range(len(rpeaks))])
     # used to add back those beat that is not detected via proprocess algorithm
-    _ann = deepcopy(ann)
+    _ann = {k: v.astype(int).tolist() for k,v in ann}
     for idx_r, r in enumerate(rpeaks):
         found = False
         for idx_a, a in enumerate(_ann['SPB_indices']):
