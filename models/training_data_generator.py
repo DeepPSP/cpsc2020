@@ -722,8 +722,8 @@ def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias
         elif argmin == 0:
             beat_ann[idx_r] = ["S", np.argmin(dist_to_spb)]
     ann_matched = {
-        "SPB_indices": np.array([ann["SPB_indices"][item[1] for item in beat_ann if item[0] == 'S']),
-        "PVC_indices": np.array([ann["PVC_indices"][item[1] for item in beat_ann if item[0] == 'V']),
+        "SPB_indices": ann["SPB_indices"][item[1] for item in beat_ann if item[0] == 'S'],
+        "PVC_indices": ann["PVC_indices"][item[1] for item in beat_ann if item[0] == 'V'],
     }
     beat_ann = np.array([item[0] for item in beat_ann], dtype='<U1')
     retval = dict(ann_matched=ann_matched, beat_ann=beat_ann)
