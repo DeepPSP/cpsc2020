@@ -207,7 +207,7 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     if cfg.parallel_keep_tail:
         filtered_ecg = np.append(filtered_ecg, tail_result['filtered_ecg'][epoch_overlap_half:])
         tail_rpeaks = tail_result['rpeaks'][np.where(tail_result['rpeaks'] >= epoch_overlap_half)[0]]
-        rpeaks = np.append(rpeaks, len(result)*epoch_forward + epoch_rpeaks)
+        rpeaks = np.append(rpeaks, len(result)*epoch_forward + tail_rpeaks)
 
     if save_dir:
         # NOTE: this part is not tested
