@@ -9,3 +9,14 @@ References:
 [2] [BioSPPy](https://github.com/PIA-Group/BioSPPy)
 
 [3] to add more ...
+
+
+TODO:
+-----
+[1] more robust qrs detector
+
+[2] feature engineering
+
+[3] deep learning model structure design (refine)
+
+[4] etc....

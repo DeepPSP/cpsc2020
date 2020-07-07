@@ -59,6 +59,7 @@ TrainCfg.test_rec_num = 2
 TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
+TrainCfg.class_weight = None  # TODO
 TrainCfg.ml_params_grid = {
     'XGBClassifier': {
         ''

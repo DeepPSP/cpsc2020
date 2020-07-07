@@ -8,7 +8,9 @@ from functools import reduce
 import logging
 from typing import Union, Optional, Any, List, Tuple, Dict, NoReturn
 from numbers import Real
+
 import numpy as np
+import pandas as pd
 from scipy.io import loadmat, savemat
 import multiprocessing as mp
 from easydict import EasyDict as ED
@@ -137,6 +139,8 @@ class CPSC2020(object):
             "S":  ["A09", "A10"],
             "VS": ["A04", "A07"],
         })
+
+        self.df_stats = misc.CPSC_STATS
 
         self.palette = {"spb": "black", "pvc": "red",}
 
