@@ -958,6 +958,19 @@ def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias
     return retval
 
 
+
+# https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 if __name__ == "__main__":
     from misc import dict_to_str
     ap = argparse.ArgumentParser(
@@ -995,6 +1008,12 @@ if __name__ == "__main__":
         dest="records",
     )
     ap.add_argument(
+        "-a", "--augment",
+        type=str2bool, default=True,
+        help="whether or not using annotations to augment the rpeaks detected by algorithm",
+        dest="augment",
+    )
+    ap.add_argument(
         "-v", "--verbose",
         type=int, default=2,
         help="verbosity",
@@ -1012,6 +1031,25 @@ if __name__ == "__main__":
         working_dir=kwargs.get("working_dir"),
         verbose=kwargs.get("verbose"),
     )
+
     preprocesses = kwargs.get("preprocesses", "").split(",") or PreprocessCfg.preprocesses
+    features = kwargs.get("features", "").split(",") or PreprocessCfg.preprocesses
+    augment = kwargs.get("augment", True)
+
     for rec in (kwargs.get("records", None) or data_gen.all_records):
-        data_gen.preprocess_data(rec, preprocesses=preprocesses)
+        data_gen.preprocess_data(
+            rec,
+            preprocesses=preprocesses,
+        )
+        data_gen.compute_features(
+            rec,
+            features=features,
+            preprocesses=preprocesses,
+            augment=augment,
+            save=True,
+        )
+        data_gen.load_beat_ann(
+            rec,
+            preprocesses=preprocesses,
+            augment=augment,
+        )
