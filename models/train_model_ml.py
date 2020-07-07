@@ -3,6 +3,7 @@ References:
 -----------
 [1] https://blog.cambridgespark.com/hyperparameter-tuning-in-xgboost-4ff9100a3b2f
 [2] https://github.com/x4nth055/emotion-recognition-using-speech
+[3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 """
 import os
 import argparse
@@ -16,8 +17,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from easydict import EasyDict as ED
 
 from cfg import TrainCfg
-from signal_processing.ecg_preprocess import parallel_preprocess_signal
-from signal_processing.ecg_features import compute_ecg_features
+# from signal_processing.ecg_preprocess import parallel_preprocess_signal
+# from signal_processing.ecg_features import compute_ecg_features
 from .training_data_generator import CPSC2020
 
 
