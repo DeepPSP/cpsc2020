@@ -266,24 +266,23 @@ def compute_morph_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     Returns:
     --------
     morph: ndarray
-
-    TODO: make intervals configurable
     """
     R_pos = int((config.beat_winL + config.beat_winR) / 2)
 
+    itv = config.morph_intervals
+    itv_num = len(itv)
+
     R_value = beat[R_pos]
-    morph = np.zeros((4,))
-    y_values = np.zeros(4)
-    x_values = np.zeros(4)
+    morph = np.zeros((itv_num,))
+    y_values = np.zeros(itv_num)
+    x_values = np.zeros(itv_num)
     # Obtain (max/min) values and index from the intervals
-    [x_values[0], y_values[0]] = max(enumerate(beat[0:45]), key=operator.itemgetter(1))
-    [x_values[1], y_values[1]] = min(enumerate(beat[85:95]), key=operator.itemgetter(1))
-    [x_values[2], y_values[2]] = min(enumerate(beat[110:120]), key=operator.itemgetter(1))
-    [x_values[3], y_values[3]] = max(enumerate(beat[170:200]), key=operator.itemgetter(1))
+    for n in range(itv_num):
+        [x_values[n], y_values[n]] = \
+            max(enumerate(beat[itv[n][0]:itv[n][1]]), key=operator.itemgetter(1))
     
-    x_values[1] = x_values[1] + 85
-    x_values[2] = x_values[2] + 110
-    x_values[3] = x_values[3] + 170
+    for n in range(1, itv_num):
+        x_values[n] = x_values[n] + itv[n][0]
     
     # Norm data before compute distance
     x_max = max(x_values)
@@ -294,7 +293,7 @@ def compute_morph_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
     R_pos = (R_pos - x_min) / (x_max - x_min)
     R_value = (R_value - y_min) / (y_max - y_min)
                 
-    for n in range(0,4):
+    for n in range(itv_num):
         x_values[n] = (x_values[n] - x_min) / (x_max - x_min)
         y_values[n] = (y_values[n] - y_min) / (y_max - y_min)
         x_diff = (R_pos - x_values[n]) 

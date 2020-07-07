@@ -14,13 +14,11 @@ __all__ = [
 #--------------------------------------------------------------
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC2020 data fs
-PreprocessCfg.preprocesses = ['baseline', 'bandpass',]
-# PreprocessCfg.remove_baseline = True
+PreprocessCfg.preprocesses = ['baseline', 'bandpass',]  # sequential, keep correct ordering
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
-PreprocessCfg.baseline_window1 = 80  # corr. to 200 ms
-PreprocessCfg.baseline_window2 = 240  # corr. to 600 ms
-# PreprocessCfg.filter_signal = True
-PreprocessCfg.filter_band = [0.5,45]
+PreprocessCfg.baseline_window1 = int(0.2*PreprocessCfg.fs)  # 200 ms window
+PreprocessCfg.baseline_window2 = int(0.6*PreprocessCfg.fs)  # 600 ms window
+PreprocessCfg.filter_band = [0.5, 45]
 PreprocessCfg.parallel_epoch_len = 600  # second
 PreprocessCfg.parallel_epoch_overlap = 10  # second
 PreprocessCfg.parallel_keep_tail = True
@@ -42,8 +40,9 @@ FeatureCfg.wt_family = 'db1'
 FeatureCfg.wt_level = 3
 FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
+FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 FeatureCfg.label_map = dict(N=0,S=1,V=2)
-FeatureCfg.beat_ann_bias_thr = int(0.15*PreprocessCfg.fs)
+FeatureCfg.beat_ann_bias_thr = int(0.1*FeatureCfg.fs)  # half width of broad qrs complex
 
 
 #--------------------------------------------------------------
