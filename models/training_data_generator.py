@@ -74,7 +74,15 @@ class CPSC2020(object):
        A08   Yes    126908              118,311
        A09   No     89972               89,693
        A10   No     83509               82,061
-    2. to add
+    2. A04 has duplicate PVC_indices (13534856, 27147621, 35141190 all appear twice):
+    before correction of `load_ann`:
+    >>> from collections import Counter
+    >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
+    >>> data_gen = CPSC2020(db_dir=db_dir,working_dir=db_dir)
+    >>> rec = 4
+    >>> ann = data_gen.load_ann(rec)
+    >>> Counter(ann['PVC_indices']).most_common()[:4]
+    would produce [(13534856, 2), (27147621, 2), (35141190, 2), (848, 1)]
 
     Usage:
     ------
@@ -377,8 +385,12 @@ class CPSC2020(object):
         ann = loadmat(ann_fp)['ref']
         sf, st = (sampfrom or 0), (sampto or np.inf)
         spb_indices = ann['S_ref'][0,0].flatten().astype(int)
+        # drop duplicates
+        spb_indices = np.array(sorted(list(set(spb_indices))), dtype=int)
         spb_indices = spb_indices[np.where( (spb_indices>=sf) & (spb_indices<st) )[0]]
         pvc_indices = ann['V_ref'][0,0].flatten().astype(int)
+        # drop duplicates
+        pvc_indices = np.array(sorted(list(set(pvc_indices))), dtype=int)
         pvc_indices = pvc_indices[np.where( (pvc_indices>=sf) & (pvc_indices<st) )[0]]
         ann = {
             "SPB_indices": spb_indices,
@@ -427,6 +439,7 @@ class CPSC2020(object):
                 sampfrom=sampfrom, sampto=sampto,
                 keep_dim=False,
                 preprocesses=preprocesses,
+                augment=False,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
             beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_ann_bias_thr, augment=augment, save=True)

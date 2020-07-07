@@ -3,9 +3,12 @@ References:
 -----------
 [1] https://blog.cambridgespark.com/hyperparameter-tuning-in-xgboost-4ff9100a3b2f
 """
+import os
 import argparse
 import joblib, pickle
 from copy import deepcopy
+from typing import Union, Optional, Any
+
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -18,6 +21,21 @@ from .training_data_generator import CPSC2020
 
 
 __all__ = ["train"]
+
+
+class ECGPrematureDetector(object):
+    """
+    """
+    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
+        """
+        """
+        self.model = model
+        self.db_dir = db_dir
+        self.working_dir = working_dir or os.getcwd()
+        self.verbose = verbose
+        self.data_gen = CPSC2020(
+            db_dir=db_dir, working_dir=working_dir, verbose=verbose
+        )
 
 
 def train(**config):
