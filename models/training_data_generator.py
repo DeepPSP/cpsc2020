@@ -75,14 +75,18 @@ class CPSC2020(object):
        A09   No     89972               89,693
        A10   No     83509               82,061
     2. A04 has duplicate PVC_indices (13534856, 27147621, 35141190 all appear twice):
-    before correction of `load_ann`:
-    >>> from collections import Counter
-    >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
-    >>> data_gen = CPSC2020(db_dir=db_dir,working_dir=db_dir)
-    >>> rec = 4
-    >>> ann = data_gen.load_ann(rec)
-    >>> Counter(ann['PVC_indices']).most_common()[:4]
-    would produce [(13534856, 2), (27147621, 2), (35141190, 2), (848, 1)]
+       before correction of `load_ann`:
+       >>> from collections import Counter
+       >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
+       >>> data_gen = CPSC2020(db_dir=db_dir,working_dir=db_dir)
+       >>> rec = 4
+       >>> ann = data_gen.load_ann(rec)
+       >>> Counter(ann['PVC_indices']).most_common()[:4]
+       would produce [(13534856, 2), (27147621, 2), (35141190, 2), (848, 1)]
+    3. when extracting morphological features using augmented rpeaks for A04,
+       `RuntimeWarning: invalid value encountered in double_scalars` would raise
+       for `R_value = (R_value - y_min) / (y_max - y_min)` and
+       for `y_values[n] = (y_values[n] - y_min) / (y_max - y_min)`
 
     Usage:
     ------
