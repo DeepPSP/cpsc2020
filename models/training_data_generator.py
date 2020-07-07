@@ -5,6 +5,7 @@ import random
 import argparse
 from copy import deepcopy
 from functools import reduce
+import logging
 from typing import Union, Optional, Any, List, Tuple, Dict, NoReturn
 from numbers import Real
 import numpy as np
@@ -142,6 +143,8 @@ class CPSC2020(object):
         os.makedirs(self.feature_dir, exist_ok=True)
         self.beat_ann_dir = os.path.join(self.db_dir, "beat_ann")
         os.makedirs(self.beat_ann_dir, exist_ok=True)
+
+        # TODO: add logger
     
 
     def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None, **kwargs) -> np.ndarray:
@@ -212,7 +215,7 @@ class CPSC2020(object):
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
-    def compute_features(self, rec:Union[int,str], features:List[str], preprocesses:List[str], save:bool=True) -> np.ndarray:
+    def compute_features(self, rec:Union[int,str], features:List[str], preprocesses:List[str], augment:bool=True, save:bool=True) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -225,6 +228,8 @@ class CPSC2020(object):
             should be sublist of `self.allowd_features`
         preprocesses: list of str,
             type of preprocesses to perform, should be sublist of `self.allowed_preprocesses`
+        augment: bool, default False,
+            rpeaks used for extracting features is augmented using the annotations or not
         save: bool, default True,
             whether or not save the features to the working directory
 
@@ -238,23 +243,26 @@ class CPSC2020(object):
         features = self._normalize_feature_names(features, True)
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}"
+        if augment:
+            rec_name = rec_name + "-augment"
         
         try:
             print("try loading precomputed filtered signal and precomputed rpeaks...")
             data = self.load_data(rec, preprocesses=preprocesses, keep_dim=False)
-            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, keep_dim=False)
+            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, augment=augment, keep_dim=False)
         except:
             print("no precomputed data exist")
             self.preprocess_data(rec, preprocesses=preprocesses)
             data = self.load_data(rec, preprocesses=preprocesses, keep_dim=False)
-            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, keep_dim=False)
+            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, augment=augment, keep_dim=False)
         
         config = deepcopy(FeatureCfg)
         config.features = features
         feature_mat = compute_ecg_features(data, rpeaks, config=config)
 
         if save:
-            save_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}{self.rec_ext}")
+            save_fp = os.path.join(self.feature_dir, f"{rec_name}{self.rec_ext}")
             savemat(save_fp, {'features': feature_mat}, format='5')
 
         return feature_mat
@@ -328,13 +336,18 @@ class CPSC2020(object):
         features = self._normalize_feature_names(features, True)
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = self._get_rec_name(rec)
-        feature_fp = os.path.join(self.feature_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}{self.rec_ext}")
-        if os.path.isfile(feature_fp) and force_recompute:
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}"
+        if augment:
+            rec_name = rec_name + "-augment"
+        feature_fp = os.path.join(self.feature_dir, f"{rec_name}{self.rec_ext}")
+        if os.path.isfile(feature_fp) and not force_recompute:
             print("try loading precomputed features...")
             feature_mat = loadmat(feature_fp)['features']
         else:
             print("recompute features")
-            feature_mat = self.compute_features(rec, features, preprocesses, save=True)
+            feature_mat = self.compute_features(
+                rec, features, preprocesses, augment, save=True
+            )
         return feature_mat
 
 
