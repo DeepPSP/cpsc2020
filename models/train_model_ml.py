@@ -51,18 +51,31 @@ class ECGPrematureDetector(object):
 
         if type(self.model).__name__ == "XGBClassifier":
             self._train_xgb_clf(self)
+        else:
+            self._train_sklearn_clf()
+        
         raise NotImplementedError
 
     
-    def _train_xgb_clf(self):
+    def _train_xgb_clf(self, **config):
         """
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train)
         dtest = xgb.DMatrix(self.x_test, label=self.y_test)
 
+        cv_results = xgb.cv(
+            config.ml_params_grid,
+            dtrain,
+            num_boost_round=num_boost_round,
+            seed=42,
+            nfold=5,
+            metrics={'mae'},
+            early_stopping_rounds=10
+        )
+
         raise NotImplementedError
 
-    def _train_sklearn_clf(self):
+    def _train_sklearn_clf(self, **config):
         """
         """
         raise NotImplementedError
