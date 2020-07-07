@@ -42,7 +42,10 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
 
     Returns:
     --------
-    to write
+    features: ndarray,
+        the computed features, of shape (m,n), where
+            m = the number of beats (the number of `rpeaks`)
+            n = the dimension of the features
     """
     cfg = deepcopy(FeatureCfg)
     cfg.update(config or {})
@@ -117,7 +120,12 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
 
     Returns:
     --------
-    features_rr: ndarray
+    features_rr: ndarray,
+        rr features, including
+        pre_rr: 
+        postr_rr: 
+        local_rr: 
+        global_rr: 
     """
     cfg = deepcopy(FeatureCfg)
     cfg.update(config or {})
@@ -138,6 +146,14 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
 
 def _compute_pre_rr(rr_intervals:np.ndarray) -> np.ndarray:
     """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     try:
         pre_rr = np.append(rr_intervals[0], rr_intervals)
@@ -146,7 +162,15 @@ def _compute_pre_rr(rr_intervals:np.ndarray) -> np.ndarray:
     return pre_rr
 
 def _compute_post_rr(rr_intervals:np.ndarray) -> np.ndarray:
-    """
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     try:
         post_rr = np.append(rr_intervals, rr_intervals[-1])
@@ -156,6 +180,14 @@ def _compute_post_rr(rr_intervals:np.ndarray) -> np.ndarray:
 
 def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
     """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     local_rr = np.array([], dtype=int)
     for i in range(config.rr_local_range-1):  # head
@@ -168,6 +200,14 @@ def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
 
 def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:int, epoch_end:int, global_range:int) -> np.ndarray:
     """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     global_rr = []
     for idx in range(epoch_start,epoch_end):
@@ -177,6 +217,14 @@ def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:
 
 def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.ndarray:
     """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
     split_indices = [0]
     one_hour = config.fs*3600
