@@ -294,8 +294,10 @@ class CPSC2020(object):
             the indices of rpeaks
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
-        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        rec_name = self._get_rec_name(rec)
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses)}"
         if augment:
+            rec_name = rec_name + "-augment"
             rpeaks_fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.rec_ext}")
         else:
             rpeaks_fp = os.path.join(self.rpeaks_dir, f"{rec_name}{self.rec_ext}")
