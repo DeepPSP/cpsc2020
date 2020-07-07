@@ -60,7 +60,9 @@ TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC20
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
 TrainCfg.ml_params_grid = {
-    'XGBClassifier': {},
+    'XGBClassifier': {
+        ''
+    },
     'SVC': {
         'C': [0.0005, 0.001, 0.002, 0.01, 0.1, 1, 10],
         'gamma' : [0.001, 0.01, 0.1, 1],

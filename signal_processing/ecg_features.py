@@ -57,6 +57,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
         beats.append(sig[r-cfg.beat_winL:r+cfg.beat_winR])
     features = np.empty((len(beats), 0))
 
+    # NOTE: ordering keep in accordance with FeatureCfg.features
     if 'wavelet' in cfg.features:
         tmp = []
         for beat in beats:

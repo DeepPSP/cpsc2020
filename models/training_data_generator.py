@@ -74,7 +74,7 @@ class CPSC2020(object):
        A08   Yes    126908              118,311
        A09   No     89972               89,693
        A10   No     83509               82,061
-    2. A04 has duplicate PVC_indices (13534856, 27147621, 35141190 all appear twice):
+    2. A04 has duplicate 'PVC_indices' (13534856,27147621,35141190 all appear twice):
        before correction of `load_ann`:
        >>> from collections import Counter
        >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
@@ -86,7 +86,9 @@ class CPSC2020(object):
     3. when extracting morphological features using augmented rpeaks for A04,
        `RuntimeWarning: invalid value encountered in double_scalars` would raise
        for `R_value = (R_value - y_min) / (y_max - y_min)` and
-       for `y_values[n] = (y_values[n] - y_min) / (y_max - y_min)`
+       for `y_values[n] = (y_values[n] - y_min) / (y_max - y_min)`.
+       this is caused by the 13882273-th sample, which is contained in 'PVC_indices',
+       however, whether it is a PVC beat, or just motion artefact, is in doubt!
 
     Usage:
     ------
@@ -755,7 +757,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]]) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set
@@ -770,6 +772,8 @@ class CPSC2020(object):
         preprocesses: list of str,
             list of preprocesses types performed on the raw data,
             should be sublist of `self.allowd_features`
+        augment: bool, default True,
+            features are computed using augmented rpeaks or not
 
         Returns:
         --------
@@ -782,10 +786,25 @@ class CPSC2020(object):
         y = ED({"train": np.array([]), "test": np.array([])})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
-                feature_mat = self.load_features(rec, features=features, preprocesses=preprocesses)
+                feature_mat = self.load_features(
+                    rec,
+                    features=features,
+                    preprocesses=preprocesses,
+                    augment=augment,
+                    force_recompute=False
+                )
                 x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
-                beat_ann = self.load_beat_ann(rec, preprocesses=preprocesses)
+                beat_ann = self.load_beat_ann(
+                    rec,
+                    preprocesses=preprocesses,
+                    augment=augment,
+                    force_recompute=False
+                )
                 y[subset] = np.append(y[subset], beat_ann)
+            # post process: drop invalid (nan, inf, etc.)
+            invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
+            x[subset] = np.delete(x[subset], invalid_indices, axis=0)
+            y[subset] = np.delete(y[subset], invalid_indices, axis=0)
         return x["train"], y["train"], x["test"], y["test"]
 
 
