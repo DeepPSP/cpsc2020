@@ -28,7 +28,7 @@ __all__ = [
 
 
 def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str="npy") -> np.ndarray:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------
@@ -83,7 +83,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
 
 
 def compute_wavelet_descriptor(beat:np.ndarray, config:ED) -> np.ndarray:
-    """
+    """ finished, checked,
 
     Parameters:
     -----------
@@ -113,7 +113,7 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     Parameters:
     -----------
     rpeaks: ndarray,
-        indices of R peaks
+        indices of r peaks
     config: dict, optional,
         extra process configurations,
         `FeatureCfg` will `update` this `config`
@@ -121,11 +121,11 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     Returns:
     --------
     features_rr: ndarray,
-        rr features, including
-        pre_rr: 
-        postr_rr: 
-        local_rr: 
-        global_rr: 
+        rr features, including (in the following ordering)
+        pre_rr: rr intervals to the previous r peak
+        post_rr: rr intervals to the next r peak
+        local_rr: mean rr interval of the previous n (c.f. `FeatureCfg`) beats
+        global_rr: mean rr interval of the previous n (c.f. `FeatureCfg`) minutes
     """
     cfg = deepcopy(FeatureCfg)
     cfg.update(config or {})
@@ -149,11 +149,13 @@ def _compute_pre_rr(rr_intervals:np.ndarray) -> np.ndarray:
 
     Parameters:
     -----------
-    to write
+    rr_intervals: ndarray,
+        array of rr intervals (to the next r peak)
 
     Returns:
     --------
-    to write
+    pre_rr: ndarray,
+        array of rr intervals to the previous r peak
     """
     try:
         pre_rr = np.append(rr_intervals[0], rr_intervals)
@@ -166,11 +168,14 @@ def _compute_post_rr(rr_intervals:np.ndarray) -> np.ndarray:
 
     Parameters:
     -----------
-    to write
+    rr_intervals: ndarray,
+        array of rr intervals (to the next r peak)
 
     Returns:
     --------
-    to write
+    post_rr: ndarray,
+        array of rr intervals to the next r peak,
+        with the last element of `rr_intervals` duplicated
     """
     try:
         post_rr = np.append(rr_intervals, rr_intervals[-1])
@@ -183,11 +188,15 @@ def _compute_local_rr(prev_rr:np.ndarray, config:ED) -> np.ndarray:
 
     Parameters:
     -----------
-    to write
+    rr_intervals: ndarray,
+        array of rr intervals (to the next r peak)
+    config: dict,
+        configurations (local range) for computing local rr intervals
 
     Returns:
     --------
-    to write
+    local_rr: ndarray,
+        array of the local mean rr intervals
     """
     local_rr = np.array([], dtype=int)
     for i in range(config.rr_local_range-1):  # head
@@ -203,11 +212,21 @@ def _compute_global_rr_epoch(rpeaks:np.ndarray, prev_rr:np.ndarray, epoch_start:
 
     Parameters:
     -----------
-    to write
+    rpeaks: ndarray,
+        indices of r peaks
+    prev_rr: ndarray,
+        array of rr intervals to the previous r peak
+    epoch_start: int,
+        index in `rpeaks` of the epoch start
+    epoch_end: int,
+        index in `rpeaks` of the epoch end
+    global_range: int,
+        range in number of samples for computing the 'global' mean rr intervals
 
     Returns:
     --------
-    to write
+    global_rr: ndarray,
+        array of the global mean rr intervals
     """
     global_rr = []
     for idx in range(epoch_start,epoch_end):
@@ -220,11 +239,17 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
 
     Parameters:
     -----------
-    to write
+    rpeaks: ndarray,
+        indices of r peaks
+    prev_rr: ndarray,
+        array of rr intervals to the previous r peak
+    config: dict,
+        configurations (global range) for computing global rr intervals
 
     Returns:
     --------
-    to write
+    global_rr: ndarray,
+        array of the global mean rr intervals
     """
     split_indices = [0]
     one_hour = config.fs*3600
