@@ -452,7 +452,9 @@ class CPSC2020(object):
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         if not force_recompute and os.path.isfile(fp):
             print("try loading precomputed beat_ann")
-            beat_ann = loadmat(fp)["beat_ann"]
+            beat_ann = loadmat(fp)
+            if not return_aux_data:
+                beat_ann = beat_ann["beat_ann"]
         else:
             print("recompute beat_ann")
             rpeaks = self.load_rpeaks(
