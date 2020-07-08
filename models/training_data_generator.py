@@ -453,6 +453,9 @@ class CPSC2020(object):
         if not force_recompute and os.path.isfile(fp):
             print("try loading precomputed beat_ann")
             beat_ann = loadmat(fp)
+            for k in beat_ann.keys():
+                if not k.startswith("__"):
+                    beat_ann[k] = beat_ann[k].flatten()
             if not return_aux_data:
                 beat_ann = beat_ann["beat_ann"]
         else:
@@ -511,6 +514,10 @@ class CPSC2020(object):
         beat_ann: ndarray, or dict,
             annotation (one of 'N', 'S', 'V') for each beat,
             or together with auxiliary data as a dict
+
+        NOTE:
+        -----
+        the 'rpeaks' saved in the .mat file is of shape (1,n), rather than (n,)
         """
         one_hour = self.fs*3600
         split_indices = [0]
@@ -570,6 +577,12 @@ class CPSC2020(object):
         sorted_indices = np.argsort(augmented_rpeaks)
         augmented_rpeaks = augmented_rpeaks[sorted_indices].astype(int)
         beat_ann = beat_ann[sorted_indices].astype('<U1')
+
+        # NOTE: features will only be extracted at 'valid' rpeaks
+        raw_sig = self.load_data(rec, keep_dim=False, preprocesses=None)
+        valid_indices = np.where( (augmented_rpeaks>=FeatureCfg.beat_winL) & (augmented_rpeaks<len(raw_sig)-FeatureCfg.beat_winR) )[0]
+        augmented_rpeaks = augmented_rpeaks[valid_indices]
+        beat_ann = beat_ann[valid_indices]
 
         # list_addition = lambda a,b: a+b
         # beat_ann = reduce(list_addition, result)
@@ -783,8 +796,8 @@ class CPSC2020(object):
         features = self._normalize_feature_names(features, True)
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         split_rec = self.train_test_split_rec(test_rec_num)
-        x = ED({"train": np.array([]), "test": np.array([])})
-        y = ED({"train": np.array([]), "test": np.array([])})
+        x = ED({"train": np.array([],dtype=float), "test": np.array([],dtype=float)})
+        y = ED({"train": np.array([],dtype='<U1'), "test": np.array([],dtype='<U1')})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
                 ecg_sig = self.load_data(rec, keep_dim=False, preprocesses=preprocesses)
@@ -802,9 +815,10 @@ class CPSC2020(object):
                     return_aux_data=True,
                     force_recompute=False
                 )
-                valid_indices = np.where( (beat_ann["rpeaks"]>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"]<len(ecg_sig)-FeatureCfg.beat_winR) )[0]
-                feature_mat = feature_mat[valid_indices]
-                beat_ann["beat_ann"] = beat_ann["beat_ann"][valid_indices]
+                # NOTE: the following has been moved to the function `_ann_to_beat_ann`
+                # valid_indices = np.where( (beat_ann["rpeaks"].ravel()>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"].ravel()<len(ecg_sig)-FeatureCfg.beat_winR) )[0]
+                # feature_mat = feature_mat[valid_indices]
+                # beat_ann["beat_ann"] = beat_ann["beat_ann"][valid_indices]
                 if len(x[subset]):
                     x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
                 else:
