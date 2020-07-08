@@ -92,6 +92,11 @@ class CPSC2020(object):
        this is caused by the 13882273-th sample, which is contained in 'PVC_indices',
        however, whether it is a PVC beat, or just motion artefact, is in doubt!
 
+    TODO:
+    -----
+    1. use SNR to filter out too noisy segments?
+    2. for ML, consider more features
+
     Usage:
     ------
     1. ecg arrhythmia (PVC, SPB) detection
@@ -811,7 +816,7 @@ class CPSC2020(object):
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)
-            y[subset] = np.delete(y[subset], invalid_indices, axis=0)
+            y[subset] = np.delete(y[subset], invalid_indices)
         return x["train"], y["train"], x["test"], y["test"]
 
 

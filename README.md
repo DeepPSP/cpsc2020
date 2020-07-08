@@ -19,4 +19,6 @@ TODO:
 
 [3] deep learning model structure design (refine)
 
-[4] etc....
+[4] use SNR to deal with (eliminate?) too noisy segments?
+
+[5] etc....
