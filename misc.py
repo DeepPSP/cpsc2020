@@ -309,7 +309,7 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
         plt.show()
 
 
-CPSC_STATS = pd.DataFraStringIO("""rec, AF, len_h,N_beats,V_beats,S_beats,total_beats
+CPSC_STATS = pd.DataFrame(StringIO("""rec, AF, len_h,N_beats,V_beats,S_beats,total_beats
 A01,No,25.89,109062,0,24,109086
 A02,Yes,22.83,98936,4554,0,103490
 A03,Yes,24.70,137249,382,0,137631
@@ -319,4 +319,4 @@ A06,No,24.59,77621,0,6,77627
 A07,No,23.11,73325,15150,3481,91956
 A08,Yes,25.46,115,518,2793,0,118311
 A09,No,25.84,88229,2,1462,89693
-A10,No,23.64,72821,169,9071,82061""")
+A10,No,23.64,72821,169,9071,82061"""))
