@@ -11,6 +11,7 @@ import joblib, pickle
 from copy import deepcopy
 from typing import Union, Optional, Any
 
+from tqdm import tqdm
 import xgboost as xgb
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import GridSearchCV
@@ -31,6 +32,16 @@ class ECGPrematureDetector(object):
     """
     def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
         """
+
+        Parameters:
+        -----------
+        model: classifiers from sklearn or xgboost,
+            e.g. `xgb.XGBClassifier()`
+        db_dir: str,
+            directory where the database is stored
+        working_dir: str, optional,
+            working directory, to store intermediate files and log file
+        verbose: int, default 2,
         """
         self.model = model
         self.db_dir = db_dir
@@ -50,15 +61,14 @@ class ECGPrematureDetector(object):
         cfg.update(config)
 
         if type(self.model).__name__ == "XGBClassifier":
-            self._train_xgb_clf(self)
+            self._train_xgb_clf(**cfg)
         else:
-            self._train_sklearn_clf()
-        
-        raise NotImplementedError
+            self._train_sklearn_clf(**cfg)
 
     
     def _train_xgb_clf(self, **config):
         """
+        NOT finished
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train)
         dtest = xgb.DMatrix(self.x_test, label=self.y_test)
@@ -77,8 +87,10 @@ class ECGPrematureDetector(object):
 
     def _train_sklearn_clf(self, **config):
         """
+        NOT finished
         """
-        raise NotImplementedError
+        grid = GridSearchCV(estimator=self.model, param_grid=params, scoring=make_scorer(score), n_jobs=n_jobs, verbose=self.verbose, cv=3)
+        grid_result = grid.fit(self.X_train, self.y_train)
 
 
 if __name__ == "__main__":

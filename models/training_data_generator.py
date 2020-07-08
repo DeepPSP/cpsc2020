@@ -797,7 +797,10 @@ class CPSC2020(object):
                     augment=augment,
                     force_recompute=False
                 )
-                x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
+                if len(x[subset]):
+                    x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
+                else:
+                    x[subset] = feature_mat.copy()
                 beat_ann = self.load_beat_ann(
                     rec,
                     preprocesses=preprocesses,

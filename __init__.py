@@ -1,6 +1,8 @@
 """
 """
 import os, sys
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
