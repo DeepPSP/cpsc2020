@@ -1,7 +1,11 @@
 """
 """
 import os
+
+from sklearn.utils.class_weight import compute_class_weight
 from easydict import EasyDict as ED
+
+from misc import CPSC_STATS
 
 
 __all__ = [
@@ -57,9 +61,10 @@ TrainCfg.SEED = 42
 TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 2
 TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
+TrainCfg.class_weight = dict(N=1,S=56,V=23)  # via sklearn.utils.class_weight.compute_class_weight
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
-TrainCfg.class_weight = None  # TODO
+TrainCfg.cv = 5
 TrainCfg.ml_params_grid = {
     'XGBClassifier': {
         ''

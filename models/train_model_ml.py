@@ -15,7 +15,18 @@ from tqdm import tqdm
 import xgboost as xgb
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+# from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import (
+    make_scorer,
+    accuracy_score, fbeta_score, jaccard_score,
+    plot_confusion_matrix,
+)
+from sklearn.ensemble import (
+    RandomForestClassifier, GradientBoostingClassifier, BaggingClassifier
+)
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
 from easydict import EasyDict as ED
 
 from cfg import TrainCfg
@@ -44,6 +55,7 @@ class ECGPrematureDetector(object):
         verbose: int, default 2,
         """
         self.model = model
+        self.model_name = type(self.model).__name__
         self.db_dir = db_dir
         self.working_dir = working_dir or os.getcwd()
         self.verbose = verbose
@@ -65,7 +77,6 @@ class ECGPrematureDetector(object):
         else:
             self._train_sklearn_clf(**cfg)
 
-    
     def _train_xgb_clf(self, **config):
         """
         NOT finished
@@ -77,8 +88,8 @@ class ECGPrematureDetector(object):
             config.ml_params_grid,
             dtrain,
             num_boost_round=num_boost_round,
-            seed=42,
-            nfold=5,
+            seed=config.SEED,
+            nfold=config.cv,
             metrics={'mae'},
             early_stopping_rounds=10
         )
@@ -89,7 +100,14 @@ class ECGPrematureDetector(object):
         """
         NOT finished
         """
-        grid = GridSearchCV(estimator=self.model, param_grid=params, scoring=make_scorer(score), n_jobs=n_jobs, verbose=self.verbose, cv=3)
+        grid = GridSearchCV(
+            estimator=self.model,
+            param_grid=config.ml_params_grid[self.modle],
+            scoring=make_scorer(acc),
+            n_jobs=n_jobs,
+            verbose=self.verbose,
+            cv=config.cv,
+        )
         grid_result = grid.fit(self.X_train, self.y_train)
 
 

@@ -104,8 +104,7 @@ class CPSC2020(object):
     References:
     -----------
     [1] http://www.icbeb.org/CPSC2020.html
-    [2] https://github.com/mondejar/ecg-classification
-    [3] https://github.com/PIA-Group/BioSPPy
+    [2] https://github.com/PIA-Group/BioSPPy
     """
     def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
         """ finished, to be improved,
@@ -517,7 +516,7 @@ class CPSC2020(object):
 
         NOTE:
         -----
-        the 'rpeaks' saved in the .mat file is of shape (1,n), rather than (n,)
+        the 'rpeaks' and 'beat_ann_int' saved in the .mat file is of shape (1,n), rather than (n,)
         """
         one_hour = self.fs*3600
         split_indices = [0]
