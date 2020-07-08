@@ -233,6 +233,7 @@ class CPSC2020(object):
         config = deepcopy(PreprocessCfg)
         config.preprocesses = preprocesses
         pps = parallel_preprocess_signal(self.load_data(rec, keep_dim=False), fs=self.fs, config=config)
+        pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
         # save mat, keep in accordance with original mat files
         savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
@@ -414,7 +415,7 @@ class CPSC2020(object):
         return ann
 
     
-    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True, force_recompute:bool=False) -> np.ndarray:
+    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True, return_aux_data:bool=False, force_recompute:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
         """ finished, checked,
 
         Parameters:
@@ -431,13 +432,18 @@ class CPSC2020(object):
             should be sublist of `self.allowed_preprocesses`
         augment: bool, default True,
             rpeaks detected by algorithm is augmented using the annotations or not
+        return_aux_data: bool, default False,
+            whether or not return auxiliary data, including
+                - the augmented rpeaks
+                - the beat_ann mapped to int annotations via `self.label_map`
         force_recompute: bool, default False,
             force recompute, regardless of the existing precomputed feature files
         
         Returns:
         --------
-        beat_ann: ndarray,
-            annotation (one of 'N', 'S', 'V') for each beat
+        beat_ann: ndarray, or dict,
+            annotation (one of 'N', 'S', 'V') for each beat,
+            or together with auxiliary data as a dict
         """
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
@@ -457,11 +463,20 @@ class CPSC2020(object):
                 augment=False,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
-            beat_ann = self._ann_to_beat_ann(rec, rpeaks, ann, preprocesses, FeatureCfg.beat_ann_bias_thr, augment=augment, save=True)
+            beat_ann = self._ann_to_beat_ann(
+                rec=rec,
+                rpeaks=rpeaks,
+                ann=ann,
+                preprocesses=preprocesses,
+                bias_thr=FeatureCfg.beat_ann_bias_thr,
+                augment=augment,
+                return_aux_data=return_aux_data,
+                save=True
+            )
         return beat_ann
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], bias_thr:Real, augment:bool=True, save:bool=False) -> np.ndarray:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], bias_thr:Real, augment:bool=True, return_aux_data:bool=False, save:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
         """ finished, checked,
 
         Parameters:
@@ -482,13 +497,18 @@ class CPSC2020(object):
             to label the type of beats given by `rpeaks`
         augment: bool, default True,
             `rpeaks` is augmented using the annotations or not
+        return_aux_data: bool, default False,
+            whether or not return auxiliary data, including
+                - the augmented rpeaks
+                - the beat_ann mapped to int annotations via `self.label_map`
         save: bool, default False,
             save the outcome beat annotations (along with 'augmented' rpeaks) to file or not
         
         Returns:
         --------
-        beat_ann: ndarray,
-            annotation (one of 'N', 'S', 'V') for each beat
+        beat_ann: ndarray, or dict,
+            annotation (one of 'N', 'S', 'V') for each beat,
+            or together with auxiliary data as a dict
         """
         one_hour = self.fs*3600
         split_indices = [0]
@@ -570,6 +590,9 @@ class CPSC2020(object):
             "beat_ann_int": np.vectorize(lambda a:self.label_map[a])(beat_ann)
         }
         savemat(fp, to_save_mdict, format='5')
+
+        if return_aux_data:
+            beat_ann = to_save_mdict
 
         return beat_ann
 
@@ -696,39 +719,6 @@ class CPSC2020(object):
         return _p
 
     
-    def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
-        """ not finished, not checked,
-
-        Parameters:
-        -----------
-        rec: int or str,
-            number of the record, NOTE that rec_no starts from 1,
-            or the record name
-        sampfrom: int, optional,
-            start index of the data to be loaded
-        sampto: int, optional,
-            end index of the data to be loaded
-        ectopic_beats_only: bool, default False,
-            whether or not onpy plot the neighborhoods of the ectopic beats
-        """
-        data = self.load_data(rec, sampfrom=sampfrom, sampto=sampto, keep_dim=False)
-        ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
-        sf, st = (sampfrom or 0), (sampto or len(data))
-        if ectopic_beats_only:
-            ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
-            tot_interval = [sf, st]
-            covering, tb = misc.get_optimal_covering(
-                total_interval=tot_interval,
-                to_cover=ectopic_beat_indices,
-                min_len=3*self.freq,
-                split_threshold=3*self.freq,
-                traceback=True,
-                verbose=self.verbose,
-            )
-        # TODO: finish plot
-        raise NotImplementedError
-
-    
     def train_test_split_rec(self, test_rec_num:int=2) -> Dict[str, List[str]]:
         """ finished, checked,
 
@@ -802,22 +792,59 @@ class CPSC2020(object):
                     augment=augment,
                     force_recompute=False
                 )
-                if len(x[subset]):
-                    x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
-                else:
-                    x[subset] = feature_mat.copy()
                 beat_ann = self.load_beat_ann(
                     rec,
                     preprocesses=preprocesses,
                     augment=augment,
+                    return_aux_data=True,
                     force_recompute=False
                 )
+                valid_indices = np.where( (beat_ann["rpeaks"]>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"]<FeatureCfg.beat_winR) )[0]
+                feature_mat = feature_mat[valid_indices]
+                beat_ann["beat_ann"] = beat_ann["beat_ann"][valid_indices]
+                if len(x[subset]):
+                    x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
+                else:
+                    x[subset] = feature_mat.copy()
                 y[subset] = np.append(y[subset], beat_ann)
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)
             y[subset] = np.delete(y[subset], invalid_indices)
         return x["train"], y["train"], x["test"], y["test"]
+
+    
+    def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
+        """ not finished, not checked,
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        sampfrom: int, optional,
+            start index of the data to be loaded
+        sampto: int, optional,
+            end index of the data to be loaded
+        ectopic_beats_only: bool, default False,
+            whether or not onpy plot the neighborhoods of the ectopic beats
+        """
+        data = self.load_data(rec, sampfrom=sampfrom, sampto=sampto, keep_dim=False)
+        ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
+        sf, st = (sampfrom or 0), (sampto or len(data))
+        if ectopic_beats_only:
+            ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
+            tot_interval = [sf, st]
+            covering, tb = misc.get_optimal_covering(
+                total_interval=tot_interval,
+                to_cover=ectopic_beat_indices,
+                min_len=3*self.freq,
+                split_threshold=3*self.freq,
+                traceback=True,
+                verbose=self.verbose,
+            )
+        # TODO: finish plot
+        raise NotImplementedError
 
 
 def _ann_to_beat_ann_epoch_v1(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> dict:
