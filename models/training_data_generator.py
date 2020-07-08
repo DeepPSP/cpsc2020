@@ -809,7 +809,7 @@ class CPSC2020(object):
                     x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
                 else:
                     x[subset] = feature_mat.copy()
-                y[subset] = np.append(y[subset], beat_ann)
+                y[subset] = np.append(y[subset], beat_ann["beat_ann"])
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)
