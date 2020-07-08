@@ -65,7 +65,7 @@ TrainCfg.class_weight = dict(N=1,S=56,V=23)  # via sklearn.utils.class_weight.co
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
 TrainCfg.cv = 5
-TrainCfg.ml_params_grid = {
+TrainCfg.ml_param_grid = {
     'XGBClassifier': {
         ''
     },

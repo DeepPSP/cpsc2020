@@ -8,6 +8,7 @@ References:
 import os
 import argparse
 import joblib, pickle
+import multiprocessing as mp
 from copy import deepcopy
 from typing import Union, Optional, Any
 
@@ -85,7 +86,7 @@ class ECGPrematureDetector(object):
         dtest = xgb.DMatrix(self.x_test, label=self.y_test)
 
         cv_results = xgb.cv(
-            config.ml_params_grid,
+            config.ml_param_grid,
             dtrain,
             num_boost_round=num_boost_round,
             seed=config.SEED,
@@ -102,13 +103,19 @@ class ECGPrematureDetector(object):
         """
         grid = GridSearchCV(
             estimator=self.model,
-            param_grid=config.ml_params_grid[self.modle],
-            scoring=make_scorer(acc),
-            n_jobs=n_jobs,
+            param_grid=config.ml_param_grid[self.modle_name],
+            scoring=make_scorer(accuracy_score),
+            n_jobs=max(1, mp.cpu_count()-3),
             verbose=self.verbose,
             cv=config.cv,
         )
         grid_result = grid.fit(self.X_train, self.y_train)
+        retval = ED(
+            best_model=grid_result.best_estimator_
+            best_params=grid_result.best_params_,
+            best_score=grid_result.best_score_
+        )
+        return retval
 
 
 if __name__ == "__main__":
