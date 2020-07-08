@@ -787,6 +787,7 @@ class CPSC2020(object):
         y = ED({"train": np.array([]), "test": np.array([])})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
+                ecg_sig = self.load_data(rec, keep_dim=False, preprocesses=preprocesses)
                 feature_mat = self.load_features(
                     rec,
                     features=features,
@@ -801,7 +802,7 @@ class CPSC2020(object):
                     return_aux_data=True,
                     force_recompute=False
                 )
-                valid_indices = np.where( (beat_ann["rpeaks"]>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"]<FeatureCfg.beat_winR) )[0]
+                valid_indices = np.where( (beat_ann["rpeaks"]>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"]<len(ecg_sig)-FeatureCfg.beat_winR) )[0]
                 feature_mat = feature_mat[valid_indices]
                 beat_ann["beat_ann"] = beat_ann["beat_ann"][valid_indices]
                 if len(x[subset]):
