@@ -24,6 +24,72 @@ Interval = Union[List[Real], Tuple[Real], type(EMPTY_SET)]
 GeneralizedInterval = Union[List[Interval], Tuple[Interval], type(EMPTY_SET)]
 
 
+def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=True) -> GeneralizedInterval:
+    """ finished, checked,
+
+    find the union (ordered and non-intersecting) of all the intervals in `interval_list`,
+    which is a list of intervals in the form [a,b], where a,b need not be ordered
+
+    Parameters:
+    -----------
+    interval_list: GeneralizedInterval,
+        the list of intervals to calculate their union
+    join_book_endeds: bool, default True,
+        join the book-ended intervals into one (e.g. [[1,2],[2,3]] into [1,3]) or not
+    
+    Returns:
+    --------
+    GeneralizedInterval, the union of the intervals in `interval_list`
+    """
+    interval_sort_key = lambda i: i[0]
+    # list_add = lambda list1, list2: list1+list2
+    processed = [item for item in interval_list if len(item) > 0]
+    for item in processed:
+        item.sort()
+    processed.sort(key=interval_sort_key)
+    # end_points = reduce(list_add, processed)
+    merge_flag = True
+    while merge_flag:
+        merge_flag = False
+        new_intervals = []
+        if len(processed) == 1:
+            return processed
+        for idx, interval in enumerate(processed[:-1]):
+            this_start, this_end = interval
+            next_start, next_end = processed[idx + 1]
+            # it is certain that this_start <= next_start
+            if this_end < next_start:
+                # 两区间首尾分开
+                new_intervals.append([this_start, this_end])
+                if idx == len(processed) - 2:
+                    new_intervals.append([next_start, next_end])
+            elif this_end == next_start:
+                # 两区间首尾正好在一点
+                # 需要区别对待单点区间以及有长度的区间
+                # 以及join_book_endeds的情况
+                # 来判断是否合并
+                if (this_start == this_end or next_start == next_end) or join_book_endeds:
+                    # 单点区间以及join_book_endeds为True时合并
+                    new_intervals.append([this_start, max(this_end, next_end)])
+                    new_intervals += processed[idx + 2:]
+                    merge_flag = True
+                    processed = new_intervals
+                    break
+                else:
+                    # 都是有长度的区间且join_book_endeds为False则不合并
+                    new_intervals.append([this_start, this_end])
+                    if idx == len(processed) - 2:
+                        new_intervals.append([next_start, next_end])
+            else:
+                new_intervals.append([this_start, max(this_end, next_end)])
+                new_intervals += processed[idx + 2:]
+                merge_flag = True
+                processed = new_intervals
+                break
+        processed = new_intervals
+    return processed
+
+
 def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:int, split_threshold:int, traceback:bool=False, **kwargs) -> Tuple[GeneralizedInterval,list]:
     """ finished, checked,
 
