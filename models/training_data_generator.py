@@ -770,7 +770,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True, int_labels:bool:True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set
@@ -787,6 +787,8 @@ class CPSC2020(object):
             should be sublist of `self.allowd_features`
         augment: bool, default True,
             features are computed using augmented rpeaks or not
+        int_labels: bool, default True,
+            use the 'beat_ann_int', which is mapped into int via `label_map`
 
         Returns:
         --------
@@ -796,7 +798,10 @@ class CPSC2020(object):
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
         split_rec = self.train_test_split_rec(test_rec_num)
         x = ED({"train": np.array([],dtype=float), "test": np.array([],dtype=float)})
-        y = ED({"train": np.array([],dtype='<U1'), "test": np.array([],dtype='<U1')})
+        if int_labels:
+            y = ED({"train": np.array([]), "test": np.array([])})
+        else:
+            y = ED({"train": np.array([],dtype='<U1'), "test": np.array([],dtype='<U1')})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
                 ecg_sig = self.load_data(rec, keep_dim=False, preprocesses=preprocesses)
@@ -822,7 +827,10 @@ class CPSC2020(object):
                     x[subset] = np.concatenate((x[subset], feature_mat), axis=0)
                 else:
                     x[subset] = feature_mat.copy()
-                y[subset] = np.append(y[subset], beat_ann["beat_ann"])
+                if int_labels:
+                    y[subset] = np.append(y[subset], beat_ann["beat_ann_int"])
+                else:
+                    y[subset] = np.append(y[subset], beat_ann["beat_ann"])
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)
