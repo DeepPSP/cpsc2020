@@ -65,6 +65,7 @@ TrainCfg.preprocesses = PreprocessCfg.preprocesses
 TrainCfg.features = FeatureCfg.features
 TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
+# TrainCfg.class_weight = 'balanced'
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
 TrainCfg.cv = 3

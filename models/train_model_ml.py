@@ -34,6 +34,7 @@ from cfg import TrainCfg
 # from signal_processing.ecg_preprocess import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
 from .training_data_generator import CPSC2020
+import misc
 
 
 __all__ = ["train"]
@@ -76,7 +77,7 @@ class ECGPrematureDetector(object):
                 augment=self.config.augment_rpeaks,
                 int_labels=True,
             )
-        self.sample_weight = class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+        self.sample_weight = misc.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
     def train(self, **config):
         """ NOT finished
@@ -142,45 +143,6 @@ class ECGPrematureDetector(object):
             best_score=grid_result.best_score_
         )
         return retval
-
-
-def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> np.ndarray:
-    """ finished, checked,
-
-    transform class weight to sample weight
-
-    Parameters:
-    -----------
-    y: ndarray,
-        the label (class) of each sample
-    class_weight: str, or list, or ndarray, or dict, default 'balanced',
-        the weight for each sample class,
-        if is 'balanced', the class weight will automatically be given by 
-        if `y` is of string type, then `class_weight` should be a dict,
-        if `y` is of numeric type, and `class_weight` is array_like,
-        then the labels (`y`) should be continuous and start from 0
-    """
-    if not class_weight:
-        sample_weight = np.ones_like(y, dtype=float)
-        return sample_weight
-    
-    try:
-        sample_weight = y.copy().astype(int)
-    except:
-        sample_weight = y.copy()
-        assert isinstance(class_weight, dict) or class_weight.lower()=='balanced', \
-            "if `y` are of type str, then class_weight should be 'balanced' or a dict"
-    
-    if class_weight.lower() == 'balanced':
-        classes = np.unique(y).tolist()
-        cw = compute_class_weight('balanced', classes=classes, y=y)
-        trans_func = lambda s: cw[classes.index(s)]
-    else:
-        trans_func = lambda s: class_weight[s]
-    sample_weight = np.vectorize(trans_func)(sample_weight)
-    sample_weight = sample_weight / np.max(sample_weight)
-    return sample_weight
-
 
 
 

@@ -9,6 +9,7 @@ from typing import Union, Optional, List, Tuple, NoReturn
 
 import numpy as np
 import pandas as pd
+from sklearn.utils.class_weight import compute_class_weight
 from easydict import EasyDict as ED
 
 
@@ -322,6 +323,46 @@ def str2bool(v:Union[str,bool]) -> bool:
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+
+
+def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> np.ndarray:
+    """ finished, checked,
+
+    transform class weight to sample weight
+
+    Parameters:
+    -----------
+    y: ndarray,
+        the label (class) of each sample
+    class_weight: str, or list, or ndarray, or dict, default 'balanced',
+        the weight for each sample class,
+        if is 'balanced', the class weight will automatically be given by 
+        if `y` is of string type, then `class_weight` should be a dict,
+        if `y` is of numeric type, and `class_weight` is array_like,
+        then the labels (`y`) should be continuous and start from 0
+    """
+    if not class_weight:
+        sample_weight = np.ones_like(y, dtype=float)
+        return sample_weight
+    
+    try:
+        sample_weight = y.copy().astype(int)
+    except:
+        sample_weight = y.copy()
+        assert isinstance(class_weight, dict) or class_weight.lower()=='balanced', \
+            "if `y` are of type str, then class_weight should be 'balanced' or a dict"
+    
+    if class_weight.lower() == 'balanced':
+        classes = np.unique(y).tolist()
+        cw = compute_class_weight('balanced', classes=classes, y=y)
+        trans_func = lambda s: cw[classes.index(s)]
+    else:
+        trans_func = lambda s: class_weight[s]
+    sample_weight = np.vectorize(trans_func)(sample_weight)
+    sample_weight = sample_weight / np.max(sample_weight)
+    return sample_weight
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
