@@ -1,6 +1,7 @@
 """
 """
 import time
+import argparse
 from io import StringIO
 from copy import deepcopy
 from numbers import Real
@@ -307,6 +308,20 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
             plt.xlabel('Time [s]')
         plt.ylabel('Voltage [mV]')
         plt.show()
+
+
+# https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v:Union[str,bool]) -> bool:
+    """
+    """
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats

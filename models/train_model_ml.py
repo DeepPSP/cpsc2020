@@ -79,8 +79,7 @@ class ECGPrematureDetector(object):
         self.sample_weight = class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
     def train(self, **config):
-        """
-        NOT finished
+        """ NOT finished
 
         Parameters:
         -----------
@@ -98,8 +97,12 @@ class ECGPrematureDetector(object):
             self._train_sklearn_clf(cfg)
 
     def _train_xgb_clf(self, config:dict):
-        """
-        NOT finished
+        """ NOT finished,
+
+        Parameters:
+        -----------
+        config: dict,
+            configurations for training xgboost classifier,
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
         # dtest = xgb.DMatrix(self.x_test, label=self.y_test)
@@ -117,8 +120,12 @@ class ECGPrematureDetector(object):
         raise NotImplementedError
 
     def _train_sklearn_clf(self, config:dict):
-        """
-        NOT finished
+        """ NOT finished,
+
+        Parameters:
+        -----------
+        config: dict,
+            configurations for training xgboost classifier,
         """
         grid = GridSearchCV(
             estimator=self.model,
@@ -182,6 +189,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(
         description="extra training setting",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    ap.add_argument(
+        '-m', '--model',
+        type=str, required=True,
+        help='name of the model',
+        dest='model',
     )
     ap.add_argument(
         '-v', '--verbose',
