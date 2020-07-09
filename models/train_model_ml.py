@@ -59,8 +59,12 @@ class ECGPrematureDetector(object):
             if set, `TrainCfg` will be updated by this `config`
         verbose: int, default 2,
         """
-        self.model = model
-        self.model_name = type(self.model).__name__
+        if isinstance(model, str):
+            self.model = eval(f"{model}()")
+            self.model_name = model
+        else:
+            self.model = model
+            self.model_name = type(self.model).__name__
         self.db_dir = db_dir
         self.working_dir = working_dir or os.getcwd()
         self.verbose = verbose
@@ -145,6 +149,21 @@ class ECGPrematureDetector(object):
         return retval
 
 
+_CLF_FULL_NAME = {
+    "xgbc": "XGBClassifier",
+    "xgbclassifier": "XGBClassifier",
+    "svc": "SVC",
+    "rfc": "RandomForestClassifier",
+    "randomforestclassifier": "RandomForestClassifier",
+    "gbc": "GradientBoostingClassifier",
+    "gradientboostingclassifier": "GradientBoostingClassifier",
+    "knn": "KNeighborsClassifier",
+    "kneighborsclassifier": "KNeighborsClassifier",
+    "mpl": "MLPClassifier",
+    "mplclassifier": "MLPClassifier",
+}
+
+_ALL_CLF = list(TrainCfg.ml_param_grid.keys())
 
 
 if __name__ == "__main__":
@@ -154,9 +173,21 @@ if __name__ == "__main__":
     )
     ap.add_argument(
         '-m', '--model',
+        type=str, default='',
+        help='name of the model, separated by ","',
+        dest='models',
+    )
+    ap.add_argument(
+        "-d", "--db-dir",
         type=str, required=True,
-        help='name of the model',
-        dest='model',
+        help="directory where the database is stored",
+        dest="db_dir",
+    )
+    ap.add_argument(
+        "-w", "--working-dir",
+        type=str, default=None,
+        help="working directory",
+        dest="working_dir",
     )
     ap.add_argument(
         '-v', '--verbose',
@@ -164,7 +195,17 @@ if __name__ == "__main__":
         help='set verbosity',
         dest='verbose',
     )
-    config = deepcopy(TrainCfg)
-    config.update(vars(ap.parse_args()))
+    kw = vars(ap.parse_args())
+    models = kw.pop("models")
+    models = list(map(lambda m: _CLF_FULL_NAME[m], models.split(",")))
+    verbose = kw.pop("verbose")
+    db_dir = kw.pop("db_dir")
+    working_dir = kw.pop("working_dir")
 
-    train(**config)
+    config = deepcopy(TrainCfg)
+    config.update(kw)
+
+    for m in models:
+        config["model"] = m
+        trainer = ECGPrematureDetector(m, db_dir, working_dir, config, verbose)  # NOT finished
+        train(**config)

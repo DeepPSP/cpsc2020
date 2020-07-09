@@ -105,9 +105,9 @@ TrainCfg.ml_param_grid = {
         'learning_rate': ['constant', 'adaptive'],
         'max_iter': [200, 300, 400, 500]
     },
-    'BaggingClassifier': {
-        'n_estimators': [10, 30, 50, 60],
-        'max_samples': [0.1, 0.3, 0.5, 0.8, 1.],
-        'max_features': [0.2, 0.5, 1, 2],
-    },
+    # 'BaggingClassifier': {
+    #     'n_estimators': [10, 30, 50, 60],
+    #     'max_samples': [0.1, 0.3, 0.5, 0.8, 1.],
+    #     'max_features': [0.2, 0.5, 1, 2],
+    # },
 }
