@@ -391,8 +391,6 @@ def str2bool(v:Union[str,bool]) -> bool:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-
-
 def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> np.ndarray:
     """ finished, checked,
 

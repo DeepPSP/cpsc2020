@@ -9,8 +9,9 @@ import os
 import argparse
 import joblib, pickle
 import multiprocessing as mp
+from functools import partial
 from copy import deepcopy
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, List
 
 from tqdm import tqdm
 import xgboost as xgb
@@ -22,6 +23,7 @@ from sklearn.metrics import (
     accuracy_score, fbeta_score, jaccard_score,
     plot_confusion_matrix,
 )
+from xgboost import XGBClassifier
 from sklearn.ensemble import (
     RandomForestClassifier, GradientBoostingClassifier, BaggingClassifier
 )
@@ -46,6 +48,9 @@ class ECGPrematureDetector(object):
     def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, config:Optional[ED]=None, verbose:int=2, **kwargs):
         """
 
+        NOTE: the official scoring functions is
+            -1 * 
+
         Parameters:
         -----------
         model: classifiers from sklearn or xgboost,
@@ -60,7 +65,10 @@ class ECGPrematureDetector(object):
         verbose: int, default 2,
         """
         if isinstance(model, str):
-            self.model = eval(f"{model}()")
+            if model == "XGBClassifier":
+                self.model = XGBClassifier(objective="multi:softmax", num_classes=3)
+            else:
+                self.model = eval(f"{model}()")
             self.model_name = model
         else:
             self.model = model
@@ -73,6 +81,7 @@ class ECGPrematureDetector(object):
         )
         self.config = deepcopy(TrainCfg)
         self.config.update(config or {})
+
         self.x_train, self.y_train, self.x_test, self.y_test = \
             self.data_gen.train_test_split_data(
                 test_rec_num=self.config.test_rec_num,
@@ -82,6 +91,7 @@ class ECGPrematureDetector(object):
                 int_labels=True,
             )
         self.sample_weight = misc.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+
 
     def train(self, **config):
         """ NOT finished
@@ -110,17 +120,18 @@ class ECGPrematureDetector(object):
             configurations for training xgboost classifier,
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
-        # dtest = xgb.DMatrix(self.x_test, label=self.y_test)
+        dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.samplt_weight)
+        
 
-        cv_results = xgb.cv(
-            config.ml_param_grid[self.modle_name],
-            dtrain,
-            num_boost_round=num_boost_round,
-            seed=config.SEED,
-            nfold=config.cv,
-            metrics={''},
-            # early_stopping_rounds=10,
-        )
+        # cpvc_pred = xgb.cv(
+        #     config.ml_param_grid[self.modle_name],
+        #     dtrain,
+        #     num_boost_round=num_boost_round,
+        #     seed=config.SEED,
+        #     nfold=config.cv,
+        #     metrics='merror',  # Exact matching error, used to evaluate multi-class classification
+        #     # early_stopping_rounds=10,
+        # )
 
         raise NotImplementedError
 
@@ -135,7 +146,7 @@ class ECGPrematureDetector(object):
         grid = GridSearchCV(
             estimator=self.model,
             param_grid=config.ml_param_grid[self.modle_name],
-            scoring=make_scorer(accuracy_score),
+            scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
             n_jobs=max(1, mp.cpu_count()-3),
             verbose=self.verbose,
             cv=config.cv,
@@ -149,10 +160,94 @@ class ECGPrematureDetector(object):
         return retval
 
 
+def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
+    """ NOT finished, need more consideration!
+
+    """
+    # valid_intervals = misc.intervals_union([[s-TrainCfg.bias_thr, s+TrainCfg.bias_thr] for s in y_true])
+    # temporarily use the official scoring function
+    if dtype == str:
+        sbp_true = np.where(y_true=='S')[0]
+        pvc_true = np.where(y_true=='V')[0]
+        sbp_pred = np.where(y_pred=='S')[0]
+        pvc_pred = np.where(y_pred=='V')[0]
+        sbp_wt = class_weight['S']
+        pvc_wt = class_weight['V']
+    elif dtype == int:
+        sbp_true = np.where(y_true==TrainCfg.label_map['S'])[0]
+        pvc_true = np.where(y_true==TrainCfg.label_map['V'])[0]
+        sbp_pred = np.where(y_pred==TrainCfg.label_map['S'])[0]
+        pvc_pred = np.where(y_pred==TrainCfg.label_map['V'])[0]
+        sbp_wt = class_weight[label_map['S']]
+        pvc_wt = class_weight[label_map['V']]
+    
+    sbp_score, pvc_score = CPSC2020_score(
+        [sbp_true], [pvc_true], [sbp_pred], [pvc_pred],
+    )
+
+    return sbp_score * sbp_wt + pvc_score * pvc_wt
+
+
+
+def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray]) -> Tuple[int]:
+    """
+    Score Function for all (test) records
+
+    Parameters:
+    -----------
+    sbp_true, pvc_true, sbp_pred, pvc_pred: list of ndarray,
+
+    Returns:
+    --------
+    Score1: int, score for S
+    Score2: int, score for V
+    """
+    s_score = np.zeros([len(sbp_true), ])
+    v_score = np.zeros([len(sbp_true), ])
+    ## Scoring ##
+    for i, s_ref in enumerate(sbp_true):
+        v_ref = pvc_true[i]
+        s_pos = sbp_pred[i]
+        v_pos = pvc_pred[i]
+        s_tp = 0
+        s_fp = 0
+        s_fn = 0
+        v_tp = 0
+        v_fp = 0
+        v_fn = 0
+        if s_ref.size == 0:
+            s_fp = len(s_pos)
+        else:
+            for m, ans in enumerate(s_ref):
+                s_pos_cand = np.where(abs(s_pos-ans) <= THR*FS)[0]
+                if s_pos_cand.size == 0:
+                    s_fn += 1
+                else:
+                    s_tp += 1
+                    s_fp += len(s_pos_cand) - 1
+        if v_ref.size == 0:
+            v_fp = len(v_pos)
+        else:
+            for m, ans in enumerate(v_ref):
+                v_pos_cand = np.where(abs(v_pos-ans) <= THR*FS)[0]
+                if v_pos_cand.size == 0:
+                    v_fn += 1
+                else:
+                    v_tp += 1
+                    v_fp += len(v_pos_cand) - 1
+        # calculate the score
+        s_score[i] = s_fp * (-1) + s_fn * (-5)
+        v_score[i] = v_fp * (-1) + v_fn * (-5)
+    Score1 = np.sum(s_score)
+    Score2 = np.sum(v_score)
+
+    return Score1, Score2
+
+
 _CLF_FULL_NAME = {
     "xgbc": "XGBClassifier",
     "xgbclassifier": "XGBClassifier",
-    "svc": "SVC",
+    # "svc": "SVC",
     "rfc": "RandomForestClassifier",
     "randomforestclassifier": "RandomForestClassifier",
     "gbc": "GradientBoostingClassifier",

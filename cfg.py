@@ -46,7 +46,7 @@ FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 FeatureCfg.label_map = dict(N=0,S=1,V=2)
-FeatureCfg.beat_ann_bias_thr = int(0.1*FeatureCfg.fs)  # half width of broad qrs complex
+FeatureCfg.beat_ann_bias_thr = 0.1*FeatureCfg.fs  # half width of broad qrs complex
 
 
 #--------------------------------------------------------------
@@ -63,7 +63,7 @@ TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
 TrainCfg.preprocesses = PreprocessCfg.preprocesses
 TrainCfg.features = FeatureCfg.features
-TrainCfg.bias_thr = int(0.15*TrainCfg.fs)  # keep the same with `THR` in `CPSC202_score.py`
+TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
 # TrainCfg.class_weight = 'balanced'
 TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
@@ -71,13 +71,16 @@ TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
 TrainCfg.ml_param_grid = {
     'XGBClassifier': {
+        # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
+        'objective': ['multi:softmax'],
+        'num_classes': [3],
         ''
     },
-    'SVC': {
-        'C': [0.0005, 0.001, 0.002, 0.01, 0.1, 1, 10],
-        'gamma' : [0.001, 0.01, 0.1, 1],
-        'kernel': ['rbf', 'poly', 'sigmoid']
-    },
+    # 'SVC': {
+    #     'C': [0.0005, 0.001, 0.002, 0.01, 0.1, 1, 10],
+    #     'gamma' : [0.001, 0.01, 0.1, 1],
+    #     'kernel': ['rbf', 'poly', 'sigmoid']
+    # },  # might be too slow
     'RandomForestClassifier': {
         'n_estimators': [10, 40, 70, 100],
         'max_depth': [3, 5, 7],
@@ -92,9 +95,10 @@ TrainCfg.ml_param_grid = {
         'min_samples_split': [0.2, 0.5, 0.7, 2],
         'min_samples_leaf': [0.2, 0.5, 1],
         'max_depth': [3, 7],
-        'max_features': [1, 2],
+        # 'max_features': [1, 2],
     },
     'KNeighborsClassifier': {
+        'n_neighbors': [3,5,7],
         'weights': ['uniform', 'distance'],
         'p': [1, 2, 3, 4, 5],
     },
@@ -103,7 +107,7 @@ TrainCfg.ml_param_grid = {
         'alpha': [0.001, 0.005, 0.01],
         'batch_size': [128, 256, 512, 1024],
         'learning_rate': ['constant', 'adaptive'],
-        'max_iter': [200, 300, 400, 500]
+        'max_iter': [200, 300, 400, 500],
     },
     # 'BaggingClassifier': {
     #     'n_estimators': [10, 30, 50, 60],
