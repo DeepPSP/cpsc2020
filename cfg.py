@@ -72,9 +72,14 @@ TrainCfg.cv = 3
 TrainCfg.ml_param_grid = {
     'XGBClassifier': {
         # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
-        'objective': ['multi:softmax'],
-        'num_classes': [3],
-        ''
+        # 'objective': ['multi:softmax'],
+        # 'num_classes': [3],
+        "learning_rate": [0.05, 0.10, 0.20, 0.30],
+        'min_child_weight': [1, 5, 10],
+        'gamma': [0.5, 1, 1.5, 2, 5],
+        'subsample': [0.6, 0.8, 1.0],
+        'colsample_bytree': [0.6, 0.8, 1.0],
+        'max_depth': [3, 4, 5],
     },
     # 'SVC': {
     #     'C': [0.0005, 0.001, 0.002, 0.01, 0.1, 1, 10],

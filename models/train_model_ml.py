@@ -4,6 +4,10 @@ References:
 [1] https://blog.cambridgespark.com/hyperparameter-tuning-in-xgboost-4ff9100a3b2f
 [2] https://github.com/x4nth055/emotion-recognition-using-speech
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
+
+TODO:
+    adjust metric function, with reference to the official scoring function,
+    which lay more punishment on false negatives (5 times)
 """
 import os
 import argparse
