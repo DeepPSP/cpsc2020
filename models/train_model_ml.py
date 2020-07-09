@@ -42,7 +42,7 @@ __all__ = ["train"]
 class ECGPrematureDetector(object):
     """
     """
-    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
+    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, config:Optional[ED]=None, verbose:int=2, **kwargs):
         """
 
         Parameters:
@@ -53,6 +53,9 @@ class ECGPrematureDetector(object):
             directory where the database is stored
         working_dir: str, optional,
             working directory, to store intermediate files and log file
+        config: dict, optional,
+            extra configurations for training,
+            if set, `TrainCfg` will be updated by this `config`
         verbose: int, default 2,
         """
         self.model = model
@@ -63,41 +66,57 @@ class ECGPrematureDetector(object):
         self.data_gen = CPSC2020(
             db_dir=db_dir, working_dir=working_dir, verbose=verbose
         )
+        self.config = deepcopy(TrainCfg)
+        self.config.update(config or {})
         self.x_train, self.y_train, self.x_test, self.y_test = \
-            self.data_gen.train_test_split_data(test_rec_num=2)
+            self.data_gen.train_test_split_data(
+                test_rec_num=self.config.test_rec_num,
+                features=self.config.features,
+                preprocesses=self.config.preprocesses,
+                augment=self.config.augment_rpeaks,
+                int_labels=True,
+            )
+        self.sample_weight = class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
     def train(self, **config):
         """
         NOT finished
+
+        Parameters:
+        -----------
+        config: dict, optional,
+            extra configurations for training,
+            for flexibility of different experiments,
+            if set, `self.config` will be updated by this `config`
         """
-        cfg = deepcopy(TrainCfg)
+        cfg = deepcopy(self.config)
         cfg.update(config)
 
         if type(self.model).__name__ == "XGBClassifier":
-            self._train_xgb_clf(**cfg)
+            self._train_xgb_clf(cfg)
         else:
-            self._train_sklearn_clf(**cfg)
+            self._train_sklearn_clf(cfg)
 
-    def _train_xgb_clf(self, **config):
+    def _train_xgb_clf(self, config:dict):
         """
         NOT finished
         """
-        dtrain = xgb.DMatrix(self.x_train, label=self.y_train)
-        dtest = xgb.DMatrix(self.x_test, label=self.y_test)
+        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
+        # dtest = xgb.DMatrix(self.x_test, label=self.y_test)
 
         cv_results = xgb.cv(
-            config.ml_param_grid,
+            config.ml_param_grid[self.modle_name],
             dtrain,
             num_boost_round=num_boost_round,
             seed=config.SEED,
             nfold=config.cv,
-            metrics={'mae'},
-            early_stopping_rounds=10
+            metrics={''},
+            # early_stopping_rounds=10,
         )
 
         raise NotImplementedError
 
-    def _train_sklearn_clf(self, **config):
+    def _train_sklearn_clf(self, config:dict):
         """
         NOT finished
         """
@@ -116,6 +135,47 @@ class ECGPrematureDetector(object):
             best_score=grid_result.best_score_
         )
         return retval
+
+
+def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> np.ndarray:
+    """ finished, checked,
+
+    transform class weight to sample weight
+
+    Parameters:
+    -----------
+    y: ndarray,
+        the label (class) of each sample
+    class_weight: str, or list, or ndarray, or dict, default 'balanced',
+        the weight for each sample class,
+        if is 'balanced', the class weight will automatically be given by 
+        if `y` is of string type, then `class_weight` should be a dict,
+        if `y` is of numeric type, and `class_weight` is array_like,
+        then the labels (`y`) should be continuous and start from 0
+    """
+    if not class_weight:
+        sample_weight = np.ones_like(y, dtype=float)
+        return sample_weight
+    
+    try:
+        sample_weight = y.copy().astype(int)
+    except:
+        sample_weight = y.copy()
+        assert isinstance(class_weight, dict) or class_weight.lower()=='balanced', \
+            "if `y` are of type str, then class_weight should be 'balanced' or a dict"
+    
+    if class_weight.lower() == 'balanced':
+        classes = np.unique(y).tolist()
+        cw = compute_class_weight('balanced', classes=classes, y=y)
+        trans_func = lambda s: cw[classes.index(s)]
+    else:
+        trans_func = lambda s: class_weight[s]
+    sample_weight = np.vectorize(trans_func)(sample_weight)
+    sample_weight = sample_weight / np.max(sample_weight)
+    return sample_weight
+
+
+
 
 
 if __name__ == "__main__":

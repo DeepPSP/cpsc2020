@@ -274,6 +274,7 @@ class CPSC2020(object):
             print("try loading precomputed filtered signal and precomputed rpeaks...")
             data = self.load_data(rec, preprocesses=preprocesses, keep_dim=False)
             rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, augment=augment, keep_dim=False)
+            print("precomputed filtered signal and precomputed rpeaks loaded successfully")
         except:
             print("no precomputed data exist")
             self.preprocess_data(rec, preprocesses=preprocesses)
@@ -368,6 +369,7 @@ class CPSC2020(object):
         if os.path.isfile(feature_fp) and not force_recompute:
             print("try loading precomputed features...")
             feature_mat = loadmat(feature_fp)['features']
+            print("precomputed features loaded successfully")
         else:
             print("recompute features")
             feature_mat = self.compute_features(
@@ -450,13 +452,14 @@ class CPSC2020(object):
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
         if not force_recompute and os.path.isfile(fp):
-            print("try loading precomputed beat_ann")
+            print("try loading precomputed beat_ann...")
             beat_ann = loadmat(fp)
             for k in beat_ann.keys():
                 if not k.startswith("__"):
                     beat_ann[k] = beat_ann[k].flatten()
             if not return_aux_data:
                 beat_ann = beat_ann["beat_ann"]
+            print("precomputed beat_ann loaded successfully")
         else:
             print("recompute beat_ann")
             rpeaks = self.load_rpeaks(
@@ -799,7 +802,7 @@ class CPSC2020(object):
         split_rec = self.train_test_split_rec(test_rec_num)
         x = ED({"train": np.array([],dtype=float), "test": np.array([],dtype=float)})
         if int_labels:
-            y = ED({"train": np.array([]), "test": np.array([])})
+            y = ED({"train": np.array([],dtype=int), "test": np.array([],dtype=int)})
         else:
             y = ED({"train": np.array([],dtype='<U1'), "test": np.array([],dtype='<U1')})
         for subset in ["train", "test"]:
@@ -828,7 +831,7 @@ class CPSC2020(object):
                 else:
                     x[subset] = feature_mat.copy()
                 if int_labels:
-                    y[subset] = np.append(y[subset], beat_ann["beat_ann_int"])
+                    y[subset] = np.append(y[subset], beat_ann["beat_ann_int"].astype(int))
                 else:
                     y[subset] = np.append(y[subset], beat_ann["beat_ann"])
             # post process: drop invalid (nan, inf, etc.)
