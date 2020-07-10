@@ -187,16 +187,17 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_we
     # valid_intervals = misc.intervals_union([[s-TrainCfg.bias_thr, s+TrainCfg.bias_thr] for s in y_true])
     # temporarily use the official scoring function
     classes = ['S', 'V']
-    
+
     truth_arr = {}
     pred_arr = {}
     if dtype == str:
         for c in classes:
-        truth_arr[c] = np.where(y_true==c)[0]
-        pred_arr[c] = np.where(y_pred==c)[0]
+            truth_arr[c] = np.where(y_true==c)[0]
+            pred_arr[c] = np.where(y_pred==c)[0]
     elif dtype == int:
-        truth_arr[c] = np.where(y_true==TrainCfg.label_map[c])[0]
-        pred_arr[c] = np.where(y_pred==TrainCfg.label_map[c])[0]
+        for c in classes:
+            truth_arr[c] = np.where(y_true==TrainCfg.label_map[c])[0]
+            pred_arr[c] = np.where(y_pred==TrainCfg.label_map[c])[0]
 
     pred_intervals = {
         c: [[idx-TrainCfg.bias_thr, idx+TrainCfg.bias_thr] for idx in pred_arr[c]] \
