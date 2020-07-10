@@ -112,6 +112,7 @@ class ECGPrematureDetector(object):
                 augment=self.config.augment_rpeaks,
                 int_labels=False,
             )
+
         self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
 
@@ -133,7 +134,7 @@ class ECGPrematureDetector(object):
         else:
             self._train_sklearn_clf(cfg)
 
-    def _train_xgb_clf(self, config:dict):
+    def _train_xgb_clf(self, config:Optional[dict]):
         """ NOT finished,
 
         Parameters:
@@ -141,18 +142,24 @@ class ECGPrematureDetector(object):
         config: dict,
             configurations for training xgboost classifier,
         """
+        cfg = deepcopy(TrainCfg)
+        if config:
+            cfg.update(config)
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
         dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
+        # booster = xgb.train()
+        raise NotImplementedError
 
-        cpvc_pred = xgb.cv(
-            config.ml_param_grid[self.modle_name],
+    def _cv_xgb(self):
+        """
+        """
+        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
+        cv_results = xgb.cv(
+            TrainCfg.xgb_native_cv_params,
             dtrain,
-            num_boost_round=num_boost_round,
-            seed=config.SEED,
-            nfold=config.cv,
-            metrics='merror',  # Exact matching error, used to evaluate multi-class classification
-            # early_stopping_rounds=10,
+            **TrainCfg.xgb_native_cv_kw,
         )
+        return cv_results
 
     def _train_xgb_clf(self, config:dict):
         """ NOT finished,
