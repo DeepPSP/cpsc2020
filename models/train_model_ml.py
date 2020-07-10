@@ -43,7 +43,7 @@ from cfg import TrainCfg
 # from signal_processing.ecg_features import compute_ecg_features
 from dataset import CPSC2020
 from metrics import CPSC2020_loss, CPSC2020_score
-import misc
+import utils
 
 
 __all__ = ["train"]
@@ -112,7 +112,7 @@ class ECGPrematureDetector(object):
                 augment=self.config.augment_rpeaks,
                 int_labels=False,
             )
-        self.sample_weight = misc.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+        self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
 
     def train(self, **config):

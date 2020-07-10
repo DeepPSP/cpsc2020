@@ -4,7 +4,7 @@ from typing import Union, Optional, Any, List, Tuple
 
 import numpy as np
 
-import misc
+import utils
 from cfg import TrainCfg
 
 
@@ -57,9 +57,9 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     false_negative_loss = {c: 5 for c in classes}
 
     if verbose >= 1:
-        print(f"true_positive = {misc.dict_to_str(true_positive)}")
-        print(f"false_positive = {misc.dict_to_str(false_positive)}")
-        print(f"false_negative = {misc.dict_to_str(false_negative)}")
+        print(f"true_positive = {utils.dict_to_str(true_positive)}")
+        print(f"false_positive = {utils.dict_to_str(false_positive)}")
+        print(f"false_negative = {utils.dict_to_str(false_negative)}")
 
     total_loss = sum([
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \

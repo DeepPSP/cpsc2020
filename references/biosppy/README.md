@@ -63,7 +63,7 @@ Please use the following if you need to cite BioSPPy:
   https://github.com/PIA-Group/BioSPPy/ [Online; accessed ```<year>-<month>-<day>```].
 
 ```latex
-@Misc{,
+@utils{,
   author = {Carlos Carreiras and Ana Priscila Alves and Andr\'{e} Louren\c{c}o and Filipe Canento and Hugo Silva and Ana Fred and others},
   title = {{BioSPPy}: Biosignal Processing in {Python}},
   year = {2015--},

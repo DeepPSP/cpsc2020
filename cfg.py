@@ -5,7 +5,7 @@ import os
 from sklearn.utils.class_weight import compute_class_weight
 from easydict import EasyDict as ED
 
-from misc import CPSC_STATS
+from utils import CPSC_STATS
 
 
 __all__ = [

@@ -15,7 +15,7 @@ from scipy.io import loadmat, savemat
 import multiprocessing as mp
 from easydict import EasyDict as ED
 
-import misc
+import utils
 from cfg import PreprocessCfg, FeatureCfg
 from signal_processing.ecg_preprocess import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
@@ -144,7 +144,7 @@ class CPSC2020(object):
             "VS": ["A04", "A07"],
         })
 
-        self.df_stats = misc.CPSC_STATS
+        self.df_stats = utils.CPSC_STATS
 
         self.palette = {"spb": "black", "pvc": "red",}
 
@@ -865,7 +865,7 @@ class CPSC2020(object):
         if ectopic_beats_only:
             ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
             tot_interval = [sf, st]
-            covering, tb = misc.get_optimal_covering(
+            covering, tb = utils.get_optimal_covering(
                 total_interval=tot_interval,
                 to_cover=ectopic_beat_indices,
                 min_len=3*self.freq,
@@ -1029,7 +1029,7 @@ def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias
 
 
 if __name__ == "__main__":
-    from misc import dict_to_str
+    from utils import dict_to_str
     ap = argparse.ArgumentParser(
         description="preprocess CPSC2020 data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -1066,7 +1066,7 @@ if __name__ == "__main__":
     )
     ap.add_argument(
         "-a", "--augment",
-        type=misc.str2bool, default=True,
+        type=utils.str2bool, default=True,
         help="whether or not using annotations to augment the rpeaks detected by algorithm",
         dest="augment",
     )
