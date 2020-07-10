@@ -314,6 +314,44 @@ def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:i
     return s
 
 
+def in_interval(val:Real, interval:Interval) -> bool:
+    """ finished, checked,
+
+    check whether val is inside interval or not
+
+    Parameters:
+    -----------
+    val: real number,
+    interval: Interval,
+
+    Returns:
+    --------
+    bool,
+    """
+    interval.sort()
+    return True if interval[0] <= val <= interval[-1] else False
+
+
+def in_generalized_interval(val:Real, generalized_interval:GeneralizedInterval) -> bool:
+    """ finished, checked,
+
+    check whether val is inside generalized_interval or not
+
+    Parameters:
+    -----------
+    val: real number,
+    generalized_interval: union of `Interval`s,
+
+    Returns:
+    --------
+    bool,
+    """
+    for interval in generalized_interval:
+        if in_interval(val, interval):
+            return True
+    return False
+
+
 def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) -> NoReturn:
     """ not finished
 
@@ -440,3 +478,11 @@ A07,No,23.11,73325,15150,3481,91956
 A08,Yes,25.46,115518,2793,0,118311
 A09,No,25.84,88229,2,1462,89693
 A10,No,23.64,72821,169,9071,82061"""))
+
+
+# columns truth, rows pred
+OFFICIAL_LOSS_DF = pd.read_csv(StringIO(""",N_true,S_true,V_true
+N_pred,0,5,5
+S_pred,1,0,5
+V_pred,1,5,0"""), index_col=0)
+OFFICIAL_LOSS_MAT = OFFICIAL_LOSS_DF.values
