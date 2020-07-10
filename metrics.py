@@ -56,9 +56,9 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     false_positive_loss = {c: 1 for c in classes}
     false_negative_loss = {c: 5 for c in classes}
 
-    print(true_positive)
-    print(false_positive)
-    print(false_negative)
+    print(f"true_positive = {true_positive}")
+    print(f"false_positive = {false_positive}")
+    print(f"false_negative = {false_negative}")
 
     total_loss = sum([
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
