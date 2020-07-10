@@ -70,6 +70,23 @@ TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weig
 TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
+TrainCfg.xgb_native_cv_params = {
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'eta': 3,
+    'subsample': 1,
+    'colsample_bytree': 1,
+    'objective': 'multi:softmax',
+    'num_class': 3,
+}
+TrainCfg.xgb_native_cv_kw = {
+    'num_boost_round': 999,
+    'early_stopping_rounds': 20,
+    'seed': TrainCfg.SEED,
+    'nfold': TrainCfg.cv,
+    'metrics': ['merror',],
+    'verbose_eval': TrainCfg.verbose,
+}
 TrainCfg.ml_init_params = {
     'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose',
     'RandomForestClassifier': 'class_weight="balanced", verbosity=TrainCfg.verbose',

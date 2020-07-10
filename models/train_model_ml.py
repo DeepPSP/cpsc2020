@@ -144,19 +144,24 @@ class ECGPrematureDetector(object):
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
         dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
 
+        cpvc_pred = xgb.cv(
+            config.ml_param_grid[self.modle_name],
+            dtrain,
+            num_boost_round=num_boost_round,
+            seed=config.SEED,
+            nfold=config.cv,
+            metrics='merror',  # Exact matching error, used to evaluate multi-class classification
+            # early_stopping_rounds=10,
+        )
 
-        
+    def _train_xgb_clf(self, config:dict):
+        """ NOT finished,
 
-        # cpvc_pred = xgb.cv(
-        #     config.ml_param_grid[self.modle_name],
-        #     dtrain,
-        #     num_boost_round=num_boost_round,
-        #     seed=config.SEED,
-        #     nfold=config.cv,
-        #     metrics='merror',  # Exact matching error, used to evaluate multi-class classification
-        #     # early_stopping_rounds=10,
-        # )
-
+        Parameters:
+        -----------
+        config: dict,
+            configurations for training xgboost classifier,
+        """
         raise NotImplementedError
 
     def _train_sklearn_clf(self, config:dict):
@@ -167,6 +172,7 @@ class ECGPrematureDetector(object):
         config: dict,
             configurations for training xgboost classifier,
         """
+        raise NotImplementedError
         grid = GridSearchCV(
             estimator=self.model,
             param_grid=config.ml_param_grid[self.modle_name],
