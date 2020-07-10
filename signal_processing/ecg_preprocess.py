@@ -2,6 +2,10 @@
 preprocess of (single lead) ecg signal:
     band pass () --> remove baseline --> find rpeaks
 
+TODO:
+    1. motion artefact detection
+    2. to add
+
 References:
 -----------
 [1] https://github.com/PIA-Group/BioSPPy
