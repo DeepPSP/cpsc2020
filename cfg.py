@@ -18,7 +18,7 @@ __all__ = [
 #--------------------------------------------------------------
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC2020 data fs
-PreprocessCfg.preprocesses = ['baseline', 'bandpass',]  # sequential, keep correct ordering
+PreprocessCfg.preproc = ['baseline', 'bandpass',]  # sequential, keep correct ordering
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = int(0.2*PreprocessCfg.fs)  # 200 ms window
 PreprocessCfg.baseline_window2 = int(0.6*PreprocessCfg.fs)  # 600 ms window
@@ -62,7 +62,7 @@ TrainCfg.verbose = 1
 TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
-TrainCfg.preprocesses = PreprocessCfg.preprocesses
+TrainCfg.preproc = PreprocessCfg.preproc
 TrainCfg.features = FeatureCfg.features
 TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
@@ -71,7 +71,7 @@ TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
 TrainCfg.ml_init_params = {
-    'XGBClassifier': 'objective="multi:softmax", num_classes=3, verbosity=TrainCfg.verbose',
+    'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose',
     'RandomForestClassifier': 'class_weight="balanced", verbosity=TrainCfg.verbose',
     'GradientBoostingClassifier': 'verbosity=TrainCfg.verbose',
     'KNeighborsClassifier': 'verbosity=TrainCfg.verbose',

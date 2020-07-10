@@ -152,10 +152,10 @@ class CPSC2020(object):
         self.label_map = kwargs.get("label_map", FeatureCfg.label_map)
 
         # NOTE:
-        # the ordering of `self.allowed_preprocesses` and `self.allowed_features`
+        # the ordering of `self.allowed_preproc` and `self.allowed_features`
         # should be in accordance with
         # corresponding items in `PreprocessCfg` and `FeatureCfg`
-        self.allowed_preprocesses = ['baseline', 'bandpass',]
+        self.allowed_preproc = ['baseline', 'bandpass',]
         self.preprocess_dir = os.path.join(self.db_dir, "preprocessed")
         os.makedirs(self.preprocess_dir, exist_ok=True)
         self.rpeaks_dir = os.path.join(self.db_dir, "rpeaks")
@@ -169,7 +169,7 @@ class CPSC2020(object):
         # TODO: add logger
     
 
-    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None, **kwargs) -> np.ndarray:
+    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preproc:Optional[List[str]]=None, **kwargs) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -183,9 +183,9 @@ class CPSC2020(object):
             end index of the data to be loaded
         keep_dim: bool, default True,
             whether or not to flatten the data of shape (n,1)
-        preprocesses: list of str,
+        preproc: list of str,
             type of preprocesses performed to the original raw data,
-            should be sublist of `self.allowed_preprocesses`,
+            should be sublist of `self.allowed_preproc`,
             if empty, the original raw data will be loaded
         
         Returns:
@@ -193,10 +193,10 @@ class CPSC2020(object):
         data: ndarray,
             the ecg data
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses, False)
+        preproc = self._normalize_preprocess_names(preproc, False)
         rec_name = self._get_rec_name(rec)
-        if preprocesses:
-            rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses)}"
+        if preproc:
+            rec_name = f"{rec_name}-{self._get_rec_suffix(preproc)}"
             rec_fp = os.path.join(self.preprocess_dir, f"{rec_name}{self.rec_ext}")
         else:
             rec_fp = os.path.join(self.data_dir, f"{rec_name}{self.rec_ext}")
@@ -210,7 +210,7 @@ class CPSC2020(object):
         return data
 
 
-    def preprocess_data(self, rec:Union[int,str], preprocesses:List[str]) -> NoReturn:
+    def preprocess_data(self, rec:Union[int,str], preproc:List[str]) -> NoReturn:
         """ finished, checked,
 
         preprocesses the ecg data in advance for further use
@@ -220,17 +220,17 @@ class CPSC2020(object):
         rec: int or str,
             number of the record, NOTE that rec_no starts from 1,
             or the record name
-        preprocesses: list of str,
+        preproc: list of str,
             type of preprocesses to perform,
-            should be sublist of `self.allowed_preprocesses`
+            should be sublist of `self.allowed_preproc`
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        preproc = self._normalize_preprocess_names(preproc, True)
         rec_name = self._get_rec_name(rec)
         save_fp = ED()
-        save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses)}{self.rec_ext}")
-        save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preprocesses)}{self.rec_ext}")
+        save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preproc)}{self.rec_ext}")
+        save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preproc)}{self.rec_ext}")
         config = deepcopy(PreprocessCfg)
-        config.preprocesses = preprocesses
+        config.preproc = preproc
         pps = parallel_preprocess_signal(self.load_data(rec, keep_dim=False), fs=self.fs, config=config)
         pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
         # save mat, keep in accordance with original mat files
@@ -238,7 +238,7 @@ class CPSC2020(object):
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
 
-    def compute_features(self, rec:Union[int,str], features:List[str], preprocesses:List[str], augment:bool=True, save:bool=True) -> np.ndarray:
+    def compute_features(self, rec:Union[int,str], features:List[str], preproc:List[str], augment:bool=True, save:bool=True) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -249,8 +249,8 @@ class CPSC2020(object):
         features: list of str,
             list of feature types to compute,
             should be sublist of `self.allowd_features`
-        preprocesses: list of str,
-            type of preprocesses to perform, should be sublist of `self.allowed_preprocesses`
+        preproc: list of str,
+            type of preprocesses to perform, should be sublist of `self.allowed_preproc`
         augment: bool, default False,
             rpeaks used for extracting features is augmented using the annotations or not
         save: bool, default True,
@@ -264,22 +264,22 @@ class CPSC2020(object):
                 n = the dimension of the features
         """
         features = self._normalize_feature_names(features, True)
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        preproc = self._normalize_preprocess_names(preproc, True)
         rec_name = self._get_rec_name(rec)
-        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}"
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preproc+features)}"
         if augment:
             rec_name = rec_name + "-augment"
         
         try:
             print("try loading precomputed filtered signal and precomputed rpeaks...")
-            data = self.load_data(rec, preprocesses=preprocesses, keep_dim=False)
-            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, augment=augment, keep_dim=False)
+            data = self.load_data(rec, preproc=preproc, keep_dim=False)
+            rpeaks = self.load_rpeaks(rec, preproc=preproc, augment=augment, keep_dim=False)
             print("precomputed filtered signal and precomputed rpeaks loaded successfully")
         except:
             print("no precomputed data exist")
-            self.preprocess_data(rec, preprocesses=preprocesses)
-            data = self.load_data(rec, preprocesses=preprocesses, keep_dim=False)
-            rpeaks = self.load_rpeaks(rec, preprocesses=preprocesses, augment=augment, keep_dim=False)
+            self.preprocess_data(rec, preproc=preproc)
+            data = self.load_data(rec, preproc=preproc, keep_dim=False)
+            rpeaks = self.load_rpeaks(rec, preproc=preproc, augment=augment, keep_dim=False)
         
         config = deepcopy(FeatureCfg)
         config.features = features
@@ -292,7 +292,7 @@ class CPSC2020(object):
         return feature_mat
 
 
-    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preprocesses:Optional[List[str]]=None, augment:bool=False) -> np.ndarray:
+    def load_rpeaks(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preproc:Optional[List[str]]=None, augment:bool=False) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -306,9 +306,9 @@ class CPSC2020(object):
             end index of the data to be loaded
         keep_dim: bool, default True,
             whether or not to flatten the data of shape (n,1)
-        preprocesses: list of str, optional
+        preproc: list of str, optional
             preprocesses performed when detecting the rpeaks,
-            should be sublist of `self.allowed_preprocesses`
+            should be sublist of `self.allowed_preproc`
         augment: bool, default False,
             rpeaks detected by algorithm is augmented using the annotations or not
         
@@ -317,9 +317,9 @@ class CPSC2020(object):
         rpeaks: ndarray,
             the indices of rpeaks
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        preproc = self._normalize_preprocess_names(preproc, True)
         rec_name = self._get_rec_name(rec)
-        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses)}"
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preproc)}"
         if augment:
             rec_name = rec_name + "-augment"
             rpeaks_fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.rec_ext}")
@@ -333,7 +333,7 @@ class CPSC2020(object):
         return rpeaks
 
 
-    def load_features(self, rec:Union[int,str], features:List[str], preprocesses:Optional[List[str]], augment:bool=True, force_recompute:bool=False) -> np.ndarray:
+    def load_features(self, rec:Union[int,str], features:List[str], preproc:Optional[List[str]], augment:bool=True, force_recompute:bool=False) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -344,9 +344,9 @@ class CPSC2020(object):
         features: list of str,
             list of feature types computed,
             should be sublist of `self.allowd_features`
-        preprocesses: list of str,
+        preproc: list of str,
             type of preprocesses performed before extracting features,
-            should be sublist of `self.allowed_preprocesses`
+            should be sublist of `self.allowed_preproc`
         augment: bool, default True,
             rpeaks used in extracting features is augmented using the annotations or not
         force_recompute: bool, default False,
@@ -360,9 +360,9 @@ class CPSC2020(object):
                 n = the dimension of the features
         """
         features = self._normalize_feature_names(features, True)
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        preproc = self._normalize_preprocess_names(preproc, True)
         rec_name = self._get_rec_name(rec)
-        rec_name = f"{rec_name}-{self._get_rec_suffix(preprocesses+features)}"
+        rec_name = f"{rec_name}-{self._get_rec_suffix(preproc+features)}"
         if augment:
             rec_name = rec_name + "-augment"
         feature_fp = os.path.join(self.feature_dir, f"{rec_name}{self.rec_ext}")
@@ -373,7 +373,7 @@ class CPSC2020(object):
         else:
             print("recompute features")
             feature_mat = self.compute_features(
-                rec, features, preprocesses, augment, save=True
+                rec, features, preproc, augment, save=True
             )
         return feature_mat
 
@@ -416,7 +416,7 @@ class CPSC2020(object):
         return ann
 
     
-    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preprocesses:Optional[List[str]]=None, augment:bool=True, return_aux_data:bool=False, force_recompute:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
+    def load_beat_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, preproc:Optional[List[str]]=None, augment:bool=True, return_aux_data:bool=False, force_recompute:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
         """ finished, checked,
 
         Parameters:
@@ -428,9 +428,9 @@ class CPSC2020(object):
             start index of the data to be loaded
         sampto: int, optional,
             end index of the data to be loaded
-        preprocesses: list of str,
+        preproc: list of str,
             type of preprocesses performed before detecting rpeaks,
-            should be sublist of `self.allowed_preprocesses`
+            should be sublist of `self.allowed_preproc`
         augment: bool, default True,
             rpeaks detected by algorithm is augmented using the annotations or not
         return_aux_data: bool, default False,
@@ -446,8 +446,8 @@ class CPSC2020(object):
             annotation (one of 'N', 'S', 'V') for each beat,
             or together with auxiliary data as a dict
         """
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
-        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        preproc = self._normalize_preprocess_names(preproc, True)
+        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preproc)}"
         if augment:
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
@@ -466,7 +466,7 @@ class CPSC2020(object):
                 rec,
                 sampfrom=sampfrom, sampto=sampto,
                 keep_dim=False,
-                preprocesses=preprocesses,
+                preproc=preproc,
                 augment=False,
             )
             ann = self.load_ann(rec, sampfrom, sampto)
@@ -474,7 +474,7 @@ class CPSC2020(object):
                 rec=rec,
                 rpeaks=rpeaks,
                 ann=ann,
-                preprocesses=preprocesses,
+                preproc=preproc,
                 bias_thr=FeatureCfg.beat_ann_bias_thr,
                 augment=augment,
                 return_aux_data=return_aux_data,
@@ -483,7 +483,7 @@ class CPSC2020(object):
         return beat_ann
 
 
-    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preprocesses:List[str], bias_thr:Real, augment:bool=True, return_aux_data:bool=False, save:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
+    def _ann_to_beat_ann(self, rec:Union[int,str], rpeaks:np.ndarray, ann:Dict[str, np.ndarray], preproc:List[str], bias_thr:Real, augment:bool=True, return_aux_data:bool=False, save:bool=False) -> Union[np.ndarray, Dict[str,np.ndarray]]:
         """ finished, checked,
 
         Parameters:
@@ -496,9 +496,9 @@ class CPSC2020(object):
         ann: dict,
             with items (ndarray) "SPB_indices" and "PVC_indices",
             which record the indices of SPBs and PVCs
-        preprocesses: list of str,
+        preproc: list of str,
             type of preprocesses performed before detecting rpeaks,
-            should be sublist of `self.allowed_preprocesses`
+            should be sublist of `self.allowed_preproc`
         bias_thr: real number,
             tolerance for using annotations (PVC, SPB indices provided by the dataset),
             to label the type of beats given by `rpeaks`
@@ -581,7 +581,7 @@ class CPSC2020(object):
         beat_ann = beat_ann[sorted_indices].astype('<U1')
 
         # NOTE: features will only be extracted at 'valid' rpeaks
-        raw_sig = self.load_data(rec, keep_dim=False, preprocesses=None)
+        raw_sig = self.load_data(rec, keep_dim=False, preproc=None)
         valid_indices = np.where( (augmented_rpeaks>=FeatureCfg.beat_winL) & (augmented_rpeaks<len(raw_sig)-FeatureCfg.beat_winR) )[0]
         augmented_rpeaks = augmented_rpeaks[valid_indices]
         beat_ann = beat_ann[valid_indices]
@@ -596,8 +596,8 @@ class CPSC2020(object):
         #     elif any([-beat_winL <= r-p < beat_winR for p in ann['PVC_indices']]):
         #         beat_ann[idx] = 'V'
         
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
-        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preprocesses)}"
+        preproc = self._normalize_preprocess_names(preproc, True)
+        rec_name = f"{self._get_rec_name(rec)}-{self._get_rec_suffix(preproc)}"
         if augment:
             rec_name = rec_name + "-augment"
         fp = os.path.join(self.beat_ann_dir, f"{rec_name}{self.ann_ext}")
@@ -667,7 +667,7 @@ class CPSC2020(object):
         -----------
         operations: list of str,
             names of operations to perform (or has performed),
-            should be sublist of `self.allowed_preprocesses` or `self.allowed_features`
+            should be sublist of `self.allowed_preproc` or `self.allowed_features`
 
         Returns:
         --------
@@ -707,32 +707,32 @@ class CPSC2020(object):
         return _f
 
 
-    def _normalize_preprocess_names(self, preprocesses:List[str], ensure_nonempty:bool) -> List[str]:
+    def _normalize_preprocess_names(self, preproc:List[str], ensure_nonempty:bool) -> List[str]:
         """
 
-        to transform all preprocesses into lower case,
+        to transform all preproc into lower case,
         and keep them in a specific ordering 
         
         Parameters:
         -----------
-        preprocesses: list of str,
+        preproc: list of str,
             list of preprocesses types,
             should be sublist of `self.allowd_features`
         ensure_nonempty: bool,
-            if True, when the passed `preprocesses` is empty,
-            `self.allowed_preprocesses` will be returned
+            if True, when the passed `preproc` is empty,
+            `self.allowed_preproc` will be returned
 
         Returns:
         --------
         _p: list of str,
             'normalized' list of preprocess types
         """
-        _p = [item.lower() for item in preprocesses] if preprocesses else []
+        _p = [item.lower() for item in preproc] if preproc else []
         if ensure_nonempty:
-            _p = _p or self.allowed_preprocesses
+            _p = _p or self.allowed_preproc
         # ensure ordering
-        _p = [item for item in self.allowed_preprocesses if item in _p]
-        # assert all([item in self.allowed_preprocesses for item in _p])
+        _p = [item for item in self.allowed_preproc if item in _p]
+        # assert all([item in self.allowed_preproc for item in _p])
         return _p
 
     
@@ -773,7 +773,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True, int_labels:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int, features:List[str], preproc:Optional[List[str]], augment:bool=True, int_labels:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set
@@ -785,9 +785,9 @@ class CPSC2020(object):
         features: list of str,
             list of feature types used for producing the training data,
             should be sublist of `self.allowd_features`
-        preprocesses: list of str,
+        preproc: list of str,
             list of preprocesses types performed on the raw data,
-            should be sublist of `self.allowd_features`
+            should be sublist of `self.allowd_preproc`
         augment: bool, default True,
             features are computed using augmented rpeaks or not
         int_labels: bool, default True,
@@ -798,7 +798,7 @@ class CPSC2020(object):
         x_train, y_train, y_indices_train, x_test, y_test, y_indices_test: ndarray,
         """
         features = self._normalize_feature_names(features, True)
-        preprocesses = self._normalize_preprocess_names(preprocesses, True)
+        preproc = self._normalize_preprocess_names(preproc, True)
         split_rec = self.train_test_split_rec(test_rec_num)
         x = ED({"train": np.array([],dtype=float), "test": np.array([],dtype=float)})
         if int_labels:
@@ -808,17 +808,17 @@ class CPSC2020(object):
         y_indices = ED({"train": np.array([],dtype=int), "test": np.array([],dtype=int)})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
-                ecg_sig = self.load_data(rec, keep_dim=False, preprocesses=preprocesses)
+                ecg_sig = self.load_data(rec, keep_dim=False, preproc=preproc)
                 feature_mat = self.load_features(
                     rec,
                     features=features,
-                    preprocesses=preprocesses,
+                    preproc=preproc,
                     augment=augment,
                     force_recompute=False
                 )
                 beat_ann = self.load_beat_ann(
                     rec,
-                    preprocesses=preprocesses,
+                    preproc=preproc,
                     augment=augment,
                     return_aux_data=True,
                     force_recompute=False
@@ -1047,10 +1047,10 @@ if __name__ == "__main__":
         dest="working_dir",
     )
     ap.add_argument(
-        "-p", "--preprocesses",
+        "-p", "--preproc",
         type=str, default="baseline,bandpass",
         help="preprocesses to perform, separated by ','",
-        dest="preprocesses",
+        dest="preproc",
     )
     ap.add_argument(
         "-f", "--features",
@@ -1089,24 +1089,24 @@ if __name__ == "__main__":
         verbose=kwargs.get("verbose"),
     )
 
-    preprocesses = kwargs.get("preprocesses", "").split(",") or PreprocessCfg.preprocesses
-    features = kwargs.get("features", "").split(",") or PreprocessCfg.preprocesses
+    preproc = kwargs.get("preproc", "").split(",") or PreprocessCfg.preproc
+    features = kwargs.get("features", "").split(",") or PreprocessCfg.preproc
     augment = kwargs.get("augment", True)
 
     for rec in (kwargs.get("records", None) or data_gen.all_records):
         data_gen.preprocess_data(
             rec,
-            preprocesses=preprocesses,
+            preproc=preproc,
         )
         data_gen.compute_features(
             rec,
             features=features,
-            preprocesses=preprocesses,
+            preproc=preproc,
             augment=augment,
             save=True,
         )
         data_gen.load_beat_ann(
             rec,
-            preprocesses=preprocesses,
+            preproc=preproc,
             augment=augment,
         )

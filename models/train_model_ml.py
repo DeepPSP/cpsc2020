@@ -42,6 +42,7 @@ from cfg import TrainCfg
 # from signal_processing.ecg_preprocess import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
 from dataset import CPSC2020
+from metrics import CPSC2020_loss, CPSC2020_score
 import misc
 
 
@@ -107,7 +108,7 @@ class ECGPrematureDetector(object):
             self.data_gen.train_test_split_data(
                 test_rec_num=self.config.test_rec_num,
                 features=self.config.features,
-                preprocesses=self.config.preprocesses,
+                preproc=self.config.preproc,
                 augment=self.config.augment_rpeaks,
                 int_labels=False,
             )
@@ -141,7 +142,9 @@ class ECGPrematureDetector(object):
             configurations for training xgboost classifier,
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
-        dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.samplt_weight)
+        dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
+
+
         
 
         # cpvc_pred = xgb.cv(
