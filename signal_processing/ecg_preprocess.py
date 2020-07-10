@@ -241,5 +241,5 @@ say for record A01, one can call
 >>>    ax.axvline(r-start_t*400,c='red',linestyle='dashed')
 >>> plt.show()
 
-or one can use the 'training_data_generator' in 'models'
+or one can use the 'dataset.py'
 """

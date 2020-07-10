@@ -835,7 +835,7 @@ class CPSC2020(object):
                     y[subset] = np.append(y[subset], beat_ann["beat_ann_int"].astype(int))
                 else:
                     y[subset] = np.append(y[subset], beat_ann["beat_ann"])
-                y_indices[subset] = np.append(y[subset], beat_ann["rpeaks"]).astype(int)
+                y_indices[subset] = np.append(y_indices[subset], beat_ann["rpeaks"]).astype(int)
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)

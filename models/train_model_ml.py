@@ -41,7 +41,7 @@ from easydict import EasyDict as ED
 from cfg import TrainCfg
 # from signal_processing.ecg_preprocess import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
-from .training_data_generator import CPSC2020
+from dataset import CPSC2020
 import misc
 
 
