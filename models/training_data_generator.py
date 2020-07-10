@@ -106,7 +106,7 @@ class CPSC2020(object):
     [1] http://www.icbeb.org/CPSC2020.html
     [2] https://github.com/PIA-Group/BioSPPy
     """
-    def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=2, **kwargs):
+    def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=1, **kwargs):
         """ finished, to be improved,
 
         Parameters:

@@ -6,7 +6,8 @@ References:
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
 TODO:
-    adjust metric function, with reference to the official scoring function,
+    adjust metric function,
+    with reference to the official scoring function,
     which lay more punishment on false negatives (5 times)
 """
 import os
@@ -46,14 +47,31 @@ import misc
 __all__ = ["train"]
 
 
+_CLF_FULL_NAME = {
+    "xgbc": "XGBClassifier",
+    "xgbclassifier": "XGBClassifier",
+    # "svc": "SVC",
+    "rfc": "RandomForestClassifier",
+    "randomforestclassifier": "RandomForestClassifier",
+    "gbc": "GradientBoostingClassifier",
+    "gradientboostingclassifier": "GradientBoostingClassifier",
+    "knn": "KNeighborsClassifier",
+    "kneighborsclassifier": "KNeighborsClassifier",
+    "mpl": "MLPClassifier",
+    "mplclassifier": "MLPClassifier",
+}
+
+_ALL_CLF = list(TrainCfg.ml_param_grid.keys())
+
+
 class ECGPrematureDetector(object):
     """
     """
-    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, config:Optional[ED]=None, verbose:int=2, **kwargs):
+    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, config:Optional[ED]=None, verbose:int=1, **kwargs):
         """
 
-        NOTE: the official scoring functions is
-            -1 * 
+        NOTE: the official scoring (-loss) functions is
+            (-1) * false_positives + (-5) * false_negatives
 
         Parameters:
         -----------
@@ -68,21 +86,19 @@ class ECGPrematureDetector(object):
             if set, `TrainCfg` will be updated by this `config`
         verbose: int, default 2,
         """
-        if isinstance(model, str):
-            if model == "XGBClassifier":
-                self.model = XGBClassifier(objective="multi:softmax", num_classes=3)
-            else:
-                self.model = eval(f"{model}()")
-            self.model_name = model
-        else:
-            self.model = model
-            self.model_name = type(self.model).__name__
         self.db_dir = db_dir
         self.working_dir = working_dir or os.getcwd()
-        self.verbose = verbose
+        self.verbose = max(TrainCfg.verbose, verbose)
         self.data_gen = CPSC2020(
             db_dir=db_dir, working_dir=working_dir, verbose=verbose
         )
+
+        if isinstance(model, str):
+            self.model_name = _CLF_FULL_NAME[model.lower()]
+            self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
+        else:
+            self.model = model
+            self.model_name = type(self.model).__name__
         self.config = deepcopy(TrainCfg)
         self.config.update(config or {})
 
@@ -92,7 +108,7 @@ class ECGPrematureDetector(object):
                 features=self.config.features,
                 preprocesses=self.config.preprocesses,
                 augment=self.config.augment_rpeaks,
-                int_labels=True,
+                int_labels=False,
             )
         self.sample_weight = misc.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
@@ -170,26 +186,43 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_we
     """
     # valid_intervals = misc.intervals_union([[s-TrainCfg.bias_thr, s+TrainCfg.bias_thr] for s in y_true])
     # temporarily use the official scoring function
-    if dtype == str:
-        sbp_true = np.where(y_true=='S')[0]
-        pvc_true = np.where(y_true=='V')[0]
-        sbp_pred = np.where(y_pred=='S')[0]
-        pvc_pred = np.where(y_pred=='V')[0]
-        sbp_wt = class_weight['S']
-        pvc_wt = class_weight['V']
-    elif dtype == int:
-        sbp_true = np.where(y_true==TrainCfg.label_map['S'])[0]
-        pvc_true = np.where(y_true==TrainCfg.label_map['V'])[0]
-        sbp_pred = np.where(y_pred==TrainCfg.label_map['S'])[0]
-        pvc_pred = np.where(y_pred==TrainCfg.label_map['V'])[0]
-        sbp_wt = class_weight[label_map['S']]
-        pvc_wt = class_weight[label_map['V']]
+    classes = ['S', 'V']
     
-    sbp_score, pvc_score = CPSC2020_score(
-        [sbp_true], [pvc_true], [sbp_pred], [pvc_pred],
-    )
+    truth_arr = {}
+    pred_arr = {}
+    if dtype == str:
+        for c in classes:
+        truth_arr[c] = np.where(y_true==c)[0]
+        pred_arr[c] = np.where(y_pred==c)[0]
+    elif dtype == int:
+        truth_arr[c] = np.where(y_true==TrainCfg.label_map[c])[0]
+        pred_arr[c] = np.where(y_pred==TrainCfg.label_map[c])[0]
 
-    return sbp_score * sbp_wt + pvc_score * pvc_wt
+    pred_intervals = {
+        c: [[idx-TrainCfg.bias_thr, idx+TrainCfg.bias_thr] for idx in pred_arr[c]] \
+            for c in classes
+    }
+
+    true_positive = {
+        c: np.array([misc.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+            for c in classes
+    }
+    false_positive = {
+        c: len(pred_arr[c]) - true_positive[c] for c in classes
+    }
+    false_negative = {
+        c: len(truth_arr[c]) - true_positive[c] for c in classes
+    }
+
+    false_positive_loss = {c: 1 for c in classes}
+    false_negative_loss = {c: 5 for c in classes}
+
+    total_loss = sum([
+        false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
+            for c in classes
+    ])
+
+    return total_loss
 
 
 
@@ -248,21 +281,6 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
     return Score1, Score2
 
 
-_CLF_FULL_NAME = {
-    "xgbc": "XGBClassifier",
-    "xgbclassifier": "XGBClassifier",
-    # "svc": "SVC",
-    "rfc": "RandomForestClassifier",
-    "randomforestclassifier": "RandomForestClassifier",
-    "gbc": "GradientBoostingClassifier",
-    "gradientboostingclassifier": "GradientBoostingClassifier",
-    "knn": "KNeighborsClassifier",
-    "kneighborsclassifier": "KNeighborsClassifier",
-    "mpl": "MLPClassifier",
-    "mplclassifier": "MLPClassifier",
-}
-
-_ALL_CLF = list(TrainCfg.ml_param_grid.keys())
 
 
 if __name__ == "__main__":
