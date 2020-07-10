@@ -51,13 +51,14 @@ FeatureCfg.beat_ann_bias_thr = 0.1*FeatureCfg.fs  # half width of broad qrs comp
 
 #--------------------------------------------------------------
 TrainCfg = ED()
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(BASE_DIR, "models", "ecg_ml.pkl"),
-    "dl": os.path.join(BASE_DIR, "models", "ecg_dl.pkl"),
+    "ml": os.path.join(_BASE_DIR, "models", "ecg_ml.pkl"),
+    "dl": os.path.join(_BASE_DIR, "models", "ecg_dl.pkl"),
 })
 TrainCfg.SEED = 42
+TrainCfg.verbose = 1
 TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
@@ -66,9 +67,16 @@ TrainCfg.features = FeatureCfg.features
 TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
 # TrainCfg.class_weight = 'balanced'
-TrainCfg.training_data = os.path.join(BASE_DIR, "training_data")
-TrainCfg.training_workdir = os.path.join(BASE_DIR, "training_workdir")
+TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
+TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
+TrainCfg.ml_init_params = {
+    'XGBClassifier': 'objective="multi:softmax", num_classes=3, verbosity=TrainCfg.verbose',
+    'RandomForestClassifier': 'class_weight="balanced", verbosity=TrainCfg.verbose',
+    'GradientBoostingClassifier': 'verbosity=TrainCfg.verbose',
+    'KNeighborsClassifier': 'verbosity=TrainCfg.verbose',
+    'MLPClassifier': 'verbosity=TrainCfg.verbose',
+}
 TrainCfg.ml_param_grid = {
     'XGBClassifier': {
         # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
