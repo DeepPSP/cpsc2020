@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
+def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced', verbose:int=0) -> int:
     """ NOT finished, need more consideration!
 
     Parameters:
@@ -56,9 +56,10 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     false_positive_loss = {c: 1 for c in classes}
     false_negative_loss = {c: 5 for c in classes}
 
-    print(f"true_positive = {true_positive}")
-    print(f"false_positive = {false_positive}")
-    print(f"false_negative = {false_negative}")
+    if verbose >= 1:
+        print(f"true_positive = {misc.dict_to_str(true_positive)}")
+        print(f"false_positive = {misc.dict_to_str(false_positive)}")
+        print(f"false_negative = {misc.dict_to_str(false_negative)}")
 
     total_loss = sum([
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
@@ -67,7 +68,7 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     return total_loss
 
 
-def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray]) -> Tuple[int]:
+def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Tuple[int]:
     """
     Score Function for all (test) records
 
@@ -116,9 +117,13 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
         # calculate the score
         s_score[i] = s_fp * (-1) + s_fn * (-5)
         v_score[i] = v_fp * (-1) + v_fn * (-5)
-        print(f"s_tp = {s_tp}, s_fp = {s_fp}, s_fn = {s_fn}")
-        print(f"v_tp = {v_tp}, v_fp = {v_fp}, s_fn = {v_fn}")
-        print(s_score[i], v_score[i])
+
+        if verbose >= 1:
+            print(f"for the {i}-th record")
+            print(f"s_tp = {s_tp}, s_fp = {s_fp}, s_fn = {s_fn}")
+            print(f"v_tp = {v_tp}, v_fp = {v_fp}, s_fn = {v_fn}")
+            print(f"s_score[{i}] = {s_score[i]}, v_score[{i}] = {v_score[i]}")
+
     Score1 = np.sum(s_score)
     Score2 = np.sum(v_score)
 

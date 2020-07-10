@@ -6,7 +6,7 @@ import numpy as np
 
 import misc
 from cfg import TrainCfg
-from .metrics import CPSC2020_loss, CPSC2020_score
+from metrics import CPSC2020_loss, CPSC2020_score
 
 
 def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:

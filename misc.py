@@ -16,6 +16,13 @@ from easydict import EasyDict as ED
 __all__ = [
     "dict_to_str",
     "get_optimal_covering",
+    "intervals_union",
+    "intervals_intersection",
+    "in_interval",
+    "in_generalized_interval",
+    "plot_single_lead_ecg",
+    "str2bool",
+    "class_weight_to_sample_weight",
 ]
 
 
