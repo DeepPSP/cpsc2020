@@ -8,7 +8,8 @@ import misc
 from cfg import TrainCfg
 
 
-def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
+
+def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
     """ NOT finished, need more consideration!
 
     Parameters:
@@ -19,20 +20,71 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_we
     --------
     to write
     """
-    # valid_intervals = misc.intervals_union([[s-TrainCfg.bias_thr, s+TrainCfg.bias_thr] for s in y_true])
-    # temporarily use the official scoring function
     classes = ['S', 'V']
 
     truth_arr = {}
     pred_arr = {}
     if dtype == str:
         for c in classes:
-            truth_arr[c] = np.where(y_true==c)[0]
-            pred_arr[c] = np.where(y_pred==c)[0]
+            truth_arr[c] = y_indices[np.where(y_true==c)[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = np.where(y_true==TrainCfg.label_map[c])[0]
-            pred_arr[c] = np.where(y_pred==TrainCfg.label_map[c])[0]
+            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
+
+    true_positive = {c: 0 for c in classes}
+
+    for c in classes:
+        for tc in truth_arr[c]:
+            pc = np.where(abs(pred_arr[c]-tc) <= TrainCfg.bias_thr)[0]
+            if pc.size > 0:
+                true_positive[c] += 1
+
+    false_positive = {
+        c: len(pred_arr[c]) - true_positive[c] for c in classes
+    }
+    false_negative = {
+        c: len(truth_arr[c]) - true_positive[c] for c in classes
+    }
+
+    false_positive_loss = {c: 1 for c in classes}
+    false_negative_loss = {c: 5 for c in classes}
+
+    print(true_positive)
+    print(false_positive)
+    print(false_negative)
+
+    total_loss = sum([
+        false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
+            for c in classes
+    ])
+    return total_loss
+
+
+def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
+    """ NOT finished, too slow!
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
+    """
+    classes = ['S', 'V']
+
+    truth_arr = {}
+    pred_arr = {}
+    if dtype == str:
+        for c in classes:
+            truth_arr[c] = y_indices[np.where(y_true==c)[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
+    elif dtype == int:
+        for c in classes:
+            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
 
     pred_intervals = {
         c: [[idx-TrainCfg.bias_thr, idx+TrainCfg.bias_thr] for idx in pred_arr[c]] \
@@ -61,9 +113,9 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_we
     return total_loss
 
 
-def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
+def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> int:
     """
-    
+
     Parameters:
     -----------
     to write
@@ -78,16 +130,18 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, dtype:type=str, cla
     pred_arr = {}
     if dtype == str:
         for c in classes:
-            truth_arr[c] = np.where(y_true==c)[0]
-            pred_arr[c] = np.where(y_pred==c)[0]
+            truth_arr[c] = y_indices[np.where(y_true==c)[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = np.where(y_true==TrainCfg.label_map[c])[0]
-            pred_arr[c] = np.where(y_pred==TrainCfg.label_map[c])[0]
+            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
 
     scores = CPSC2020_score([truth_arr['S']],[truth_arr['V']],[pred_arr['S']],[pred_arr['V']])
 
     loss = -sum(scores)
+
+    return loss
 
 
 def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray]) -> Tuple[int]:
@@ -120,7 +174,7 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
             s_fp = len(s_pos)
         else:
             for m, ans in enumerate(s_ref):
-                s_pos_cand = np.where(abs(s_pos-ans) <= TrainCfg.bias_thr*TrainCfg.fs)[0]
+                s_pos_cand = np.where(abs(s_pos-ans) <= TrainCfg.bias_thr)[0]
                 if s_pos_cand.size == 0:
                     s_fn += 1
                 else:
@@ -130,7 +184,7 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
             v_fp = len(v_pos)
         else:
             for m, ans in enumerate(v_ref):
-                v_pos_cand = np.where(abs(v_pos-ans) <= TrainCfg.bias_thr*TrainCfg.fs)[0]
+                v_pos_cand = np.where(abs(v_pos-ans) <= TrainCfg.bias_thr)[0]
                 if v_pos_cand.size == 0:
                     v_fn += 1
                 else:
@@ -139,6 +193,7 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
         # calculate the score
         s_score[i] = s_fp * (-1) + s_fn * (-5)
         v_score[i] = v_fp * (-1) + v_fn * (-5)
+        print(s_score[i], v_score[i])
     Score1 = np.sum(s_score)
     Score2 = np.sum(v_score)
 

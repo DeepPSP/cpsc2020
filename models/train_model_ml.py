@@ -103,7 +103,7 @@ class ECGPrematureDetector(object):
         self.config = deepcopy(TrainCfg)
         self.config.update(config or {})
 
-        self.x_train, self.y_train, self.x_test, self.y_test = \
+        self.x_train, self.y_train, self.y_indices_train, self.x_test, self.y_test, self.y_indices_test = \
             self.data_gen.train_test_split_data(
                 test_rec_num=self.config.test_rec_num,
                 features=self.config.features,

@@ -773,7 +773,7 @@ class CPSC2020(object):
         return split_res
 
 
-    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True, int_labels:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+    def train_test_split_data(self, test_rec_num:int, features:List[str], preprocesses:Optional[List[str]], augment:bool=True, int_labels:bool=True) -> Tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
         """ finished, checked,
 
         split the data (and the annotations) into train set and test set
@@ -795,7 +795,7 @@ class CPSC2020(object):
 
         Returns:
         --------
-        x_train, y_train, x_test, y_test: ndarray,
+        x_train, y_train, y_indices_train, x_test, y_test, y_indices_test: ndarray,
         """
         features = self._normalize_feature_names(features, True)
         preprocesses = self._normalize_preprocess_names(preprocesses, True)
@@ -805,6 +805,7 @@ class CPSC2020(object):
             y = ED({"train": np.array([],dtype=int), "test": np.array([],dtype=int)})
         else:
             y = ED({"train": np.array([],dtype='<U1'), "test": np.array([],dtype='<U1')})
+        y_indices = ED({"train": np.array([],dtype=int), "test": np.array([],dtype=int)})
         for subset in ["train", "test"]:
             for rec in split_rec[subset]:
                 ecg_sig = self.load_data(rec, keep_dim=False, preprocesses=preprocesses)
@@ -834,11 +835,13 @@ class CPSC2020(object):
                     y[subset] = np.append(y[subset], beat_ann["beat_ann_int"].astype(int))
                 else:
                     y[subset] = np.append(y[subset], beat_ann["beat_ann"])
+                y_indices[subset] = np.append(y[subset], beat_ann["rpeaks"]).astype(int)
             # post process: drop invalid (nan, inf, etc.)
             invalid_indices = list(set(np.where(~np.isfinite(x[subset]))[0]))
             x[subset] = np.delete(x[subset], invalid_indices, axis=0)
             y[subset] = np.delete(y[subset], invalid_indices)
-        return x["train"], y["train"], x["test"], y["test"]
+            y_indices[subset] = np.delete(y_indices[subset], invalid_indices)
+        return x["train"], y["train"], y_indices["train"], x["test"], y["test"], y_indices["test"]
 
     
     def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
