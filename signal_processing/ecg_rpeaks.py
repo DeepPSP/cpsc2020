@@ -22,7 +22,12 @@ __all__ = [
 # ---------------------------------------------------------------------
 # algorithms from wfdb
 def pantompkins(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
-    """ to keep in accordance of parameters with `xqrs` and `gqrs` """
+    """ to keep in accordance of parameters with `xqrs` and `gqrs`
+    
+    References:
+    -----------
+    [1] Pan, Jiapu, and Willis J. Tompkins. "A real-time QRS detection algorithm." IEEE transactions on biomedical engineering 3 (1985): 230-236.
+    """
     rpeaks = _pantompkins(sig, fs)
     return rpeaks
 
@@ -80,9 +85,11 @@ def ssf_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     Slope Sum Function (SSF)
 
+    might be too simple
+
     References:
     -----------
-    [1]
+    [1] Zong, W., et al. "An open-source algorithm to detect onset of arterial blood pressure pulses." Computers in Cardiology, 2003. IEEE, 2003.
     """
     rpeaks, = BSE.ssf_segmenter(
         signal=sig, sampling_rate=fs,
@@ -142,7 +149,7 @@ def gamboa_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     References:
     -----------
-    [1] 
+    [1] Gamboa, Hugo. "Multi-modal behavioral biometrics based on HCI and electrophysiology." PhD ThesisUniversidade (2008).
     """
     rpeaks, = BSE.gamboa_segmenter(
         signal=sig, sampling_rate=fs,
