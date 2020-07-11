@@ -122,6 +122,19 @@ class ECGPrematureDetector(object):
 
         self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
+        self.fit_params = {
+            "XGBClassifier": {
+                "sample_weight": self.sample_weight,
+                "eval_set": [(self.x_test, self.y_test)],
+                "sample_weight_eval_set": [self.sample_weight],
+            },
+            "SVC": ,
+            "RandomForestClassifier": ,
+            "GradientBoostingClassifier": ,
+            "KNeighborsClassifier": ,
+            "MLPClassifier": ,
+        }
+
 
     def train(self, config:Optional[ED]=None):
         """ NOT finished
@@ -143,14 +156,18 @@ class ECGPrematureDetector(object):
 
         grid = GridSearchCV(
             estimator=self.model,
-            param_grid=config.ml_param_grid[self.modle_name],
+            param_grid=config.ml_param_grid[self.model_name],
             # TODO: better scoring function
             scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
             n_jobs=max(1, mp.cpu_count()-3),
             verbose=self.verbose,
             cv=config.cv,
         )
-        grid_result = grid.fit(self.X_train, self.y_train)
+
+        grid_result = grid.fit(
+            self.X_train, self.y_train,
+            **cfg.ml_fit_params[self.model_name]
+        )
 
         retval = ED(
             best_model=grid_result.best_estimator_,

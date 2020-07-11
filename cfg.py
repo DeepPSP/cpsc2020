@@ -83,10 +83,21 @@ TrainCfg.xgb_native_cv_kw = {
 }
 TrainCfg.ml_init_params = {
     'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose',
+    # 'SVC':,
     'RandomForestClassifier': 'class_weight="balanced", verbosity=TrainCfg.verbose',
     'GradientBoostingClassifier': 'verbosity=TrainCfg.verbose',
     'KNeighborsClassifier': 'verbosity=TrainCfg.verbose',
     'MLPClassifier': 'verbosity=TrainCfg.verbose',
+}
+TrainCfg.ml_fit_params = {
+    'XGBClassifier': {
+        'early_stopping_rounds': 20,
+    }，
+    # 'SVC':,
+    'RandomForestClassifier': {},
+    'GradientBoostingClassifier': {},
+    'KNeighborsClassifier': {},
+    'MLPClassifier': {},
 }
 TrainCfg.ml_param_grid = {
     'XGBClassifier': {
