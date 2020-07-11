@@ -5,7 +5,7 @@ import os
 from sklearn.utils.class_weight import compute_class_weight
 from easydict import EasyDict as ED
 
-from misc import CPSC_STATS
+from utils import CPSC_STATS
 
 
 __all__ = [
@@ -85,7 +85,7 @@ TrainCfg.xgb_native_cv_kw = {
     'early_stopping_rounds': 20,
     'seed': TrainCfg.SEED,
     'nfold': TrainCfg.cv,
-    'metrics': ['merror',],
+    'metrics': ['merror',],  # Exact matching error, used to evaluate multi-class classification
     'verbose_eval': TrainCfg.verbose,
 }
 TrainCfg.ml_init_params = {

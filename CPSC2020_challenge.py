@@ -5,7 +5,6 @@ import numpy as np
 from signal_processing.ecg_preprocess import preprocess_signal, parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 from models.load_model import load_model
-from models.train_model import train
 
 
 def CPSC2020_challenge(ECG, fs=400):

@@ -4,7 +4,7 @@ from typing import Union, Optional, Any, List, Tuple
 
 import numpy as np
 
-import misc
+import utils
 from cfg import TrainCfg
 from metrics import CPSC2020_loss, CPSC2020_score
 
@@ -58,6 +58,10 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
             if pc.size > 0:
                 true_positive[c] += 1
 
+    true_positive = {
+        c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+            for c in classes
+    }
     false_positive = {
         c: len(pred_arr[c]) - true_positive[c] for c in classes
     }
@@ -86,7 +90,7 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
         false_positive=false_positive,
         false_negative=false_negative,
     )
-    
+
     return retval
 
 
