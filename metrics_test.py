@@ -3,6 +3,7 @@
 from typing import Union, Optional, Any, List, Tuple
 
 import numpy as np
+from easydict import EasyDict as ED
 
 import utils
 from cfg import TrainCfg
@@ -58,10 +59,10 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
             if pc.size > 0:
                 true_positive[c] += 1
 
-    true_positive = {
-        c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
-            for c in classes
-    }
+    # true_positive = {
+    #     c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+    #         for c in classes
+    # }
     false_positive = {
         c: len(pred_arr[c]) - true_positive[c] for c in classes
     }
@@ -72,9 +73,9 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
     false_positive_loss = {c: 1 for c in classes}
     false_negative_loss = {c: 5 for c in classes}
 
-    print(f"true_positive = {misc.dict_to_str(true_positive)}")
-    print(f"false_positive = {misc.dict_to_str(false_positive)}")
-    print(f"false_negative = {misc.dict_to_str(false_negative)}")
+    print(f"true_positive = {utils.dict_to_str(true_positive)}")
+    print(f"false_positive = {utils.dict_to_str(false_positive)}")
+    print(f"false_negative = {utils.dict_to_str(false_negative)}")
 
     class_loss = {
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
@@ -180,7 +181,7 @@ def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray,
     }
 
     true_positive = {
-        c: np.array([misc.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+        c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
             for c in classes
     }
     false_positive = {

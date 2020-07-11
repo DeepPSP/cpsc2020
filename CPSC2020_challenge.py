@@ -6,6 +6,7 @@ from cfg import FeatureCfg
 from signal_processing.ecg_preprocess import preprocess_signal, parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 from models.load_model import load_model
+import utils
 
 
 def CPSC2020_challenge(ECG, fs=400):
@@ -44,8 +45,13 @@ def CPSC2020_challenge(ECG, fs=400):
     features = compute_ecg_features(filtered_ecg, rpeaks)
 
     model = load_model()
-    if model is None:
-        model = train()
+    # if model is None:
+    #     model = train()
 
-    raise NotImplementedError
+    y_pred = model.predict(features)
+    S_pos, V_pos = utils.pred_to_indices(
+        y_pred, rpeaks,
+        label_map=FeatureCfg.label_map
+    )
+
     return S_pos, V_pos

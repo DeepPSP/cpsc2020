@@ -128,11 +128,11 @@ class ECGPrematureDetector(object):
                 "eval_set": [(self.x_test, self.y_test)],
                 "sample_weight_eval_set": [self.sample_weight],
             },
-            "SVC": ,
-            "RandomForestClassifier": ,
-            "GradientBoostingClassifier": ,
-            "KNeighborsClassifier": ,
-            "MLPClassifier": ,
+            "SVC": {},
+            "RandomForestClassifier": {},
+            "GradientBoostingClassifier": {},
+            "KNeighborsClassifier": {},
+            "MLPClassifier": {},
         }
 
 

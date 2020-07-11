@@ -3,6 +3,7 @@
 from typing import Union, Optional, Any, List, Tuple
 
 import numpy as np
+from easydict import EasyDict as ED
 
 import utils
 from cfg import TrainCfg

@@ -23,6 +23,7 @@ __all__ = [
     "plot_single_lead_ecg",
     "str2bool",
     "class_weight_to_sample_weight",
+    "pred_to_indices",
 ]
 
 
@@ -472,6 +473,12 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
     sample_weight = np.vectorize(trans_func)(sample_weight)
     sample_weight = sample_weight / np.max(sample_weight)
     return sample_weight
+
+
+def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    """
+    raise NotImplementedError
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
