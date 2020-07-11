@@ -19,11 +19,19 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
 
     Parameters:
     -----------
-    to write
+    y_true: ndarray,
+        array of ground truth of beat types
+    y_true: ndarray,
+        array of predictions of beat types
+    y_indices: ndarray,
+        indices of beat (rpeak) in the original ecg signal
+    dtype: type, default str,
+        dtype of `y_true` and `y_pred`
 
     Returns:
     --------
-    to write
+    total_loss: int,
+        the total loss of all ectopic beat types (SBP, PVC)
     """
     classes = ['S', 'V']
 
@@ -65,21 +73,28 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
             for c in classes
     ])
+    
     return total_loss
 
 
-def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Tuple[int]:
+def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Union[Tuple[int],dict]:
     """
     Score Function for all (test) records
 
     Parameters:
     -----------
     sbp_true, pvc_true, sbp_pred, pvc_pred: list of ndarray,
+    verbose: int
 
     Returns:
     --------
-    Score1: int, score for S
-    Score2: int, score for V
+    retval: tuple or dict,
+        tuple of (negative) scores for each ectopic beat type (SBP, PVC), or
+        dict of more scoring details, including
+        - total_loss: sum of loss of each ectopic beat type (PVC and SPB)
+        - true_positive: number of true positives of each ectopic beat type
+        - false_positive: number of false positives of each ectopic beat type
+        - false_negative: number of false negatives of each ectopic beat type
     """
     s_score = np.zeros([len(sbp_true), ])
     v_score = np.zeros([len(sbp_true), ])
@@ -127,4 +142,15 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
     Score1 = np.sum(s_score)
     Score2 = np.sum(v_score)
 
-    return Score1, Score2
+    if verbose >= 1:
+        retval = ED(
+            total_loss=-(Score1+Score2),
+            class_loss={'S':-Score1, 'V':-Score2},
+            true_positive={'S':s_tp, 'V':v_tp},
+            false_positive={'S':s_fp, 'V':v_fp},
+            false_negative={'S':s_fn, 'V':v_fn},
+        )
+    else:
+        retval = Score1, Score2
+
+    return retval

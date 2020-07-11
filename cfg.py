@@ -18,7 +18,8 @@ __all__ = [
 #--------------------------------------------------------------
 PreprocessCfg = ED()
 PreprocessCfg.fs = 400  # Hz, CPSC2020 data fs
-PreprocessCfg.preproc = ['baseline', 'bandpass',]  # sequential, keep correct ordering
+# sequential, keep correct ordering, to add 'motion_artefact'
+PreprocessCfg.preproc = ['baseline', 'bandpass',]
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocessCfg.baseline_window1 = int(0.2*PreprocessCfg.fs)  # 200 ms window
 PreprocessCfg.baseline_window2 = int(0.6*PreprocessCfg.fs)  # 600 ms window

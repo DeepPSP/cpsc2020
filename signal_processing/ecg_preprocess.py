@@ -1,6 +1,6 @@
 """
 preprocess of (single lead) ecg signal:
-    band pass () --> remove baseline --> find rpeaks
+    band pass () --> remove baseline --> find rpeaks --> deal with motion artefact
 
 TODO:
     1. motion artefact detection
