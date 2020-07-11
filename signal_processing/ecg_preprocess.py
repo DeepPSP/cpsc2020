@@ -1,6 +1,6 @@
 """
 preprocess of (single lead) ecg signal:
-    band pass () --> remove baseline --> find rpeaks --> deal with motion artefact
+    band pass --> remove baseline --> find rpeaks --> denoise (mainly deal with motion artefact)
 
 TODO:
     1. motion artefact detection
@@ -55,15 +55,15 @@ QRS_DETECTORS = {
 }
 
 
-def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
+def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
     """ finished, checked,
 
     Parameters:
     -----------
-    raw_ecg: ndarray,
+    raw_sig: ndarray,
         the raw ecg signal
     fs: real number,
-        sampling frequency of `raw_ecg`
+        sampling frequency of `raw_sig`
     config: dict, optional,
         extra process configuration,
         `PreprocessCfg` will `update` this `config`
@@ -75,7 +75,7 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         - 'filtered_ecg': the array of the processed ecg signal
         - 'rpeaks': the array of indices of rpeaks; empty if 'rpeaks' in `config` is not set
     """
-    filtered_ecg = raw_ecg.copy()
+    filtered_ecg = raw_sig.copy()
 
     cfg = deepcopy(PreprocessCfg)
     cfg.update(config or {})
@@ -116,15 +116,15 @@ def preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     return retval
     
 
-def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy') -> Dict[str, np.ndarray]:
+def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy') -> Dict[str, np.ndarray]:
     """ finished, checked,
 
     Parameters:
     -----------
-    raw_ecg: ndarray,
+    raw_sig: ndarray,
         the raw ecg signal
     fs: real number,
-        sampling frequency of `raw_ecg`
+        sampling frequency of `raw_sig`
     config: dict, optional,
         extra process configuration,
         `PreprocessCfg` will `update` this `config`
@@ -148,21 +148,21 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
     epoch_overlap = 2 * epoch_overlap_half
     epoch_forward = epoch_len - epoch_overlap
 
-    if len(raw_ecg) <= 3 * epoch_len:  # too short, no need for parallel computing
-        return preprocess_signal(raw_ecg, fs, cfg)
+    if len(raw_sig) <= 3 * epoch_len:  # too short, no need for parallel computing
+        return preprocess_signal(raw_sig, fs, cfg)
     
     l_epoch = [
-        raw_ecg[idx*epoch_forward: idx*epoch_forward + epoch_len] \
-            for idx in range((len(raw_ecg)-epoch_overlap)//epoch_forward)
+        raw_sig[idx*epoch_forward: idx*epoch_forward + epoch_len] \
+            for idx in range((len(raw_sig)-epoch_overlap)//epoch_forward)
     ]
 
     if cfg.parallel_keep_tail:
         tail_start_idx = epoch_forward * len(l_epoch) + epoch_overlap
-        if len(raw_ecg) - tail_start_idx < 30 * fs:  # less than 30s, make configurable?
+        if len(raw_sig) - tail_start_idx < 30 * fs:  # less than 30s, make configurable?
             # append to the last epoch
-            l_epoch[-1] = np.append(l_epoch[-1], raw_ecg[tail_start_idx:])
+            l_epoch[-1] = np.append(l_epoch[-1], raw_sig[tail_start_idx:])
         else:  # long enough
-            tail_epoch = raw_ecg[tail_start_idx-epoch_overlap:]
+            tail_epoch = raw_sig[tail_start_idx-epoch_overlap:]
             l_epoch.append(tail_epoch)
 
     cpu_num = max(1, mp.cpu_count()-3)
@@ -209,9 +209,9 @@ def parallel_preprocess_signal(raw_ecg:np.ndarray, fs:Real, config:Optional[ED]=
 """
 to check correctness of the function `parallel_preprocess_signal`,
 say for record A01, one can call
->>> raw_ecg = loadmat("./data/A01.mat")['ecg'].flatten()
->>> processed = parallel_preprocess_signal(raw_ecg, 400)
->>> print(len(processed['filtered_ecg']) - len(raw_ecg))
+>>> raw_sig = loadmat("./data/A01.mat")['ecg'].flatten()
+>>> processed = parallel_preprocess_signal(raw_sig, 400)
+>>> print(len(processed['filtered_ecg']) - len(raw_sig))
 >>> start_t = int(3600*24.7811)
 >>> len_t = 10
 >>> fig, ax = plt.subplots(figsize=(20,6))

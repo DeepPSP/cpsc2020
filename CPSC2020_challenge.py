@@ -2,6 +2,7 @@
 """
 import numpy as np
 
+from cfg import FeatureCfg
 from signal_processing.ecg_preprocess import preprocess_signal, parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 from models.load_model import load_model

@@ -48,7 +48,7 @@ def CPSC2020_score(S_refs, V_refs, S_results, V_results):
     """
     Score Function
     Input:
-        S_refs, V_refs, S_results, V_results
+        S_refs, V_refs, S_results, V_results: list of ndarray
     Output:
         Score1: score for S
         Score2: score for V

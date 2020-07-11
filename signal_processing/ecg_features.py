@@ -33,7 +33,7 @@ def compute_ecg_features(sig:np.ndarray, rpeaks:np.ndarray, config:Optional[ED]=
     Parameters:
     -----------
     sig: ndarray,
-        the ecg signal
+        the filtered ecg signal
     rpeaks: ndarray,
         indices of R peaks
     config: dict, optional,
