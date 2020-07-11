@@ -27,7 +27,9 @@ PreprocessCfg.filter_band = [0.5, 45]
 PreprocessCfg.parallel_epoch_len = 600  # second
 PreprocessCfg.parallel_epoch_overlap = 10  # second
 PreprocessCfg.parallel_keep_tail = True
-PreprocessCfg.rpeaks = 'xqrs'  # or 'gqrs', or 'pantompkins' or empty string ''
+PreprocessCfg.rpeaks = 'xqrs'
+# or 'gqrs', or 'pantompkins', 'hamilton', 'ssf', 'christov', 'engzee', 'gamboa'
+# or empty string '' if not detecting rpeaks
 """
 for qrs detectors:
     `xqrs` sometimes detects s peak (valley) as r peak,

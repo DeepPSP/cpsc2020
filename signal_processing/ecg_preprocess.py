@@ -15,12 +15,10 @@ import os
 import multiprocessing as mp
 from copy import deepcopy
 from numbers import Real
-from typing import Optional, List, Dict
+from typing import Union, Optional, Any, List, Dict
 
 import numpy as np
 from easydict import EasyDict as ED
-from wfdb.processing.qrs import XQRS, GQRS, xqrs_detect as _xqrs_detect, gqrs_detect as _gqrs_detect
-from wfdb.processing.pantompkins import pantompkins as _pantompkins
 from scipy.ndimage.filters import median_filter
 from scipy.signal.signaltools import resample
 from scipy.io import savemat
@@ -32,51 +30,28 @@ except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
 from cfg import PreprocessCfg
+from .ecg_rpeaks import (
+    xqrs_detect, gqrs_detect, pantompkins,
+    hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,
+)
 
 
 __all__ = [
     "preprocess_signal",
     "parallel_preprocess_signal",
+    "denoise_signal",
 ]
-
-
-def pantompkins(sig, fs, **kwargs):
-    """ to keep in accordance of parameters with `xqrs` and `gqrs` """
-    rpeaks = _pantompkins(sig, fs)
-    return rpeaks
-
-def xqrs_detect(sig, fs, **kwargs):
-    """
-    default kwargs:
-        sampfrom=0, sampto='end', conf=None, learn=True, verbose=True
-    """
-    kw = dict(sampfrom=0, sampto='end', conf=None, learn=True, verbose=True)
-    kw = {k: kwargs.get(k,v) for k,v in kw.items()}
-    rpeaks = _xqrs_detect(sig, fs, **kw)
-    return rpeaks
-
-def gqrs_detect(sig, fs, **kwargs):
-    """
-    default kwargs:
-        d_sig=None, adc_gain=None, adc_zero=None,
-        threshold=1.0, hr=75, RRdelta=0.2, RRmin=0.28, RRmax=2.4,
-        QS=0.07, QT=0.35, RTmin=0.25, RTmax=0.33,
-        QRSa=750, QRSamin=130
-    """
-    kw = dict(d_sig=None, adc_gain=None, adc_zero=None,
-        threshold=1.0, hr=75, RRdelta=0.2, RRmin=0.28, RRmax=2.4,
-        QS=0.07, QT=0.35, RTmin=0.25, RTmax=0.33,
-        QRSa=750, QRSamin=130
-    )
-    kw = {k: kwargs.get(k,v) for k,v in kw.items()}
-    rpeaks = _gqrs_detect(sig, fs, **kw)
-    return rpeaks
 
 
 QRS_DETECTORS = {
     "xqrs": xqrs_detect,
     "gqrs": gqrs_detect,
     "pantompkins": pantompkins,
+    "hamilton": hamilton_detect,
+    "ssf": ssf_detect,
+    "christov": christov_detect,
+    "engzee": engzee_detect,
+    "gamboa": gamboa_detect,
 }
 
 
@@ -247,3 +222,19 @@ say for record A01, one can call
 
 or one can use the 'dataset.py'
 """
+
+
+def denoise_signal(filtered_ecg:np.ndarray,) -> Any:
+    """
+
+    function dealing with noise (mainly motion artefact)
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
+    """
+    raise NotImplementedError
