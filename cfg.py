@@ -73,15 +73,6 @@ TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weig
 TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
-TrainCfg.xgb_native_cv_params = {
-    'max_depth': 6,
-    'min_child_weight': 1,
-    'eta': 3,
-    'subsample': 1,
-    'colsample_bytree': 1,
-    'objective': 'multi:softmax',
-    'num_class': 3,
-}
 TrainCfg.xgb_native_cv_kw = {
     'num_boost_round': 999,
     'early_stopping_rounds': 20,
@@ -102,7 +93,7 @@ TrainCfg.ml_param_grid = {
         # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
         # 'objective': ['multi:softmax'],
         # 'num_classes': [3],
-        "learning_rate": [0.05, 0.10, 0.20, 0.30],
+        "learning_rate": [0.01, 0.05, 0.10, 0.20, 0.30],
         'min_child_weight': [1, 5, 10],
         'gamma': [0.5, 1, 1.5, 2, 5],
         'subsample': [0.6, 0.8, 1.0],

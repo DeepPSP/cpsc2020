@@ -1,4 +1,8 @@
 """
+NOTE:
+    the CPSC data is highly unbalanced,
+    with most beats normal beats
+
 References:
 -----------
 [1] https://blog.cambridgespark.com/hyperparameter-tuning-in-xgboost-4ff9100a3b2f
@@ -6,6 +10,7 @@ References:
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
 TODO:
+    feature selection
     adjust metric function,
     with reference to the official scoring function,
     which lay more punishment on false negatives (5 times)
@@ -96,11 +101,13 @@ class ECGPrematureDetector(object):
         )
 
         if isinstance(model, str):
+            assert model.lower() in _CLF_FULL_NAME.keys(), f"model {model} not supported!"
             self.model_name = _CLF_FULL_NAME[model.lower()]
             self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
         else:
             self.model = model
             self.model_name = type(self.model).__name__
+
         self.config = deepcopy(TrainCfg)
         self.config.update(config or {})
 
@@ -116,7 +123,7 @@ class ECGPrematureDetector(object):
         self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
 
 
-    def train(self, **config):
+    def train(self, config:Optional[ED]=None):
         """ NOT finished
 
         Parameters:
@@ -129,72 +136,70 @@ class ECGPrematureDetector(object):
         cfg = deepcopy(self.config)
         cfg.update(config)
 
-        if type(self.model).__name__ == "XGBClassifier":
-            self._train_xgb_clf(cfg)
-        else:
-            self._train_sklearn_clf(cfg)
+        # if type(self.model).__name__ == "XGBClassifier":
+        #     self._train_xgb_clf(cfg)
+        # else:
+        #     self._train_sklearn_clf(cfg)
 
-    def _train_xgb_clf(self, config:Optional[dict]):
-        """ NOT finished,
-
-        Parameters:
-        -----------
-        config: dict,
-            configurations for training xgboost classifier,
-        """
-        cfg = deepcopy(TrainCfg)
-        if config:
-            cfg.update(config)
-        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
-        dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
-        # booster = xgb.train()
-        raise NotImplementedError
-
-    def _cv_xgb(self):
-        """
-        """
-        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
-        cv_results = xgb.cv(
-            TrainCfg.xgb_native_cv_params,
-            dtrain,
-            **TrainCfg.xgb_native_cv_kw,
-        )
-        return cv_results
-
-    def _train_xgb_clf(self, config:dict):
-        """ NOT finished,
-
-        Parameters:
-        -----------
-        config: dict,
-            configurations for training xgboost classifier,
-        """
-        raise NotImplementedError
-
-    def _train_sklearn_clf(self, config:dict):
-        """ NOT finished,
-
-        Parameters:
-        -----------
-        config: dict,
-            configurations for training xgboost classifier,
-        """
-        raise NotImplementedError
         grid = GridSearchCV(
             estimator=self.model,
             param_grid=config.ml_param_grid[self.modle_name],
+            # TODO: better scoring function
             scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
             n_jobs=max(1, mp.cpu_count()-3),
             verbose=self.verbose,
             cv=config.cv,
         )
         grid_result = grid.fit(self.X_train, self.y_train)
+
         retval = ED(
             best_model=grid_result.best_estimator_,
             best_params=grid_result.best_params_,
             best_score=grid_result.best_score_,
         )
+
         return retval
+
+
+    # def _train_sklearn_clf(self, config:dict):
+    #     """ NOT finished,
+
+    #     Parameters:
+    #     -----------
+    #     config: dict,
+    #         configurations for training xgboost classifier,
+    #     """
+    #     raise NotImplementedError
+
+
+    def _cv_xgb(self, params:dict):
+        """
+        """
+        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
+        cv_results = xgb.cv(
+            params,
+            dtrain,
+            **TrainCfg.xgb_native_cv_kw,
+        )
+        return cv_results
+
+
+    # def _train_xgb_clf(self, config:Optional[dict]):
+    #     """ NOT finished,
+
+    #     Parameters:
+    #     -----------
+    #     config: dict,
+    #         configurations for training xgboost classifier,
+    #     """
+    #     cfg = deepcopy(TrainCfg)
+    #     if config:
+    #         cfg.update(config)
+    #     dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
+    #     dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
+    #     # booster = xgb.train()
+    #     raise NotImplementedError
+
 
 
 if __name__ == "__main__":
