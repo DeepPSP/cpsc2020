@@ -1,5 +1,9 @@
 """
 """
+import os, sys
+# for DAS training ModuleNotFoundError:
+_PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _PARENT_DIR)
 import argparse
 from copy import deepcopy
 

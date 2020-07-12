@@ -56,10 +56,13 @@ FeatureCfg.beat_ann_bias_thr = 0.1*FeatureCfg.fs  # half width of broad qrs comp
 #--------------------------------------------------------------
 TrainCfg = ED()
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# common configurations
+TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
+TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{time}.{ext}"),
-    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{time}.{ext}"),
+    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{scaler}_{time}.{ext}"),
+    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{scaler}_{time}.{ext}"),
 })
 TrainCfg.model_in_use = ED({
     "ml": os.path.join(_BASE_DIR, "models", "ecg_XGBClassifier_2020-07-12-17-54-10.bst"),
@@ -71,14 +74,13 @@ TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
 TrainCfg.preproc = PreprocessCfg.preproc
-TrainCfg.features = FeatureCfg.features
-TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
 # TrainCfg.class_weight = 'balanced'
-TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
-TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
-
+# machine learning related configuartions
+TrainCfg.features = FeatureCfg.features
+TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
+TrainCfg.feature_scaler = 'StandardScaler'  # or 'MinMaxScaler', or empty '' if not scaling features
 # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
 TrainCfg.xgb_native_train_params = {
     'objective': 'multi:softmax',
@@ -172,3 +174,4 @@ TrainCfg.ml_param_grid = {
     #     'max_features': [0.2, 0.5, 1, 2],
     # },
 }
+# TODO: deep learning related configurations

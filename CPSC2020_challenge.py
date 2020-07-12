@@ -38,14 +38,14 @@ def CPSC2020_challenge(ECG, fs=400):
 
 #    S_pos = np.zeros([1, ])
 #    V_pos = np.zeros([1, ])
-    pr = parallel_preprocess_signal(ECG, fs)  # use default config in `cfg`
-    filtered_ecg = pr['filtered_ecg']
-    rpeaks = pr['rpeaks']
+    pps = parallel_preprocess_signal(ECG, fs)  # use default config in `cfg`
+    filtered_ecg = pps['filtered_ecg']
+    rpeaks = pps['rpeaks']
     filtered_rpeaks = rpeaks[np.where( (rpeaks>=FeatureCfg.beat_winL) & (rpeaks<len(sig)-FeatureCfg.beat_winR) )[0]]
 
     features = compute_ecg_features(filtered_ecg, rpeaks)
 
-    model = load_model()
+    model = load_model(field='ml')
     # if model is None:
     #     model = train()
 

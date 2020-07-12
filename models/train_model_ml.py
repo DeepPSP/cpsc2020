@@ -15,6 +15,9 @@ TODO:
     3. adjust metric function,
        with reference to the official scoring function,
        which lay more punishment on false negatives (5 times)
+    4. (?necessary) add AF detection models which depends only on RR intervals,
+       or mainly on RR intervals, with auxiliary detector based on wave (f-wave) delineation,
+       so that SPB is not confused with AF.
 """
 import os, sys
 # for DAS training ModuleNotFoundError:
@@ -31,6 +34,7 @@ from typing import Union, Optional, Any, List, Tuple, NoReturn
 import numpy as np
 from tqdm import tqdm
 import xgboost as xgb
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import GridSearchCV
 # from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -56,7 +60,9 @@ from metrics import CPSC2020_loss, CPSC2020_score
 import utils
 
 
-__all__ = ["ECGPrematureDetector"]
+__all__ = [
+    "ECGPrematureDetector",
+]
 
 
 _CLF_FULL_NAME = {
@@ -124,6 +130,10 @@ class ECGPrematureDetector(object):
         self.x_train, self.y_train, self.y_indices_train = None, None, None
         self.x_test, self.y_test, self.y_indices_test = None, None, None
         self.sample_weight = None
+        if self.config.feature_scaler:
+            self.feature_scaler = eval(f"{self.config.feature_scaler}()")
+        else:
+            self.feature_scaler = None
         self.fit_params = ED()
 
 
@@ -139,6 +149,10 @@ class ECGPrematureDetector(object):
                 augment=self.config.augment_rpeaks,
                 int_labels=int_labels,
             )
+        if self.feature_scaler:
+            self.feature_scaler.fit(self.x_train)
+            self.x_train = self.feature_scaler.transform(self.x_train)
+            self.x_test = self.feature_scaler.transform(self.x_test)
 
         if self.verbose >= 1:
             print(f"self.x_train.shape = {self.x_train.shape}")
@@ -272,13 +286,21 @@ class ECGPrematureDetector(object):
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
 
         save_path_params = '_'.join([str(k)+'-'+str(v) for k,v in params.items()])
+        scaler_name = self.feature_scaler.__name__ if self.feature_scaler else 'no-scaler'
         save_path = cfg.model_path['ml'].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
             params=save_path_params,
-            ext='bst',
+            ext='pkl',
         )
-        booster.save_model(save_path)
+        # booster.save_model(save_path)
+        save_dict = {
+            'feature_scaler': self.feature_scaler,
+            'model': booster,
+        }
+
+        with open(save_path, 'wb') as f:
+            pickle.dump(save_dict, f)
 
 
 DAS = True
