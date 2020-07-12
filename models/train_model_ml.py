@@ -21,7 +21,7 @@ import joblib, pickle
 import multiprocessing as mp
 from functools import partial
 from copy import deepcopy
-from typing import Union, Optional, Any, List, Tuple
+from typing import Union, Optional, Any, List, Tuple, NoReturn
 
 import numpy as np
 from tqdm import tqdm
@@ -155,7 +155,7 @@ class ECGPrematureDetector(object):
             for flexibility of different experiments,
             if set, `self.config` will be updated by this `config`
         """
-        if not all([self.x_train, self.y_train, self.y_indices_train, self.x_test, self.y_test, self.y_indices_test]):
+        if any([len(self.x_train), len(self.y_train), len(self.y_indices_train), len(self.x_test), len(self.y_test), len(self.y_indices_test)]):
             raise ValueError("do train test split first!")
 
         cfg = deepcopy(self.config)
