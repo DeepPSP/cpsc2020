@@ -91,7 +91,7 @@ TrainCfg.xgb_native_train_params = {
 }
 TrainCfg.xgb_native_train_kw = {
     'num_boost_round': 999,
-    'early_stopping_rounds': 100,
+    'early_stopping_rounds': 50,
     'verbose_eval': TrainCfg.verbose+1,
 }
 TrainCfg.xgb_native_cv_kw = {

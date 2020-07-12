@@ -294,7 +294,10 @@ class ECGPrematureDetector(object):
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
         print(f"evals_result = {utils.dict_to_str(evals_result)}")
 
-        save_path_params = '_'.join([str(k)+'-'+str(v) for k,v in params.items()])
+        save_path_params = '_'.join(
+            [str(k)+'-'+str(v) for k,v in params.items() \
+                if k not in ['objective', 'num_class', 'verbosity', 'eval_metric',]]
+        )
         scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
         save_path = cfg.model_path['ml'].format(
             model_name=self.model_name,
