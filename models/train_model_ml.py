@@ -140,6 +140,14 @@ class ECGPrematureDetector(object):
                 int_labels=int_labels,
             )
 
+        if self.verbose >= 1:
+            print(f"self.x_train.shape = {self.x_train.shape}")
+            print(f"self.y_train.shape = {self.y_train.shape}")
+            print(f"self.y_indices_train.shape = {self.y_indices_train.shape}")
+            print(f"self.x_test.shape = {self.x_test.shape}")
+            print(f"self.y_test.shape = {self.y_test.shape}")
+            print(f"self.y_indices_test.shape = {self.y_indices_test.shape}")
+
         if int_labels:
             class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
         else:
