@@ -51,7 +51,7 @@ from metrics import CPSC2020_loss, CPSC2020_score
 import utils
 
 
-__all__ = ["train"]
+__all__ = ["ECGPrematureDetector"]
 
 
 _CLF_FULL_NAME = {
@@ -245,7 +245,7 @@ if __name__ == "__main__":
     ap.add_argument(
         "-d", "--db-dir",
         # type=str, required=True,
-        type=str, default="/mnt/wenhao71/data/CPSC2020/TrainingSet/"
+        type=str, default="/mnt/wenhao71/data/CPSC2020/TrainingSet/",
         help="directory where the database is stored",
         dest="db_dir",
     )
