@@ -161,6 +161,7 @@ class ECGPrematureDetector(object):
             print(f"self.x_test.shape = {self.x_test.shape}")
             print(f"self.y_test.shape = {self.y_test.shape}")
             print(f"self.y_indices_test.shape = {self.y_indices_test.shape}")
+            print(f"feature_scaler.mean = {self.feature_scaler.mean_}")
 
         if int_labels:
             class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
@@ -294,11 +295,12 @@ class ECGPrematureDetector(object):
         print(f"evals_result = {utils.dict_to_str(evals_result)}")
 
         save_path_params = '_'.join([str(k)+'-'+str(v) for k,v in params.items()])
-        scaler_name = self.feature_scaler.__name__ if self.feature_scaler else 'no-scaler'
+        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
         save_path = cfg.model_path['ml'].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
             params=save_path_params,
+            scaler=scaler_name,
             ext='pkl',
         )
         # booster.save_model(save_path)
