@@ -74,13 +74,27 @@ TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weig
 TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.cv = 3
+
+# https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
+TrainCfg.xgb_native_train_params = {
+    'objective': 'multi:softmax',
+    'num_class': 3,
+    'verbosity': TrainCfg.verbose+1,
+    'eval_metric': ['merror','mlogloss','map'],
+    'seed': TrainCfg.SEED,
+}
+TrainCfg.xgb_native_train_kw = {
+    'num_boost_round': 999,
+    'early_stopping_rounds': 100,
+    'verbose_eval': TrainCfg.verbose+1,
+}
 TrainCfg.xgb_native_cv_kw = {
     'num_boost_round': 999,
     'early_stopping_rounds': 20,
     'seed': TrainCfg.SEED,
     'nfold': TrainCfg.cv,
-    'metrics': ['merror',],  # Exact matching error, used to evaluate multi-class classification
-    'verbose_eval': TrainCfg.verbose,
+    'metrics': ['merror','mlogloss','map'],
+    'verbose_eval': TrainCfg.verbose+1,
 }
 TrainCfg.ml_init_params = {
     'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose+1',
@@ -106,7 +120,6 @@ TrainCfg.ml_fit_params = {
 }
 TrainCfg.ml_param_grid = {
     'XGBClassifier': {
-        # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
         # 'objective': ['multi:softmax'],
         # 'num_classes': [3],
         "learning_rate": [0.03, 0.10, 0.30],
@@ -114,7 +127,7 @@ TrainCfg.ml_param_grid = {
         'gamma': [0.4, 1, 4],
         'subsample': [0.6, 1.0],
         'colsample_bytree': [0.6, 1.0],
-        'max_depth': [3, 4, 5],
+        'max_depth': [3, 4, 6],
     },
     # 'SVC': {
     #     'C': [0.0005, 0.001, 0.002, 0.01, 0.1, 1, 10],

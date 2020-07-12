@@ -10,10 +10,11 @@ References:
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
 TODO:
-    feature selection
-    adjust metric function,
-    with reference to the official scoring function,
-    which lay more punishment on false negatives (5 times)
+    1. feature selection,
+    2. consider whether features should be normalized using sklearn.preprocessing.StandardScaler
+    3. adjust metric function,
+       with reference to the official scoring function,
+       which lay more punishment on false negatives (5 times)
 """
 import os
 import argparse
@@ -231,23 +232,34 @@ class ECGPrematureDetector(object):
         return cv_results
 
 
-    # def _train_xgb_clf(self, config:Optional[dict]):
-    #     """ NOT finished,
+    def train_das_gpu_xgb(self, config:Optional[ED]=None, **kwargs):
+        """ NOT finished,
 
-    #     Parameters:
-    #     -----------
-    #     config: dict,
-    #         configurations for training xgboost classifier,
-    #     """
-    #     cfg = deepcopy(TrainCfg)
-    #     if config:
-    #         cfg.update(config)
-    #     dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
-    #     dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight)
-    #     # booster = xgb.train()
-    #     raise NotImplementedError
+        Parameters:
+        -----------
+        config: dict,
+            configurations for training xgboost classifier,
+        """
+        cfg = deepcopy(TrainCfg)
+        cfg.update(config or {})
+        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight.train)
+        dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight.test)
+
+        params = {
+            'learning_rate': kwargs.get('learning_rate', 0.1),
+            'tree_method': 'gpu_hist',
+        }
+        params.update(cfg.xgb_native_train_params)
+
+        booster = xgb.train(
+            params, dtrain,
+            evals=[(dtest, test)],
+
+        )
 
 
+
+DAS = True
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(
@@ -281,6 +293,12 @@ if __name__ == "__main__":
         dest='gpu',
     )
     ap.add_argument(
+        '-l', '--lr',
+        type=float, default=0.1,
+        help='learning rate of xgb booster',
+        dest='lr',
+    )
+    ap.add_argument(
         '-v', '--verbose',
         type=int, default=0,
         help='set verbosity',
@@ -289,23 +307,26 @@ if __name__ == "__main__":
     kw = vars(ap.parse_args())
     models = kw.pop("models")
     models = list(map(lambda m: _CLF_FULL_NAME[m], models.split(",")))
-    verbose = kw.pop("verbose")
-    db_dir = kw.pop("db_dir")
-    working_dir = kw.pop("working_dir")
-    gpu = kw.pop("gpu")
+    lr = kw.pop("lr")
+    # verbose = kw.pop("verbose")
+    # db_dir = kw.pop("db_dir")
+    # working_dir = kw.pop("working_dir")
+    # gpu = kw.pop("gpu")
 
     config = deepcopy(TrainCfg)
-    config.update(kw)
+    # config.update(kw)
 
     for m in models:
-        config["model"] = m
         trainer = ECGPrematureDetector(
-            model=m,
-            db_dir=db_dir,
-            working_dir=working_dir,
-            config=config,
-            verbose=verbose,
-            gpu=gpu,
+            model=m, **kw
+            # db_dir=db_dir,
+            # working_dir=working_dir,
+            # config=config,
+            # verbose=verbose,
+            # gpu=gpu,
         )  # NOT finished
-        trainer.train_test_split(test_rec_num=1,int_labels=True)
-        trainer.train(**config)
+        trainer.train_test_split(test_rec_num=config.test_rec_num,int_labels=True)
+        if DAS:
+            trainer.train_das_gpu_xgb(config, learning_rate=lr)
+        else:
+            trainer.train(config)
