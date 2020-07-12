@@ -106,9 +106,9 @@ class ECGPrematureDetector(object):
             assert model.lower() in _CLF_FULL_NAME.keys(), f"model {model} not supported!"
             self.model_name = _CLF_FULL_NAME[model.lower()]
             if self.model_name == "XGBClassifier" and self.gpu:
-                self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
-            else:
                 self.model = eval(f"{self.model_name}({TrainCfg.xgbc_gpu_init_params})")
+            else:
+                self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
         else:
             self.model = model
             self.model_name = type(self.model).__name__
