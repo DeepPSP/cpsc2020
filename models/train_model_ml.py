@@ -271,9 +271,11 @@ class ECGPrematureDetector(object):
         )
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
 
+        save_path_params = '_'.join([str(k)+'-'+str(v) for k,v in params.items()])
         save_path = cfg.model_path['ml'].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
+            params=save_path_params,
             ext='bst',
         )
         booster.save_model(save_path)
@@ -325,6 +327,10 @@ if __name__ == "__main__":
         dest='verbose',
     )
     kw = vars(ap.parse_args())
+
+    nl = "\n"
+    print(f"passed keyword arguments:{nl}{utils.dict_to_str(kw)}")
+
     models = kw.pop("models")
     models = list(map(lambda m: _CLF_FULL_NAME[m], models.split(",")))
     lr = kw.pop("lr")

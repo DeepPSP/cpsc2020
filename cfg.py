@@ -58,8 +58,8 @@ TrainCfg = ED()
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{time}.{ext}"),
-    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{time}.{ext}"),
+    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{time}.{ext}"),
+    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{time}.{ext}"),
 })
 TrainCfg.SEED = 42
 TrainCfg.verbose = 1
@@ -80,7 +80,7 @@ TrainCfg.xgb_native_train_params = {
     'objective': 'multi:softmax',
     'num_class': 3,
     'verbosity': TrainCfg.verbose+1,
-    'eval_metric': ['merror','mlogloss','map'],
+    'eval_metric': ['merror','mlogloss',],
     'seed': TrainCfg.SEED,
 }
 TrainCfg.xgb_native_train_kw = {
