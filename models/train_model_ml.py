@@ -277,13 +277,21 @@ class ECGPrematureDetector(object):
         }
         params.update(cfg.xgb_native_train_params)
 
+        watchlist = [
+            (dtest, "Test"),
+            (dtrain, "Train"),
+        ]
+        evals_result = dict()
+
         start = time.time()
         booster = xgb.train(
             params, dtrain,
             evals=[(dtest, "Test")],
+            evals_result=evals_result,
             **config.xgb_native_train_kw,
         )
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
+        print(f"evals_result = {utils.dict_to_str(evals_result)}")
 
         save_path_params = '_'.join([str(k)+'-'+str(v) for k,v in params.items()])
         scaler_name = self.feature_scaler.__name__ if self.feature_scaler else 'no-scaler'

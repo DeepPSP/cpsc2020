@@ -61,11 +61,11 @@ TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{scaler}_{time}.{ext}"),
-    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{params}_{scaler}_{time}.{ext}"),
+    "ml": os.path.join(_BASE_DIR, "models", "{model_name}_{params}_{scaler}_{time}.{ext}"),
+    "dl": os.path.join(_BASE_DIR, "models", "{model_name}_{params}_{scaler}_{time}.{ext}"),
 })
 TrainCfg.model_in_use = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "ecg_XGBClassifier_2020-07-12-17-54-10.bst"),
+    "ml": os.path.join(_BASE_DIR, "models", "XGBClassifier_2020-07-12-17-54-10.bst"),
     "dl": os.path.join(_BASE_DIR, "models", ""),
 })
 TrainCfg.SEED = 42
