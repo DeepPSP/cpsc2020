@@ -95,8 +95,8 @@ TrainCfg.xgbc_gpu_init_params = \
     ", ".join([TrainCfg.ml_init_params['XGBClassifier'], TrainCfg.xgbc_gpu_init_params])
 TrainCfg.ml_fit_params = {
     'XGBClassifier': {  # params for xgb.train
-        'early_stopping_rounds': 20,
-        'metrics': ['merror',],
+        'early_stopping_rounds': 30,
+        'eval_metric': ['merror',],
     },
     # 'SVC':,
     'RandomForestClassifier': {},

@@ -157,12 +157,8 @@ class ECGPrematureDetector(object):
         self.fit_params = ED({
             "XGBClassifier": {
                 "sample_weight": self.sample_weight.train,
-                "eval_set": [
-                    (xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight.test), "Test"),
-                    (xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight.train),
-                    "Train"),
-                ],
-                # "sample_weight_eval_set": [self.sample_weight.test],
+                "eval_set": [(self.x_train, self.y_train)],
+                "sample_weight_eval_set": [self.sample_weight.test],
             },
             "SVC": {},
             "RandomForestClassifier": {},
