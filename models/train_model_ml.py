@@ -16,6 +16,7 @@ TODO:
        with reference to the official scoring function,
        which lay more punishment on false negatives (5 times)
 """
+import sys
 import os
 import argparse
 import joblib, pickle
@@ -325,6 +326,10 @@ if __name__ == "__main__":
 
     config = deepcopy(TrainCfg)
     # config.update(kw)
+
+    # for DAS training ModuleNotFoundError:
+    _PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, _PARENT_DIR)
 
     for m in models:
         trainer = ECGPrematureDetector(
