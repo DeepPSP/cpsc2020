@@ -83,19 +83,19 @@ TrainCfg.xgb_native_cv_kw = {
     'verbose_eval': TrainCfg.verbose,
 }
 TrainCfg.ml_init_params = {
-    'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose',
+    'XGBClassifier': 'objective="multi:softmax", num_class=3, verbosity=TrainCfg.verbose+1',
     # 'SVC':,
-    'RandomForestClassifier': 'class_weight="balanced", verbosity=TrainCfg.verbose',
-    'GradientBoostingClassifier': 'verbosity=TrainCfg.verbose',
-    'KNeighborsClassifier': 'verbosity=TrainCfg.verbose',
-    'MLPClassifier': 'verbosity=TrainCfg.verbose',
+    'RandomForestClassifier': 'class_weight="balanced", verbose=TrainCfg.verbose',
+    'GradientBoostingClassifier': 'verbose=TrainCfg.verbose',
+    'KNeighborsClassifier': '',
+    'MLPClassifier': 'verbose=TrainCfg.verbose',
 }
 TrainCfg.xgbc_gpu_init_params = "tree_method=gpu_hist, gpu_platform_id=0, gpu_device_id=0"
 TrainCfg.xgbc_gpu_init_params = \
     ", ".join([TrainCfg.ml_init_params['XGBClassifier'], TrainCfg.xgbc_gpu_init_params])
 TrainCfg.ml_fit_params = {
     'XGBClassifier': {  # params for xgb.train
-        'early_stopping_rounds': 200,
+        # 'early_stopping_rounds': 200,
         'eval_metric': ['merror',],
     },
     # 'SVC':,
@@ -109,11 +109,11 @@ TrainCfg.ml_param_grid = {
         # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
         # 'objective': ['multi:softmax'],
         # 'num_classes': [3],
-        "learning_rate": [0.01, 0.05, 0.10, 0.20, 0.30],
+        "learning_rate": [0.03, 0.10, 0.30],
         'min_child_weight': [1, 5, 10],
-        'gamma': [0.5, 1, 1.5, 2, 5],
-        'subsample': [0.6, 0.8, 1.0],
-        'colsample_bytree': [0.6, 0.8, 1.0],
+        'gamma': [0.4, 1, 4],
+        'subsample': [0.6, 1.0],
+        'colsample_bytree': [0.6, 1.0],
         'max_depth': [3, 4, 5],
     },
     # 'SVC': {

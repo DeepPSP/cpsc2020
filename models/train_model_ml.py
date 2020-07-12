@@ -100,10 +100,15 @@ class ECGPrematureDetector(object):
             db_dir=db_dir, working_dir=working_dir, verbose=verbose
         )
 
+        self.gpu = kwargs.get("gpu", False)
+
         if isinstance(model, str):
             assert model.lower() in _CLF_FULL_NAME.keys(), f"model {model} not supported!"
             self.model_name = _CLF_FULL_NAME[model.lower()]
-            self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
+            if self.model_name == "XGBClassifier" and self.gpu:
+                self.model = eval(f"{self.model_name}({TrainCfg.ml_init_params[self.model_name]})")
+            else:
+                self.model = eval(f"{self.model_name}({TrainCfg.xgbc_gpu_init_params})")
         else:
             self.model = model
             self.model_name = type(self.model).__name__
@@ -269,6 +274,13 @@ if __name__ == "__main__":
         dest="working_dir",
     )
     ap.add_argument(
+        '-g', '--gpu',
+        type=utils.str2bool,
+        default=True,
+        help='use gpu (only for xgboost) or not',
+        dest='gpu',
+    )
+    ap.add_argument(
         '-v', '--verbose',
         type=int, default=0,
         help='set verbosity',
@@ -280,11 +292,20 @@ if __name__ == "__main__":
     verbose = kw.pop("verbose")
     db_dir = kw.pop("db_dir")
     working_dir = kw.pop("working_dir")
+    gpu = kw.pop("gpu")
 
     config = deepcopy(TrainCfg)
     config.update(kw)
 
     for m in models:
         config["model"] = m
-        trainer = ECGPrematureDetector(m, db_dir, working_dir, config, verbose)  # NOT finished
-        train(**config)
+        trainer = ECGPrematureDetector(
+            model=m,
+            db_dir=db_dir,
+            working_dir=working_dir,
+            config=config,
+            verbose=verbose,
+            gpu=gpu,
+        )  # NOT finished
+        trainer.train_test_split(test_rec_num=1,int_labels=True)
+        trainer.train(**config)
