@@ -114,19 +114,7 @@ class ECGPrematureDetector(object):
         self.x_train, self.y_train, self.y_indices_train = None, None, None
         self.x_test, self.y_test, self.y_indices_test = None, None, None
         self.sample_weight = None
-
-        self.fit_params = {
-            "XGBClassifier": {
-                "sample_weight": self.sample_weight,
-                "eval_set": [(self.x_test, self.y_test)],
-                "sample_weight_eval_set": [self.sample_weight],
-            },
-            "SVC": {},
-            "RandomForestClassifier": {},
-            "GradientBoostingClassifier": {},
-            "KNeighborsClassifier": {},
-            "MLPClassifier": {},
-        }
+        self.fit_params = ED()
 
 
     def train_test_split(self, test_rec_num:Optional[int]=None) -> NoReturn:
@@ -139,10 +127,13 @@ class ECGPrematureDetector(object):
                 features=self.config.features,
                 preproc=self.config.preproc,
                 augment=self.config.augment_rpeaks,
-                int_labels=False,
+                int_labels=True,
             )
 
-        self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+        self.sample_weight = ED(
+            train=utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight),
+            test=utils.class_weight_to_sample_weight(self.y_test, self.config.class_weight),
+        )
 
 
     def train(self, config:Optional[ED]=None):
@@ -158,8 +149,28 @@ class ECGPrematureDetector(object):
         if not all([len(self.x_train), len(self.y_train), len(self.y_indices_train), len(self.x_test), len(self.y_test), len(self.y_indices_test)]):
             raise ValueError("do train test split first!")
 
+        self.fit_params = ED({
+            "XGBClassifier": {
+                "sample_weight": self.sample_weight.train,
+                "eval_set": [
+                    (xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight.test), "Test"),
+                    (xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight.train),
+                    "Train"),
+                ],
+                # "sample_weight_eval_set": [self.sample_weight.test],
+            },
+            "SVC": {},
+            "RandomForestClassifier": {},
+            "GradientBoostingClassifier": {},
+            "KNeighborsClassifier": {},
+            "MLPClassifier": {},
+        })
+
         cfg = deepcopy(self.config)
         cfg.update(config)
+
+        for k,v in cfg.ml_fit_params.items():
+            v.update(self.fit_params[k])
 
         # if type(self.model).__name__ == "XGBClassifier":
         #     self._train_xgb_clf(cfg)
@@ -171,13 +182,14 @@ class ECGPrematureDetector(object):
             param_grid=cfg.ml_param_grid[self.model_name],
             # TODO: better scoring function
             scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
-            n_jobs=max(1, mp.cpu_count()-3),
+            # n_jobs=max(1, mp.cpu_count()-3),
+            n_jobs=-1,
             verbose=self.verbose,
             cv=cfg.cv,
         )
 
         grid_result = grid.fit(
-            self.X_train, self.y_train,
+            self.x_train, self.y_train,
             **cfg.ml_fit_params[self.model_name]
         )
 
@@ -204,7 +216,7 @@ class ECGPrematureDetector(object):
     def _cv_xgb(self, params:dict):
         """
         """
-        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight)
+        dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight.train)
         cv_results = xgb.cv(
             params,
             dtrain,
