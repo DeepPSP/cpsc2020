@@ -281,7 +281,7 @@ if __name__ == "__main__":
     )
     ap.add_argument(
         '-m', '--model',
-        type=str, default='',
+        type=str, default='xgbc',
         help='name of the model, separated by ","',
         dest='models',
     )
