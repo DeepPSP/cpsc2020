@@ -58,8 +58,8 @@ TrainCfg = ED()
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "ecg_ml.pkl"),
-    "dl": os.path.join(_BASE_DIR, "models", "ecg_dl.pkl"),
+    "ml": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{time}.{ext}"),
+    "dl": os.path.join(_BASE_DIR, "models", "ecg_{model_name}_{time}.{ext}"),
 })
 TrainCfg.SEED = 42
 TrainCfg.verbose = 1

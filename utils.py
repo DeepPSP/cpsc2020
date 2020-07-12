@@ -1,6 +1,6 @@
 """
 """
-import time
+import time, datetime
 import argparse
 from io import StringIO
 from copy import deepcopy
@@ -24,6 +24,7 @@ __all__ = [
     "str2bool",
     "class_weight_to_sample_weight",
     "pred_to_indices",
+    "get_date_str",
 ]
 
 
@@ -479,6 +480,11 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
     """
     """
     raise NotImplementedError
+
+
+def get_date_str():
+    now = datetime.datetime.now()
+    return now.strftime('%Y-%m-%d-%H-%M-%S')
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats

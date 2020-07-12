@@ -19,6 +19,7 @@ TODO:
 import os
 import argparse
 import joblib, pickle
+import time, datetime
 import multiprocessing as mp
 from functools import partial
 from copy import deepcopy
@@ -251,11 +252,20 @@ class ECGPrematureDetector(object):
         }
         params.update(cfg.xgb_native_train_params)
 
+        start = time.time()
         booster = xgb.train(
             params, dtrain,
             evals=[(dtest, test)],
-
+            **config.xgb_native_train_kw,
         )
+        print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
+
+        save_path = cfg.model_path['ml'].format(
+            model_name=self.model_name,
+            time=utils.get_date_str(),
+            ext='bst',
+        )
+        booster.save_model(save_path)
 
 
 
