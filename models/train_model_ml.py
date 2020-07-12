@@ -117,7 +117,7 @@ class ECGPrematureDetector(object):
         self.fit_params = ED()
 
 
-    def train_test_split(self, test_rec_num:Optional[int]=None) -> NoReturn:
+    def train_test_split(self, test_rec_num:Optional[int]=None, int_labels:bool=True) -> NoReturn:
         """
         """
         self.x_train, self.y_train, self.y_indices_train, \
@@ -127,12 +127,17 @@ class ECGPrematureDetector(object):
                 features=self.config.features,
                 preproc=self.config.preproc,
                 augment=self.config.augment_rpeaks,
-                int_labels=True,
+                int_labels=int_labels,
             )
 
+        if int_labels:
+            class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
+        else:
+            class_weight = self.config.class_weight
+
         self.sample_weight = ED(
-            train=utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight),
-            test=utils.class_weight_to_sample_weight(self.y_test, self.config.class_weight),
+            train=utils.class_weight_to_sample_weight(self.y_train, class_weight),
+            test=utils.class_weight_to_sample_weight(self.y_test, class_weight),
         )
 
 
