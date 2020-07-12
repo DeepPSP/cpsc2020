@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, class_weight:Union[str,List[float],np.ndarray,dict]='balanced', verbose:int=0) -> int:
+def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, verbose:int=0) -> int:
     """ NOT finished, need more consideration!
 
     Parameters:

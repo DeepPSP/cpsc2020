@@ -78,7 +78,7 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
     print(f"false_negative = {utils.dict_to_str(false_negative)}")
 
     class_loss = {
-        false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
+        c: false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
             for c in classes
     }
 
