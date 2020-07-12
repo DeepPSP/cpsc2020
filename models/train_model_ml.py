@@ -258,7 +258,7 @@ class ECGPrematureDetector(object):
         start = time.time()
         booster = xgb.train(
             params, dtrain,
-            evals=[(dtest, test)],
+            evals=[(dtest, "Test")],
             **config.xgb_native_train_kw,
         )
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
@@ -269,7 +269,6 @@ class ECGPrematureDetector(object):
             ext='bst',
         )
         booster.save_model(save_path)
-
 
 
 DAS = True
