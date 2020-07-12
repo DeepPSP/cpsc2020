@@ -1,5 +1,13 @@
 """
 algorithms detecting R peaks from (filtered) ECG signal
+
+Exists algorithms from wfdb and biosppy,
+
+TODO: algorithms compared in [1]
+
+References:
+-----------
+[1] Liu, Feifei, et al. "Performance analysis of ten common QRS detectors on different ECG application cases." Journal of healthcare engineering 2018 (2018).
 """
 from numbers import Real
 from typing import Union, Optional
@@ -66,7 +74,7 @@ def hamilton_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     References:
     -----------
-    [1] P.S. Hamilton, "Open Source ECG Analysis Software Documentation", E.P.Limited, 2002
+    [1] Hamilton, Pat. "Open source ECG analysis." Computers in cardiology. IEEE, 2002.
     """
     # segment
     rpeaks, = BSE.hamilton_segmenter(signal=sig, sampling_rate=fs)
