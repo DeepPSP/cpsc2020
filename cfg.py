@@ -92,7 +92,7 @@ TrainCfg.ml_init_params = {
 TrainCfg.ml_fit_params = {
     'XGBClassifier': {
         'early_stopping_rounds': 20,
-    }，
+    },
     # 'SVC':,
     'RandomForestClassifier': {},
     'GradientBoostingClassifier': {},

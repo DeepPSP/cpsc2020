@@ -464,7 +464,7 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
         assert isinstance(class_weight, dict) or class_weight.lower()=='balanced', \
             "if `y` are of type str, then class_weight should be 'balanced' or a dict"
     
-    if class_weight.lower() == 'balanced':
+    if isinstance(class_weight, str) and class_weight.lower() == 'balanced':
         classes = np.unique(y).tolist()
         cw = compute_class_weight('balanced', classes=classes, y=y)
         trans_func = lambda s: cw[classes.index(s)]

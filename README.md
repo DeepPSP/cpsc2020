@@ -1,4 +1,4 @@
-# cpsc2020
+# CPSC2020
 Searching for Premature Ventricular Contraction and Supraventricular Premature Beat from Long-term ECGs: The 3rd China Physiological Signal Challenge 2020
 
 

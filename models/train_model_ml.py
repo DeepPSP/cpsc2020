@@ -111,16 +111,9 @@ class ECGPrematureDetector(object):
         self.config = deepcopy(TrainCfg)
         self.config.update(config or {})
 
-        self.x_train, self.y_train, self.y_indices_train, self.x_test, self.y_test, self.y_indices_test = \
-            self.data_gen.train_test_split_data(
-                test_rec_num=self.config.test_rec_num,
-                features=self.config.features,
-                preproc=self.config.preproc,
-                augment=self.config.augment_rpeaks,
-                int_labels=False,
-            )
-
-        self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+        self.x_train, self.y_train, self.y_indices_train = None, None, None
+        self.x_test, self.y_test, self.y_indices_test = None, None, None
+        self.sample_weight = None
 
         self.fit_params = {
             "XGBClassifier": {
@@ -136,6 +129,22 @@ class ECGPrematureDetector(object):
         }
 
 
+    def train_test_split(self, test_rec_num:Optional[int]=None) -> NoReturn:
+        """
+        """
+        self.x_train, self.y_train, self.y_indices_train, \
+        self.x_test, self.y_test, self.y_indices_test = \
+            self.data_gen.train_test_split_data(
+                test_rec_num=(test_rec_num or self.config.test_rec_num),
+                features=self.config.features,
+                preproc=self.config.preproc,
+                augment=self.config.augment_rpeaks,
+                int_labels=False,
+            )
+
+        self.sample_weight = utils.class_weight_to_sample_weight(self.y_train, self.config.class_weight)
+
+
     def train(self, config:Optional[ED]=None):
         """ NOT finished
 
@@ -146,6 +155,9 @@ class ECGPrematureDetector(object):
             for flexibility of different experiments,
             if set, `self.config` will be updated by this `config`
         """
+        if not all([self.x_train, self.y_train, self.y_indices_train, self.x_test, self.y_test, self.y_indices_test]):
+            raise ValueError("do train test split first!")
+
         cfg = deepcopy(self.config)
         cfg.update(config)
 
