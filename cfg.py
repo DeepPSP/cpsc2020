@@ -90,7 +90,7 @@ TrainCfg.ml_init_params = {
     'KNeighborsClassifier': '',
     'MLPClassifier': 'verbose=TrainCfg.verbose',
 }
-TrainCfg.xgbc_gpu_init_params = "tree_method=gpu_hist, gpu_platform_id=0, gpu_device_id=0"
+TrainCfg.xgbc_gpu_init_params = 'tree_method="gpu_hist", gpu_platform_id=0, gpu_device_id=0'
 TrainCfg.xgbc_gpu_init_params = \
     ", ".join([TrainCfg.ml_init_params['XGBClassifier'], TrainCfg.xgbc_gpu_init_params])
 TrainCfg.ml_fit_params = {
