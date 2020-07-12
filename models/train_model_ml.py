@@ -244,7 +244,8 @@ if __name__ == "__main__":
     )
     ap.add_argument(
         "-d", "--db-dir",
-        type=str, required=True,
+        # type=str, required=True,
+        type=str, default="/mnt/wenhao71/data/CPSC2020/TrainingSet/"
         help="directory where the database is stored",
         dest="db_dir",
     )
