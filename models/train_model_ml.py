@@ -155,7 +155,7 @@ class ECGPrematureDetector(object):
             for flexibility of different experiments,
             if set, `self.config` will be updated by this `config`
         """
-        if any([len(self.x_train), len(self.y_train), len(self.y_indices_train), len(self.x_test), len(self.y_test), len(self.y_indices_test)]):
+        if not all([len(self.x_train), len(self.y_train), len(self.y_indices_train), len(self.x_test), len(self.y_test), len(self.y_indices_test)]):
             raise ValueError("do train test split first!")
 
         cfg = deepcopy(self.config)
@@ -168,12 +168,12 @@ class ECGPrematureDetector(object):
 
         grid = GridSearchCV(
             estimator=self.model,
-            param_grid=config.ml_param_grid[self.model_name],
+            param_grid=cfg.ml_param_grid[self.model_name],
             # TODO: better scoring function
             scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
             n_jobs=max(1, mp.cpu_count()-3),
             verbose=self.verbose,
-            cv=config.cv,
+            cv=cfg.cv,
         )
 
         grid_result = grid.fit(
