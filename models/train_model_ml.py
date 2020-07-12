@@ -157,7 +157,7 @@ class ECGPrematureDetector(object):
         self.fit_params = ED({
             "XGBClassifier": {
                 "sample_weight": self.sample_weight.train,
-                "eval_set": [(self.x_train, self.y_train)],
+                "eval_set": [(self.x_test, self.y_test)],
                 "sample_weight_eval_set": [self.sample_weight.test],
             },
             "SVC": {},
@@ -182,7 +182,7 @@ class ECGPrematureDetector(object):
             estimator=self.model,
             param_grid=cfg.ml_param_grid[self.model_name],
             # TODO: better scoring function
-            scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
+            # scoring=make_scorer(partial(accuracy_score, sample_weight=self.sample_weight)),
             # n_jobs=max(1, mp.cpu_count()-3),
             n_jobs=-1,
             verbose=self.verbose,
