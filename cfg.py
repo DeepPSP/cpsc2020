@@ -61,8 +61,8 @@ TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
 TrainCfg.fs = PreprocessCfg.fs
 TrainCfg.model_path = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{time}.{ext}"),
-    "dl": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{time}.{ext}"),
+    "ml": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{eval}_{time}.{ext}"),
+    "dl": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{eval}_{time}.{ext}"),
 })
 TrainCfg.model_in_use = ED({
     "ml": os.path.join(_BASE_DIR, "models", "saved_models", "XGBoost_GridSearchCV_meta.pkl"),
@@ -99,7 +99,7 @@ TrainCfg.xgb_native_cv_kw = {
     'early_stopping_rounds': 20,
     'seed': TrainCfg.SEED,
     'nfold': TrainCfg.cv,
-    'metrics': ['merror','mlogloss','map'],
+    'metrics': ['merror','mlogloss',],
     'verbose_eval': TrainCfg.verbose+1,
 }
 TrainCfg.ml_init_params = {

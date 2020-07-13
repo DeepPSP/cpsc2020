@@ -162,6 +162,7 @@ class ECGPrematureDetector(object):
             print(f"self.y_test.shape = {self.y_test.shape}")
             print(f"self.y_indices_test.shape = {self.y_indices_test.shape}")
             print(f"feature_scaler.mean = {self.feature_scaler.mean_}")
+            print(f"feature_scaler.std = {self.feature_scaler.std_}")
 
         if int_labels:
             class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
@@ -228,9 +229,22 @@ class ECGPrematureDetector(object):
         )
 
         retval = ED(
-            best_model=grid_result.best_estimator_,
+            model=grid_result.best_estimator_,
             best_params=grid_result.best_params_,
             best_score=grid_result.best_score_,
+        )
+
+        save_dict = deepcopy(retval)
+        save_dict["feature_scaler"] = self.feature_scaler
+
+        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
+        save_path = cfg.model_path['ml'].format(
+            model_name=self.model_name,
+            time=utils.get_date_str(),
+            params=type(grid).__name__,
+            scaler=scaler_name,
+            eval=f'best_score_{save_dict["best_score"]}',
+            ext='pkl',
         )
 
         return retval
@@ -299,11 +313,13 @@ class ECGPrematureDetector(object):
                 if k not in ['objective', 'num_class', 'verbosity', 'eval_metric',]]
         )
         scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
+        eval_name = f'Test_merror_{np.min(evals_result["Test"]["merror"]):.4f}'
         save_path = cfg.model_path['ml'].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
             params=save_path_params,
             scaler=scaler_name,
+            eval=eval_name,
             ext='pkl',
         )
         # booster.save_model(save_path)
