@@ -2,6 +2,8 @@
 """
 import numpy as np
 
+import xgboost as xgb
+
 from cfg import FeatureCfg
 from signal_processing.ecg_preprocess import preprocess_signal, parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
@@ -52,8 +54,12 @@ def CPSC2020_challenge(ECG, fs=400):
             features = model["feature_scaler"].transform(features)
         model = model["model"]
 
-    y_pred = model.predict(features)
-    
+    if type(model).__name__ == "Booster":
+        # xgboost native Booster
+        y_pred = model.predict(xgb.DMatrix(features))
+    else:
+        y_pred = model.predict(features)
+
     S_pos, V_pos = utils.pred_to_indices(
         y_pred, filtered_rpeaks,
         label_map=FeatureCfg.label_map
