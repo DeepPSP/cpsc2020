@@ -1,7 +1,9 @@
 """
 """
-import numpy as np
+from numbers import Real
+from typing import Tuple
 
+import numpy as np
 import xgboost as xgb
 
 from cfg import FeatureCfg
@@ -11,7 +13,7 @@ from models.load_model import load_model
 import utils
 
 
-def CPSC2020_challenge(ECG, fs=400):
+def CPSC2020_challenge(ECG:np.ndarray, fs:Real=400) -> Tuple[np.ndarray,np.ndarray]:
     """
     % This function can be used for events 1 and 2. Participants are free to modify any
     % components of the code. However the function prototype must stay the same

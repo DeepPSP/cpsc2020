@@ -3,7 +3,7 @@
 import os
 import pickle, joblib
 from copy import deepcopy
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 import xgboost as xgb
 
@@ -13,8 +13,23 @@ from cfg import TrainCfg
 __all__ = ["load_model"]
 
 
-def load_model(field:str='ml', model_path:Optional[str]=None):
-    """
+def load_model(field:str='ml', model_path:Optional[str]=None) -> Union[xgb.Booster,dict]:
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    field: str,
+        model type, machine learning ('ml') or deep learning ('dl')
+    model_path: str, optional,
+        custom model path,
+        if not given, default model will be loaded
+    
+    Returns:
+    --------
+    model: Booster, dict, etc.
+        for machine learning, a Booster,
+        or a dict containing 'model' and 'feature_scaler' and perhaps more metadata;
+        for deep learning, to implement later...
     """
     if field.lower() in ['ml', 'machine_learning']:
         if model_path:

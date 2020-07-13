@@ -293,36 +293,6 @@ def intervals_intersection(interval_list:GeneralizedInterval, drop_degenerate:bo
         return []
 
 
-def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:int=4) -> str:
-    """
-    """
-    assert isinstance(d, (dict, list, tuple))
-    if len(d) == 0:
-        s = f"{{}}" if isinstance(d, dict) else f"[]"
-        return s
-    s = "\n"
-    unit_indent = " "*indent_spaces
-    prefix = unit_indent*current_depth
-    if isinstance(d, (list, tuple)):
-        for v in d:
-            if isinstance(v, (dict, list, tuple)):
-                s += f"{prefix}{dict_to_str(v, current_depth+1)}\n"
-            else:
-                val = f'\042{v}\042' if isinstance(v, str) else v
-                s += f"{prefix}{val}\n"
-    elif isinstance(d, dict):
-        for k, v in d.items():
-            if isinstance(v, (dict, list, tuple)):
-                s += f"{prefix}{k}: {dict_to_str(v, current_depth+1)}\n"
-            else:
-                key = f'\042{k}\042' if isinstance(k, str) else k
-                val = f'\042{v}\042' if isinstance(v, str) else v
-                s += f"{prefix}{key}: {val}\n"
-    s += unit_indent*(current_depth-1)
-    s = f"{{{s}}}" if isinstance(d, dict) else f"[{s}]"
-    return s
-
-
 def in_interval(val:Real, interval:Interval) -> bool:
     """ finished, checked,
 
@@ -481,11 +451,18 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
 
     Parameters:
     -----------
-    to write
+    y_pred: ndarray,
+        array of model prediction
+    rpeaks: ndarray,
+        indices of rpeaks, and of `y_pred` in the corresponding ECG signal
+    label_map: dict,
+        mapping from classes of string type to int,
+        if elements of `y_pred` is of string type, then this mapping will not be used
 
     Returns:
     --------
-    to write
+    S_pos, V_pos: ndarray,
+        indices of SPB, PVC respectively
     """
     classes = ["S", "V"]
     if len(y_pred) == 0:
@@ -502,9 +479,43 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
     return S_pos, V_pos
 
 
-def get_date_str():
+def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:int=4) -> str:
+    """
+    """
+    assert isinstance(d, (dict, list, tuple))
+    if len(d) == 0:
+        s = f"{{}}" if isinstance(d, dict) else f"[]"
+        return s
+    s = "\n"
+    unit_indent = " "*indent_spaces
+    prefix = unit_indent*current_depth
+    if isinstance(d, (list, tuple)):
+        for v in d:
+            if isinstance(v, (dict, list, tuple)):
+                s += f"{prefix}{dict_to_str(v, current_depth+1)}\n"
+            else:
+                val = f'\042{v}\042' if isinstance(v, str) else v
+                s += f"{prefix}{val}\n"
+    elif isinstance(d, dict):
+        for k, v in d.items():
+            if isinstance(v, (dict, list, tuple)):
+                s += f"{prefix}{k}: {dict_to_str(v, current_depth+1)}\n"
+            else:
+                key = f'\042{k}\042' if isinstance(k, str) else k
+                val = f'\042{v}\042' if isinstance(v, str) else v
+                s += f"{prefix}{key}: {val}\n"
+    s += unit_indent*(current_depth-1)
+    s = f"{{{s}}}" if isinstance(d, dict) else f"[{s}]"
+    return s
+
+
+def get_date_str(fmt:Optional[str]=None):
+    """
+    """
     now = datetime.datetime.now()
-    return now.strftime('%Y-%m-%d-%H-%M-%S')
+    _fmt = fmt or '%Y-%m-%d-%H-%M-%S'
+    ds = now.strftime(_fmt)
+    return ds
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats

@@ -139,7 +139,11 @@ class ECGPrematureDetector(object):
 
 
     def train_test_split(self, test_rec_num:Optional[int]=None, int_labels:bool=True) -> NoReturn:
-        """
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        to write
         """
         self.x_train, self.y_train, self.y_indices_train, \
         self.x_test, self.y_test, self.y_indices_test = \
@@ -263,7 +267,11 @@ class ECGPrematureDetector(object):
 
 
     def _cv_xgb(self, params:dict):
-        """
+        """ not finished,
+
+        Parameters:
+        -----------
+        to write
         """
         dtrain = xgb.DMatrix(self.x_train, label=self.y_train, weight=self.sample_weight.train)
         cv_results = xgb.cv(
@@ -274,7 +282,7 @@ class ECGPrematureDetector(object):
         return cv_results
 
 
-    def train_das_gpu_xgb(self, config:Optional[ED]=None, **kwargs):
+    def train_das_gpu_xgb(self, config:Optional[ED]=None, **kwargs) -> NoReturn:
         """ finished, under improvement
 
         Parameters:
