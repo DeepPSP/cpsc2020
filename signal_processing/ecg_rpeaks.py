@@ -51,7 +51,7 @@ def xqrs_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     default kwargs:
         sampfrom=0, sampto='end', conf=None, learn=True, verbose=True
     """
-    kw = dict(sampfrom=0, sampto='end', conf=None, learn=True, verbose=True)
+    kw = dict(sampfrom=0, sampto='end', conf=None, learn=True, verbose=False)
     kw = {k: kwargs.get(k,v) for k,v in kw.items()}
     rpeaks = _xqrs_detect(sig, fs, **kw)
     # correct R-peak locations
