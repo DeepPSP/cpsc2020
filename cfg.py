@@ -65,7 +65,11 @@ TrainCfg.model_path = ED({
     "dl": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{eval}_{time}.{ext}"),
 })
 TrainCfg.model_in_use = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "saved_models", "XGBoost_GridSearchCV_meta.pkl"),
+    "ml": os.path.join(
+        _BASE_DIR, "models", "saved_models",
+        # "XGBoost_GridSearchCV_meta.pkl"
+        "XGBClassifier_learning_rate-0.06_tree_method-gpu_hist_seed-42_StandardScaler_Test_merror_0.1426.pkl"
+    ),
     "dl": os.path.join(_BASE_DIR, "models", "saved_models", ""),
 })
 TrainCfg.SEED = 42
