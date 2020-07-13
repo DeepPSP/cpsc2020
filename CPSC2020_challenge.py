@@ -41,7 +41,7 @@ def CPSC2020_challenge(ECG, fs=400):
     rpeaks = pps['rpeaks']
     filtered_rpeaks = rpeaks[np.where( (rpeaks>=FeatureCfg.beat_winL) & (rpeaks<len(sig)-FeatureCfg.beat_winR) )[0]]
 
-    features = compute_ecg_features(filtered_ecg, rpeaks)
+    features = compute_ecg_features(filtered_ecg, filtered_rpeaks)
 
     model = load_model(field='ml')
     # if model is None:
@@ -55,7 +55,7 @@ def CPSC2020_challenge(ECG, fs=400):
     y_pred = model.predict(features)
     
     S_pos, V_pos = utils.pred_to_indices(
-        y_pred, rpeaks,
+        y_pred, filtered_rpeaks,
         label_map=FeatureCfg.label_map
     )
 
