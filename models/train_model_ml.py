@@ -10,6 +10,7 @@ References:
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
 TODO:
+    0. xgbclassifier currently has too many false positives,
     1. feature selection,
     2. consider whether features should be normalized using sklearn.preprocessing.StandardScaler
     3. adjust metric function,
@@ -274,12 +275,13 @@ class ECGPrematureDetector(object):
 
 
     def train_das_gpu_xgb(self, config:Optional[ED]=None, **kwargs):
-        """ NOT finished,
+        """ finished, under improvement
 
         Parameters:
         -----------
         config: dict,
             configurations for training xgboost classifier,
+        kwargs: dict,
         """
         cfg = deepcopy(TrainCfg)
         cfg.update(config or {})
