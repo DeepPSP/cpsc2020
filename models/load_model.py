@@ -20,7 +20,8 @@ def load_model(field:str='ml'):
             model = xgb.Booster()
             model.load_model(model_path)
         else:
-            raise NotImplementedError
+            with open(model_path, "rb") as model_file:
+                model = pickle.load(model_file)
     else:
         raise NotImplementedError
     return model

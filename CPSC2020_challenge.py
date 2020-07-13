@@ -34,11 +34,9 @@ def CPSC2020_challenge(ECG, fs=400):
 
     """
 
-#   ====== arrhythmias detection =======
-
-#    S_pos = np.zeros([1, ])
-#    V_pos = np.zeros([1, ])
-    pps = parallel_preprocess_signal(ECG, fs)  # use default config in `cfg`
+    #    ====== arrhythmias detection =======
+    sig = np.array(ECG).copy().flatten()
+    pps = parallel_preprocess_signal(sig, fs)  # use default config in `cfg`
     filtered_ecg = pps['filtered_ecg']
     rpeaks = pps['rpeaks']
     filtered_rpeaks = rpeaks[np.where( (rpeaks>=FeatureCfg.beat_winL) & (rpeaks<len(sig)-FeatureCfg.beat_winR) )[0]]
@@ -48,6 +46,11 @@ def CPSC2020_challenge(ECG, fs=400):
     model = load_model(field='ml')
     # if model is None:
     #     model = train()
+
+    if isinstance(model, dict):
+        if model.get("feature_scaler", None):
+            features = model["feature_scaler"].transform(features)
+        model = model["model"]
 
     y_pred = model.predict(features)
     

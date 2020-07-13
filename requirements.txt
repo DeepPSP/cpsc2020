@@ -4,7 +4,7 @@ matplotlib
 biosppy
 wfdb
 pywt
-xgboost==1.1.1  # to add version
+xgboost==1.1.1
 Cython==0.29.13
 joblib==0.16.0
 scikit-learn==0.23.1
