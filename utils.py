@@ -491,6 +491,7 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
     if len(y_pred) == 0:
         S_pos, V_pos = np.array([]), np.array([])
         return S_pos, V_pos
+    pred_arr = {}
     if isinstance(y_pred[0], Real):
         for c in classes:
             pred_arr[c] = rpeaks[np.where(y_pred==label_map[c])[0]]
