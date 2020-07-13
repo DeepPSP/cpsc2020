@@ -37,6 +37,13 @@ def pantompkins(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     [1] Pan, Jiapu, and Willis J. Tompkins. "A real-time QRS detection algorithm." IEEE transactions on biomedical engineering 3 (1985): 230-236.
     """
     rpeaks = _pantompkins(sig, fs)
+    # correct R-peak locations
+    rpeaks, = BSE.correct_rpeaks(
+        signal=sig,
+        rpeaks=rpeaks,
+        sampling_rate=fs,
+        tol=kwargs.get("correct_tol", 0.05),
+    )
     return rpeaks
 
 def xqrs_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
@@ -47,6 +54,13 @@ def xqrs_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     kw = dict(sampfrom=0, sampto='end', conf=None, learn=True, verbose=True)
     kw = {k: kwargs.get(k,v) for k,v in kw.items()}
     rpeaks = _xqrs_detect(sig, fs, **kw)
+    # correct R-peak locations
+    rpeaks, = BSE.correct_rpeaks(
+        signal=sig,
+        rpeaks=rpeaks,
+        sampling_rate=fs,
+        tol=kwargs.get("correct_tol", 0.05),
+    )
     return rpeaks
 
 def gqrs_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
@@ -64,6 +78,13 @@ def gqrs_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     )
     kw = {k: kwargs.get(k,v) for k,v in kw.items()}
     rpeaks = _gqrs_detect(sig, fs, **kw)
+    # correct R-peak locations
+    rpeaks, = BSE.correct_rpeaks(
+        signal=sig,
+        rpeaks=rpeaks,
+        sampling_rate=fs,
+        tol=kwargs.get("correct_tol", 0.05),
+    )
     return rpeaks
 
 
