@@ -162,7 +162,7 @@ class ECGPrematureDetector(object):
             print(f"self.y_test.shape = {self.y_test.shape}")
             print(f"self.y_indices_test.shape = {self.y_indices_test.shape}")
             print(f"feature_scaler.mean = {self.feature_scaler.mean_}")
-            print(f"feature_scaler.std = {self.feature_scaler.std_}")
+            print(f"feature_scaler.variance = {self.feature_scaler.var_}")
 
         if int_labels:
             class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
