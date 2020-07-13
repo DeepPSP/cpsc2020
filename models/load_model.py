@@ -2,6 +2,8 @@
 """
 import os
 import pickle, joblib
+from copy import deepcopy
+from typing import Union, Optional
 
 import xgboost as xgb
 
@@ -11,17 +13,22 @@ from cfg import TrainCfg
 __all__ = ["load_model"]
 
 
-def load_model(field:str='ml'):
+def load_model(field:str='ml', model_path:Optional[str]=None):
     """
     """
     if field.lower() in ['ml', 'machine_learning']:
-        model_path = TrainCfg.model_in_use['ml']
-        model_file_ext = os.path.splitext(model_path)[1]
+        if model_path:
+            print("loading custom machine learning model...")
+            mp = deepcopy(model_path)
+        else:
+            print("loading default machine learning model...")
+            mp = TrainCfg.model_in_use['ml']
+        model_file_ext = os.path.splitext(mp)[1]
         if model_file_ext == '.bst':
             model = xgb.Booster()
-            model.load_model(model_path)
+            model.load_model(mp)
         elif model_file_ext == '.pkl':
-            with open(model_path, "rb") as model_file:
+            with open(mp, "rb") as model_file:
                 model = pickle.load(model_file)
         else:
             raise NotImplementedError
