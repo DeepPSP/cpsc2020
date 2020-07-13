@@ -493,10 +493,10 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
         return S_pos, V_pos
     if isinstance(y_pred[0], Real):
         for c in classes:
-            pred_arr[c] = y_indices[np.where(y_pred==label_map[c])[0]]
+            pred_arr[c] = rpeaks[np.where(y_pred==label_map[c])[0]]
     else:  # of string type
         for c in classes:
-            pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
+            pred_arr[c] = rpeaks[np.where(y_pred==c)[0]]
     S_pos, V_pos = pred_arr["S"], pred_arr["V"]
     return S_pos, V_pos
 
