@@ -477,9 +477,28 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
 
 
 def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tuple[np.ndarray, np.ndarray]:
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    to write
+
+    Returns:
+    --------
+    to write
     """
-    """
-    raise NotImplementedError
+    classes = ["S", "V"]
+    if len(y_pred) == 0:
+        S_pos, V_pos = np.array([]), np.array([])
+        return S_pos, V_pos
+    if isinstance(y_pred[0], Real):
+        for c in classes:
+            pred_arr[c] = y_indices[np.where(y_pred==label_map[c])[0]]
+    else:  # of string type
+        for c in classes:
+            pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
+    S_pos, V_pos = pred_arr["S"], pred_arr["V"]
+    return S_pos, V_pos
 
 
 def get_date_str():

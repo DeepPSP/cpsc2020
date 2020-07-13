@@ -1,5 +1,6 @@
 """
 """
+from numbers import Real
 from typing import Union, Optional, Any, List, Tuple
 
 import numpy as np
