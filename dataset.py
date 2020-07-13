@@ -16,7 +16,7 @@ import multiprocessing as mp
 from easydict import EasyDict as ED
 
 import utils
-from cfg import PreprocessCfg, FeatureCfg
+from cfg import PreprocCfg, FeatureCfg
 from signal_processing.ecg_preprocess import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 
@@ -154,7 +154,7 @@ class CPSC2020(object):
         # NOTE:
         # the ordering of `self.allowed_preproc` and `self.allowed_features`
         # should be in accordance with
-        # corresponding items in `PreprocessCfg` and `FeatureCfg`
+        # corresponding items in `PreprocCfg` and `FeatureCfg`
         self.allowed_preproc = ['baseline', 'bandpass',]
         self.preprocess_dir = os.path.join(self.db_dir, "preprocessed")
         os.makedirs(self.preprocess_dir, exist_ok=True)
@@ -229,7 +229,7 @@ class CPSC2020(object):
         save_fp = ED()
         save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{self._get_rec_suffix(preproc)}{self.rec_ext}")
         save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{self._get_rec_suffix(preproc)}{self.rec_ext}")
-        config = deepcopy(PreprocessCfg)
+        config = deepcopy(PreprocCfg)
         config.preproc = preproc
         pps = parallel_preprocess_signal(self.load_data(rec, keep_dim=False), fs=self.fs, config=config)
         pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
@@ -1089,8 +1089,8 @@ if __name__ == "__main__":
         verbose=kwargs.get("verbose"),
     )
 
-    preproc = kwargs.get("preproc", "").split(",") or PreprocessCfg.preproc
-    features = kwargs.get("features", "").split(",") or PreprocessCfg.preproc
+    preproc = kwargs.get("preproc", "").split(",") or PreprocCfg.preproc
+    features = kwargs.get("features", "").split(",") or PreprocCfg.preproc
     augment = kwargs.get("augment", True)
 
     for rec in (kwargs.get("records", None) or data_gen.all_records):

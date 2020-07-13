@@ -10,25 +10,25 @@ from utils import CPSC_STATS
 
 
 __all__ = [
-    "PreprocessCfg",
+    "PreprocCfg",
     "FeatureCfg",
     "TrainCfg",
 ]
 
 
 #--------------------------------------------------------------
-PreprocessCfg = ED()
-PreprocessCfg.fs = 400  # Hz, CPSC2020 data fs
+PreprocCfg = ED()
+PreprocCfg.fs = 400  # Hz, CPSC2020 data fs
 # sequential, keep correct ordering, to add 'motion_artefact'
-PreprocessCfg.preproc = ['baseline', 'bandpass',]
+PreprocCfg.preproc = ['baseline', 'bandpass',]
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
-PreprocessCfg.baseline_window1 = int(0.2*PreprocessCfg.fs)  # 200 ms window
-PreprocessCfg.baseline_window2 = int(0.6*PreprocessCfg.fs)  # 600 ms window
-PreprocessCfg.filter_band = [0.5, 45]
-PreprocessCfg.parallel_epoch_len = 600  # second
-PreprocessCfg.parallel_epoch_overlap = 10  # second
-PreprocessCfg.parallel_keep_tail = True
-PreprocessCfg.rpeaks = 'xqrs'
+PreprocCfg.baseline_window1 = int(0.2*PreprocCfg.fs)  # 200 ms window
+PreprocCfg.baseline_window2 = int(0.6*PreprocCfg.fs)  # 600 ms window
+PreprocCfg.filter_band = [0.5, 45]
+PreprocCfg.parallel_epoch_len = 600  # second
+PreprocCfg.parallel_epoch_overlap = 10  # second
+PreprocCfg.parallel_keep_tail = True
+PreprocCfg.rpeaks = 'xqrs'
 # or 'gqrs', or 'pantompkins', 'hamilton', 'ssf', 'christov', 'engzee', 'gamboa'
 # or empty string '' if not detecting rpeaks
 """
@@ -40,7 +40,7 @@ for qrs detectors:
 
 #--------------------------------------------------------------
 FeatureCfg = ED()
-FeatureCfg.fs = PreprocessCfg.fs  # Hz, CPSC2020 data fs
+FeatureCfg.fs = PreprocCfg.fs  # Hz, CPSC2020 data fs
 FeatureCfg.beat_winL = 100  # corr. to 250 ms
 FeatureCfg.beat_winR = 100  # corr. to 250 ms
 FeatureCfg.features = ['wavelet', 'rr', 'morph',]
@@ -59,7 +59,7 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # common configurations
 TrainCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 TrainCfg.training_workdir = os.path.join(_BASE_DIR, "training_workdir")
-TrainCfg.fs = PreprocessCfg.fs
+TrainCfg.fs = PreprocCfg.fs
 TrainCfg.model_path = ED({
     "ml": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{eval}_{time}.{ext}"),
     "dl": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{eval}_{time}.{ext}"),
@@ -77,7 +77,7 @@ TrainCfg.verbose = 1
 TrainCfg.label_map = FeatureCfg.label_map
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
-TrainCfg.preproc = PreprocessCfg.preproc
+TrainCfg.preproc = PreprocCfg.preproc
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
 # TrainCfg.class_weight = 'balanced'
 TrainCfg.cv = 3

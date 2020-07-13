@@ -30,7 +30,7 @@ try:
 except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
-from cfg import PreprocessCfg
+from cfg import PreprocCfg
 from .ecg_rpeaks import (
     xqrs_detect, gqrs_detect, pantompkins,
     hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,
@@ -67,7 +67,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         sampling frequency of `raw_sig`
     config: dict, optional,
         extra process configuration,
-        `PreprocessCfg` will `update` this `config`
+        `PreprocCfg` will `update` this `config`
 
     Returns:
     --------
@@ -78,11 +78,11 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     """
     filtered_ecg = raw_sig.copy()
 
-    cfg = deepcopy(PreprocessCfg)
+    cfg = deepcopy(PreprocCfg)
     cfg.update(config or {})
 
     if fs != cfg.fs:
-        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocessCfg.fs/fs)))
+        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocCfg.fs/fs)))
 
     # remove baseline
     if 'baseline' in cfg.preproc:
@@ -128,7 +128,7 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
         sampling frequency of `raw_sig`
     config: dict, optional,
         extra process configuration,
-        `PreprocessCfg` will `update` this `config`
+        `PreprocCfg` will `update` this `config`
     save_dir: str, optional,
         directory for saving the outcome ('filtered_ecg' and 'rpeaks')
     save_fmt: str, default 'npy',
@@ -141,7 +141,7 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
         - 'filtered_ecg': the array of the processed ecg signal
         - 'rpeaks': the array of indices of rpeaks; empty if 'rpeaks' in `config` is not set
     """
-    cfg = deepcopy(PreprocessCfg)
+    cfg = deepcopy(PreprocCfg)
     cfg.update(config or {})
 
     epoch_len = int(cfg.parallel_epoch_len * fs)
