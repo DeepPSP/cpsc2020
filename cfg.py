@@ -67,8 +67,8 @@ TrainCfg.model_path = ED({
 TrainCfg.model_in_use = ED({
     "ml": os.path.join(
         _BASE_DIR, "models", "saved_models",
-        # "XGBoost_GridSearchCV_meta.pkl"
-        "XGBClassifier_learning_rate-0.06_tree_method-gpu_hist_seed-42_StandardScaler_Test_merror_0.1426.pkl"
+        "XGBoost_GridSearchCV_meta.pkl"
+        # "XGBClassifier_learning_rate-0.06_tree_method-gpu_hist_seed-42_StandardScaler_Test_merror_0.1426.pkl"
     ),
     "dl": os.path.join(_BASE_DIR, "models", "saved_models", ""),
 })
