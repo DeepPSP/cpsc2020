@@ -65,8 +65,8 @@ TrainCfg.model_path = ED({
     "dl": os.path.join(_BASE_DIR, "models", "saved_models", "{model_name}_{params}_{scaler}_{time}.{ext}"),
 })
 TrainCfg.model_in_use = ED({
-    "ml": os.path.join(_BASE_DIR, "models", "XGBClassifier_2020-07-12-17-54-10.bst"),
-    "dl": os.path.join(_BASE_DIR, "models", ""),
+    "ml": os.path.join(_BASE_DIR, "models", "saved_models", "XGBoost_GridSearchCV_meta.pkl"),
+    "dl": os.path.join(_BASE_DIR, "models", "saved_models", ""),
 })
 TrainCfg.SEED = 42
 TrainCfg.verbose = 1
