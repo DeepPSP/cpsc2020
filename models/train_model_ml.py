@@ -54,7 +54,7 @@ from sklearn.neural_network import MLPClassifier
 from easydict import EasyDict as ED
 
 from cfg import TrainCfg
-# from signal_processing.ecg_preprocess import parallel_preprocess_signal
+# from signal_processing.ecg_preproc import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
 from dataset import CPSC2020
 from metrics import CPSC2020_loss, CPSC2020_score

@@ -17,7 +17,7 @@ from easydict import EasyDict as ED
 
 import utils
 from cfg import PreprocCfg, FeatureCfg
-from signal_processing.ecg_preprocess import parallel_preprocess_signal
+from signal_processing.ecg_preproc import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 
 

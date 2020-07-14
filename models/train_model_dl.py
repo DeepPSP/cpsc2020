@@ -30,7 +30,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from easydict import EasyDict as ED
 
 from cfg import TrainCfg
-from signal_processing.ecg_preprocess import parallel_preprocess_signal
+from signal_processing.ecg_preproc import parallel_preprocess_signal
 from dataset import CPSC2020
 
 
