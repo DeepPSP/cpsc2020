@@ -1,7 +1,9 @@
 """
 NOTE:
-    the CPSC data is highly unbalanced,
-    with most beats normal beats
+-----
+    1. the CPSC data is highly unbalanced, with most beats normal beats
+
+    2. it might be better to make a two stage (``sequential'') model: first use features of RR intervals to train a model distinguishing premature beats from normal beats; what follows is a binary classifier that determines a premature beat is ventricular or super-ventricular. How to eliminate the effect of fusion beats, atrial fibrillation, etc., remains a problem.
 
 References:
 -----------
@@ -10,6 +12,8 @@ References:
 [3] https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
 TODO:
+-----
+    -1. see NOTE.2.
     0. xgbclassifier currently has too many false positives,
     1. feature selection,
     2. consider whether features should be normalized using sklearn.preprocessing.StandardScaler
