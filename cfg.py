@@ -80,15 +80,15 @@ TrainCfg.model_in_use = ED({
 })
 TrainCfg.SEED = 42
 TrainCfg.verbose = 1
-TrainCfg.label_map = FeatureCfg.label_map
+TrainCfg.label_map = deepcopy(FeatureCfg.label_map)
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
-TrainCfg.preproc = PreprocCfg.preproc
+TrainCfg.preproc = deepcopy(PreprocCfg.preproc)
 TrainCfg.class_weight = dict(N=0.018,S=1,V=0.42)  # via sklearn.utils.class_weight.compute_class_weight
 # TrainCfg.class_weight = 'balanced'
 TrainCfg.cv = 3
 # machine learning related configuartions
-TrainCfg.features = FeatureCfg.features
+TrainCfg.features = deepcopy(FeatureCfg.features)
 TrainCfg.bias_thr = 0.15*TrainCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 TrainCfg.feature_scaler = 'StandardScaler'  # or 'MinMaxScaler', or empty '' if not scaling features
 # https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
