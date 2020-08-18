@@ -1,6 +1,7 @@
 import glob
 import numpy as np
 import os
+import re
 
 import scipy.io as sio
 
@@ -10,31 +11,36 @@ from CPSC2020_challenge import *
 FS = 400
 THR = 0.15
 DATA_PATH = '../data/'
-REF_PATH = '../label/'
+REF_PATH = '../ref/'
 
 def load_ans():
     """
     Function for loading the detection results and references
     Input:
-
     Ouput:
         S_refs: position references for S
         V_refs: position references for V
         S_results: position results for S
         V_results: position results for V
     """
-    data_files = glob.glob(DATA_PATH + '*.mat')
-    ref_files = glob.glob(REF_PATH + '*.mat')
+    def is_mat(l):
+        return l.endswith('.mat')
+
+    data_files = list(filter(is_mat, os.listdir(DATA_PATH)))
+
     S_refs = []
     V_refs = []
     S_results = []
     V_results = []
     for i, data_file in enumerate(data_files):
+        index = re.split('[.]', data_file)[0][1: ]
+        data_file = os.path.join(DATA_PATH, data_file)
+        ref_file = os.path.join(REF_PATH, 'R{}.mat'.format(index))
         # load ecg file
         ecg_data = sio.loadmat(data_file)['ecg'].squeeze()
-        # load answers
-        s_ref = sio.loadmat(ref_files[i])['ref']['S_ref'][0, 0].squeeze()
-        v_ref = sio.loadmat(ref_files[i])['ref']['V_ref'][0, 0].squeeze()
+        # load answer
+        s_ref = sio.loadmat(ref_file)['ref']['S_ref'][0, 0].flatten()
+        v_ref = sio.loadmat(ref_file)['ref']['V_ref'][0, 0].flatten()
         # process ecg and conduct event detection using your algorithm
         s_pos, v_pos = CPSC2020_challenge(ecg_data, FS)
         S_refs.append(s_ref)
@@ -48,7 +54,7 @@ def CPSC2020_score(S_refs, V_refs, S_results, V_results):
     """
     Score Function
     Input:
-        S_refs, V_refs, S_results, V_results: list of ndarray
+        S_refs, V_refs, S_results, V_results
     Output:
         Score1: score for S
         Score2: score for V
@@ -100,3 +106,9 @@ if __name__ == '__main__':
 
     print ("S_score: {}".format(S1))
     print ("V_score: {}".format(S2))
+
+    with open('score.txt', 'w') as score_file:
+        print('S_score: {}'.format(S1), file=score_file)
+        print('V_score: {}'.format(S2), file=score_file)
+
+        score_file.close()
