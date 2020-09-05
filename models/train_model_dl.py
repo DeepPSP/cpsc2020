@@ -31,7 +31,7 @@ from easydict import EasyDict as ED
 
 from cfg import TrainCfg
 from signal_processing.ecg_preproc import parallel_preprocess_signal
-from dataset import CPSC2020
+from dataset import CPSC2020_Reader
 
 
 __all__ = [
@@ -94,5 +94,5 @@ def train(**config):
     cfg.update(config or {})
     verbose = cfg.get("verbose", 0)
 
-    data_gen = CPSC2020(db_dir=cfg.training_data, working_dir=cfg.training_workdir)
+    data_gen = CPSC2020_Reader(db_dir=cfg.training_data, working_dir=cfg.training_workdir)
     

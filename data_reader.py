@@ -1087,7 +1087,7 @@ if __name__ == "__main__":
     print("passed arguments:")
     print(f"{dict_to_str(kwargs)}")
 
-    # data_gen = CPSC2020(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
+    # data_gen = CPSC2020_Reader(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
     data_gen = CPSC2020_Reader(
         db_dir=kwargs.get("db_dir"),
         working_dir=kwargs.get("working_dir"),
