@@ -60,7 +60,7 @@ from easydict import EasyDict as ED
 from cfg import TrainCfg
 # from signal_processing.ecg_preproc import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
-from dataset import CPSC2020_Reader
+from dataset import CPSC2020Reader
 from metrics import CPSC2020_loss, CPSC2020_score
 import utils
 
@@ -112,7 +112,7 @@ class ECGPrematureDetector(object):
         self.db_dir = db_dir
         self.working_dir = working_dir or os.getcwd()
         self.verbose = max(TrainCfg.verbose, verbose)
-        self.data_gen = CPSC2020_Reader(
+        self.data_gen = CPSC2020Reader(
             db_dir=db_dir, working_dir=working_dir, verbose=verbose
         )
 

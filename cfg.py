@@ -14,6 +14,7 @@ __all__ = [
     "PreprocCfg",
     "FeatureCfg",
     "TrainCfg",
+    "ModelCfg",
 ]
 
 
@@ -185,3 +186,7 @@ TrainCfg.ml_param_grid = {
     # },
 }
 # TODO: deep learning related configurations
+
+
+ModelCfg = ED()
+ModelCfg.torch_dtype = 'float'

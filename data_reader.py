@@ -22,11 +22,11 @@ from signal_processing.ecg_features import compute_ecg_features
 
 
 __all__ = [
-    "CPSC2020_Reader",
+    "CPSC2020Reader",
 ]
 
 
-class CPSC2020_Reader(object):
+class CPSC2020Reader(object):
     """
 
     The 3rd China Physiological Signal Challenge 2020:
@@ -85,7 +85,7 @@ class CPSC2020_Reader(object):
        before correction of `load_ann`:
        >>> from collections import Counter
        >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
-       >>> data_gen = CPSC2020_Reader(db_dir=db_dir,working_dir=db_dir)
+       >>> data_gen = CPSC2020Reader(db_dir=db_dir,working_dir=db_dir)
        >>> rec = 4
        >>> ann = data_gen.load_ann(rec)
        >>> Counter(ann['PVC_indices']).most_common()[:4]
@@ -1087,8 +1087,8 @@ if __name__ == "__main__":
     print("passed arguments:")
     print(f"{dict_to_str(kwargs)}")
 
-    # data_gen = CPSC2020_Reader(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
-    data_gen = CPSC2020_Reader(
+    # data_gen = CPSC2020Reader(db_dir="/mnt/wenhao71/data/CPSC2020/TrainingSet/")
+    data_gen = CPSC2020Reader(
         db_dir=kwargs.get("db_dir"),
         working_dir=kwargs.get("working_dir"),
         verbose=kwargs.get("verbose"),
