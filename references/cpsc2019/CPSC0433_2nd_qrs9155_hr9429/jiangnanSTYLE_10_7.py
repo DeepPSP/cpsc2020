@@ -64,63 +64,63 @@ def wavelet_all_data(data):#基础方法
 
 
 
-alldata=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alldata_meiquzao.mat')
-alllabel=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alllabel_new.mat')
+# alldata=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alldata_meiquzao.mat')
+# alllabel=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alllabel_new.mat')
 
-new_data3=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alldata_7_9.mat')
-new_label3=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alllabel_7_9.mat')
-
-
-AFdata=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/AFdata.mat')#D:/心梗/2019生理参数竞赛/自采ECG信号/房颤数据/合并/
-AFlabel=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/AFlabel.mat')
-
-tianchi_data=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/tianchi_data.mat')#D:/心梗/2019生理参数竞赛/自采ECG信号/房颤数据/合并/
-tianchi_label=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/tianchi_label.mat')
+# new_data3=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alldata_7_9.mat')
+# new_label3=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/alllabel_7_9.mat')
 
 
+# AFdata=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/AFdata.mat')#D:/心梗/2019生理参数竞赛/自采ECG信号/房颤数据/合并/
+# AFlabel=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/AFlabel.mat')
 
-alldata=alldata['alldata_meiquzao']
-alllabel=alllabel['alllabel_new']
-
-new_data3=new_data3['alldata_7_9'][2000:]
-new_label3=new_label3['alllabel_7_9'][2000:]
-
-AFdata=AFdata['AFdata']
-AFlabel=AFlabel['AFlabel']
-
-tianchi_data=tianchi_data['tianchi_data']
-tianchi_label=tianchi_label['tianchi_label']
-
-random.seed(1)
-length=len(alldata)
-#length=2000
-c = range(0,length)
-q = random.sample(c,int(length*0.8))
-
-c=set(c)
-q=set(q)
-e=c-q
-e=list(e)
-q=list(q)
-
-train_x=alldata[q]
-train_y=alllabel[q]
-
-test_x=alldata[e]
-test_y=alllabel[e]
+# tianchi_data=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/tianchi_data.mat')#D:/心梗/2019生理参数竞赛/自采ECG信号/房颤数据/合并/
+# tianchi_label=scipy.io.loadmat('/home/lirongwang/CWQ/XG/jiangnanSTYLE/tianchi_label.mat')
 
 
-train_x=np.concatenate((train_x,new_data3,AFdata,tianchi_data))
-train_y=np.concatenate((train_y,new_label3,AFlabel,tianchi_label))
 
-train_x=wavelet_all_data(train_x)
-test_x=wavelet_all_data(test_x)
+# alldata=alldata['alldata_meiquzao']
+# alllabel=alllabel['alllabel_new']
 
-train_x=train_x.reshape(train_x.shape[0],train_x.shape[1],14)
-test_x=test_x.reshape(test_x.shape[0],test_x.shape[1],14)
+# new_data3=new_data3['alldata_7_9'][2000:]
+# new_label3=new_label3['alllabel_7_9'][2000:]
 
-train_y=train_y.reshape(train_y.shape[0],train_y.shape[1],1)
-test_y=test_y.reshape(test_y.shape[0],test_y.shape[1],1)
+# AFdata=AFdata['AFdata']
+# AFlabel=AFlabel['AFlabel']
+
+# tianchi_data=tianchi_data['tianchi_data']
+# tianchi_label=tianchi_label['tianchi_label']
+
+# random.seed(1)
+# length=len(alldata)
+# #length=2000
+# c = range(0,length)
+# q = random.sample(c,int(length*0.8))
+
+# c=set(c)
+# q=set(q)
+# e=c-q
+# e=list(e)
+# q=list(q)
+
+# train_x=alldata[q]
+# train_y=alllabel[q]
+
+# test_x=alldata[e]
+# test_y=alllabel[e]
+
+
+# train_x=np.concatenate((train_x,new_data3,AFdata,tianchi_data))
+# train_y=np.concatenate((train_y,new_label3,AFlabel,tianchi_label))
+
+# train_x=wavelet_all_data(train_x)
+# test_x=wavelet_all_data(test_x)
+
+# train_x=train_x.reshape(train_x.shape[0],train_x.shape[1],14)
+# test_x=test_x.reshape(test_x.shape[0],test_x.shape[1],14)
+
+# train_y=train_y.reshape(train_y.shape[0],train_y.shape[1],1)
+# test_y=test_y.reshape(test_y.shape[0],test_y.shape[1],1)
 
 inputs = Input((5000,14),name='inputs')
 
@@ -238,4 +238,4 @@ adam=keras.optimizers.Adam(lr=0.001,beta_1=0.9, beta_2=0.999,epsilon=1e-08,clipv
 
 model.compile(loss='binary_crossentropy', optimizer=adam,metrics=['accuracy'])
 
-model.fit({'inputs':train_x}, {'output':train_y}, validation_data=(test_x,test_y),epochs=10000,batch_size=256,callbacks=[checkpoint])
+# model.fit({'inputs':train_x}, {'output':train_y}, validation_data=(test_x,test_y),epochs=10000,batch_size=256,callbacks=[checkpoint])
