@@ -11,7 +11,6 @@ def layer_1(in_channel,out_channel):
         nn.BatchNorm1d(out_channel),
         nn.ReLU(True),
         nn.MaxPool1d(2,2)
-
     )
     return layer
 
