@@ -17,7 +17,7 @@ import multiprocessing as mp
 from easydict import EasyDict as ED
 
 from utils import CPSC_STATS, get_optimal_covering
-from cfg import PreprocCfg, FeatureCfg
+from cfg import BaseCfg, PreprocCfg
 from signal_processing.ecg_preproc import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 
@@ -155,7 +155,7 @@ class CPSC2020Reader(object):
         self.palette = {"spb": "black", "pvc": "red",}
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
-        self.label_map = kwargs.get("label_map", FeatureCfg.label_map)
+        self.label_map = kwargs.get("label_map", BaseCfg.label_map)
 
         # NOTE:
         # the ordering of `self.allowed_preproc` and `self.allowed_features`
@@ -483,7 +483,7 @@ class CPSC2020Reader(object):
                 rpeaks=rpeaks,
                 ann=ann,
                 preproc=preproc,
-                bias_thr=FeatureCfg.beat_ann_bias_thr,
+                bias_thr=BaseCfg.beat_ann_bias_thr,
                 augment=augment,
                 return_aux_data=return_aux_data,
                 save=True
@@ -590,7 +590,7 @@ class CPSC2020Reader(object):
 
         # NOTE: features will only be extracted at 'valid' rpeaks
         raw_sig = self.load_data(rec, keep_dim=False, preproc=None)
-        valid_indices = np.where( (augmented_rpeaks>=FeatureCfg.beat_winL) & (augmented_rpeaks<len(raw_sig)-FeatureCfg.beat_winR) )[0]
+        valid_indices = np.where( (augmented_rpeaks>=BaseCfg.beat_winL) & (augmented_rpeaks<len(raw_sig)-BaseCfg.beat_winR) )[0]
         augmented_rpeaks = augmented_rpeaks[valid_indices]
         beat_ann = beat_ann[valid_indices]
 
@@ -832,7 +832,7 @@ class CPSC2020Reader(object):
                     force_recompute=False
                 )
                 # NOTE: the following has been moved to the function `_ann_to_beat_ann`
-                # valid_indices = np.where( (beat_ann["rpeaks"].ravel()>=FeatureCfg.beat_winL) & (beat_ann["rpeaks"].ravel()<len(ecg_sig)-FeatureCfg.beat_winR) )[0]
+                # valid_indices = np.where( (beat_ann["rpeaks"].ravel()>=BaseCfg.beat_winL) & (beat_ann["rpeaks"].ravel()<len(ecg_sig)-BaseCfg.beat_winR) )[0]
                 # feature_mat = feature_mat[valid_indices]
                 # beat_ann["beat_ann"] = beat_ann["beat_ann"][valid_indices]
                 if len(x[subset]):
