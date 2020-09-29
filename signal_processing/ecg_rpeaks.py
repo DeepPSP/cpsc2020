@@ -3,7 +3,9 @@ algorithms detecting R peaks from (filtered) ECG signal
 
 Exists algorithms from wfdb and biosppy,
 
-TODO: algorithms compared in [1]
+TODO:
+1. algorithms compared in [1]
+2. deep learning models from CPSC2019
 
 References:
 -----------

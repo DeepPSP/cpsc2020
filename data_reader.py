@@ -3,6 +3,7 @@
 import os
 import random
 import argparse
+import math
 from copy import deepcopy
 from functools import reduce
 import logging
@@ -15,10 +16,10 @@ from scipy.io import loadmat, savemat
 import multiprocessing as mp
 from easydict import EasyDict as ED
 
-import utils
-from cfg import PreprocCfg, FeatureCfg
-from signal_processing.ecg_preproc import parallel_preprocess_signal
-from signal_processing.ecg_features import compute_ecg_features
+from . import utils
+from .cfg import PreprocCfg, FeatureCfg
+from .signal_processing.ecg_preproc import parallel_preprocess_signal
+from .signal_processing.ecg_features import compute_ecg_features
 
 
 __all__ = [
@@ -131,7 +132,7 @@ class CPSC2020Reader(object):
         self.rec_ext = '.mat'
         self.ann_ext = '.mat'
 
-        self._to_mv = False
+        self._to_mv = True
 
         self.nb_records = 10
         self.all_records = ["A{0:02d}".format(i) for i in range(1,1+self.nb_records)]
@@ -174,7 +175,7 @@ class CPSC2020Reader(object):
         # TODO: add logger
     
 
-    def load_data(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preproc:Optional[List[str]]=None, **kwargs) -> np.ndarray:
+    def load_data(self, rec:Union[int,str], units:str='mV', sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True, preproc:Optional[List[str]]=None, **kwargs) -> np.ndarray:
         """ finished, checked,
 
         Parameters:
@@ -182,6 +183,8 @@ class CPSC2020Reader(object):
         rec: int or str,
             number of the record, NOTE that rec_no starts from 1,
             or the record name
+        units: str, default 'mV',
+            units of the output signal, can also be 'μV', with an alias of 'uV'
         sampfrom: int, optional,
             start index of the data to be loaded
         sampto: int, optional,
@@ -206,7 +209,7 @@ class CPSC2020Reader(object):
         else:
             rec_fp = os.path.join(self.data_dir, f"{rec_name}{self.rec_ext}")
         data = loadmat(rec_fp)['ecg']
-        if self._to_mv or kwargs.get("to_mv", False):
+        if units.lower() in ['uv', 'μv']:
             data = (1000 * data).astype(int)
         sf, st = (sampfrom or 0), (sampto or len(data))
         data = data[sf:st]
@@ -848,8 +851,49 @@ class CPSC2020Reader(object):
             y_indices[subset] = np.delete(y_indices[subset], invalid_indices)
         return x["train"], y["train"], y_indices["train"], x["test"], y["test"], y_indices["test"]
 
+
+    def locate_premature_beats(self, rec:Union[int,str], premature_type:Optional[str]=None, window:int=5000, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> List[List[int]]:
+        """ finished, NOT checked,
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        premature_type: str, optional,
+            premature beat type, can be one of "SPB", "PVC"
+        window: int, default 5000,
+            window length of each premature beat
+        sampfrom: int, optional,
+            start index of the premature beats to locate
+        sampto: int, optional,
+            end index of the premature beats to locate
+
+        Returns:
+        --------
+        premature_intervals: list,
+            list of intervals of premature beats
+        """
+        ann = self.load_ann(rec)
+        if premature_type:
+            premature_inds = ann[f"{premature_type.upper()}_indices"]
+        else:
+            premature_inds = np.append(ann["SPB_indices"], ann["PVC_indices"])
+            premature_inds = np.sort(premature_inds)
+        sf, st = (sampfrom or 0), (sampto or len(data))
+        premature_inds = premature_inds[(sf < premature_inds) & (premature_inds < st)]
+        tot_interval = [sf, st]
+        premature_intervals, _ = utils.get_optimal_covering(
+            total_interval=tot_interval,
+            to_cover=premature_inds,
+            min_len=window*self.freq//1000,
+            split_threshold=window*self.freq//1000,
+            traceback=False,
+        )
+        return premature_intervals
+
     
-    def plot(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None, ectopic_beats_only:bool=False, **kwargs) -> NoReturn:
+    def plot(self, rec:Union[int,str], ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> NoReturn:
         """ not finished, not checked,
 
         Parameters:
@@ -858,28 +902,47 @@ class CPSC2020Reader(object):
             number of the record, NOTE that rec_no starts from 1,
             or the record name
         sampfrom: int, optional,
-            start index of the data to be loaded
+            start index of the data to plot
         sampto: int, optional,
-            end index of the data to be loaded
-        ectopic_beats_only: bool, default False,
-            whether or not onpy plot the neighborhoods of the ectopic beats
+            end index of the data to plot
         """
-        data = self.load_data(rec, sampfrom=sampfrom, sampto=sampto, keep_dim=False)
+        if 'plt' not in dir():
+            import matplotlib.pyplot as plt
+
+        data = self.load_data(rec, units='uv', sampfrom=sampfrom, sampto=sampto, keep_dim=False)
         ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
         sf, st = (sampfrom or 0), (sampto or len(data))
-        if ectopic_beats_only:
-            ectopic_beat_indices = sorted(ann["SPB_indices"] + ann["PVC_indices"])
-            tot_interval = [sf, st]
-            covering, tb = utils.get_optimal_covering(
-                total_interval=tot_interval,
-                to_cover=ectopic_beat_indices,
-                min_len=3*self.freq,
-                split_threshold=3*self.freq,
-                traceback=True,
-                verbose=self.verbose,
-            )
-        # TODO: finish plot
-        raise NotImplementedError
+        spb_indices = ann["SPB_indices"]
+        pvc_indices = ann["PVC_indices"]
+        spb_indices = spb_indices[(sf < spb_indices) & (spb_indices < st))] - sf
+        pvc_indices = pvc_indices[(sf < pvc_indices) & (pvc_indices < st))] - sf
+
+        default_fig_sz = 120
+        line_len = self.freq * 25  # 25 seconds
+        nb_lines = math.ceil(len(data)/line_len)
+
+        for idx in range(nb_lines):
+            seg = data[idx*line_len: (idx+1)*line_len]
+            secs = (np.arange(len(seg)) + idx*line_len) / self.freq
+            fig_sz_w = int(round(4.8 * len(seg) / self.freq))
+            y_range = np.max(np.abs(seg))
+            fig_sz_h = 6 * y_range / 1500
+            fig, ax = plt.subplots(figsize=(fig_sz_w, fig_sz_h))
+            ax.plot(secs, seg, c='black')
+            ax.axhline(y=0, linestyle='-', linewidth='1.0', color='red')
+            if ticks_granularity >= 1:
+                ax.xaxis.set_major_locator(plt.MultipleLocator(0.2))
+                ax.yaxis.set_major_locator(plt.MultipleLocator(500))
+                ax.grid(which='major', linestyle='-', linewidth='0.5', color='red')
+            if ticks_granularity >= 2:
+                ax.xaxis.set_minor_locator(plt.MultipleLocator(0.04))
+                ax.yaxis.set_minor_locator(plt.MultipleLocator(100))
+                ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+            ax.set_xlim(secs[0], secs[-1])
+            ax.set_ylim(-y_range, y_range)
+            ax.set_xlabel('Time [s]')
+            ax.set_ylabel('Voltage [μV]')
+            plt.show()
 
 
 def _ann_to_beat_ann_epoch_v1(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> dict:

@@ -16,9 +16,9 @@ import torch
 from torch.utils.data.dataset import Dataset
 from sklearn.preprocessing import StandardScaler
 
-from cfg import TrainCfg, ModelCfg
-from data_reader import CPSC2020Reader as CR
-from utils import dict_to_str
+from .cfg import TrainCfg, ModelCfg
+from .data_reader import CPSC2020Reader as CR
+from .utils import dict_to_str
 
 if ModelCfg.torch_dtype.lower() == 'double':
     torch.set_default_tensor_type(torch.DoubleTensor)

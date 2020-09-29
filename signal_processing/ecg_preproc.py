@@ -30,7 +30,7 @@ try:
 except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
-from cfg import PreprocCfg
+from ..cfg import PreprocCfg
 from .ecg_rpeaks import (
     xqrs_detect, gqrs_detect, pantompkins,
     hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,
@@ -82,7 +82,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     cfg.update(config or {})
 
     if fs != cfg.fs:
-        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*PreprocCfg.fs/fs)))
+        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*cfg.fs/fs)))
 
     # remove baseline
     if 'baseline' in cfg.preproc:
@@ -180,7 +180,9 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
     filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap_half]
     rpeaks = result[0]['rpeaks'][np.where(result[0]['rpeaks']<epoch_len-epoch_overlap_half)[0]]
     for idx, e in enumerate(result[1:]):
-        filtered_ecg = np.append(filtered_ecg, e['filtered_ecg'][epoch_overlap_half: -epoch_overlap_half])
+        filtered_ecg = np.append(
+            filtered_ecg, e['filtered_ecg'][epoch_overlap_half: -epoch_overlap_half]
+        )
         epoch_rpeaks = e['rpeaks'][np.where( (e['rpeaks'] >= epoch_overlap_half) & (e['rpeaks'] < epoch_len-epoch_overlap_half) )[0]]
         rpeaks = np.append(rpeaks, (idx+1)*epoch_forward + epoch_rpeaks)
 
