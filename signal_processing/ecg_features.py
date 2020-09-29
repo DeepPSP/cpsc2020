@@ -17,7 +17,7 @@ import numpy as np
 from scipy.io import savemat
 from easydict import EasyDict as ED
 
-from ..cfg import FeatureCfg
+from cfg import FeatureCfg
 
 
 __all__ = [

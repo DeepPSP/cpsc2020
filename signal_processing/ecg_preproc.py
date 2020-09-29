@@ -30,7 +30,7 @@ try:
 except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
-from ..cfg import PreprocCfg
+from cfg import PreprocCfg
 from .ecg_rpeaks import (
     xqrs_detect, gqrs_detect, pantompkins,
     hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,

@@ -16,10 +16,10 @@ from scipy.io import loadmat, savemat
 import multiprocessing as mp
 from easydict import EasyDict as ED
 
-from .utils import CPSC_STATS, get_optimal_covering
-from .cfg import PreprocCfg, FeatureCfg
-from .signal_processing.ecg_preproc import parallel_preprocess_signal
-from .signal_processing.ecg_features import compute_ecg_features
+from utils import CPSC_STATS, get_optimal_covering
+from cfg import PreprocCfg, FeatureCfg
+from signal_processing.ecg_preproc import parallel_preprocess_signal
+from signal_processing.ecg_features import compute_ecg_features
 
 
 __all__ = [
