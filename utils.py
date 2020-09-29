@@ -3,9 +3,10 @@
 import time, datetime
 import argparse
 from io import StringIO
+from functools import reduce
 from copy import deepcopy
 from numbers import Real, Number
-from typing import Union, Optional, List, Tuple, NoReturn
+from typing import Union, Optional, List, Tuple, Sequence, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,8 @@ __all__ = [
     "class_weight_to_sample_weight",
     "pred_to_indices",
     "get_date_str",
+    "mask_to_intervals",
+    "list_sum",
 ]
 
 
@@ -571,6 +574,56 @@ def get_date_str(fmt:Optional[str]=None):
     _fmt = fmt or '%Y-%m-%d-%H-%M-%S'
     ds = now.strftime(_fmt)
     return ds
+
+
+def mask_to_intervals(mask:np.ndarray, vals:Optional[Union[int,Sequence[int]]]=None) -> Union[list, dict]:
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    mask: ndarray,
+        1d mask
+    vals: int or sequence of int, optional,
+        values in `mask` to obtain intervals
+
+    Returns:
+    --------
+    intervals: dict or list,
+        the intervals corr. to each value in `vals` if `vals` is `None` or `Sequence`;
+        or the intervals corr. to `vals` if `vals` is int.
+        each interval is of the form `[a,b]`, left inclusive, right exclusive
+    """
+    if vals is None:
+        _vals = list(set(mask))
+    elif isinstance(vals, int):
+        _vals = [vals]
+    else:
+        _vals = vals
+    assert set(_vals) & set(mask) == set(_vals)
+
+    intervals = {v:[] for v in _vals}
+    for v in _vals:
+        valid_inds = np.where(np.array(mask)==v)[0]
+        if len(valid_inds) == 0:
+            continue
+        split_indices = np.where(np.diff(valid_inds)>1)[0]
+        split_indices = split_indices.tolist() + (split_indices+1).tolist()
+        split_indices = sorted([0] + split_indices + [len(valid_inds)-1])
+        for idx in range(len(split_indices)//2):
+            intervals[v].append(
+                [valid_inds[split_indices[2*idx]], valid_inds[split_indices[2*idx+1]]+1]
+            )
+    
+    if isinstance(vals, int):
+        intervals = intervals[vals]
+
+    return intervals
+
+
+def list_sum(l:Sequence[list]) -> list:
+    """ finished, checked,
+    """
+    return reduce(lambda a,b: a+b, l, [])
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
