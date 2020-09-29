@@ -6,8 +6,8 @@ from typing import Union, Optional, Any, List, Tuple
 import numpy as np
 from easydict import EasyDict as ED
 
-import utils
-from cfg import TrainCfg
+from . import utils
+from .cfg import BaseCfg
 
 
 __all__ = [
@@ -17,7 +17,7 @@ __all__ = [
 
 
 def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dtype:type=str, verbose:int=0) -> int:
-    """ NOT finished, need more consideration!
+    """ finished, updated with the latest (updated on 2020.8.31) official function
 
     Parameters:
     -----------
@@ -45,14 +45,14 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
 
     true_positive = {c: 0 for c in classes}
 
     for c in classes:
         for tc in truth_arr[c]:
-            pc = np.where(abs(pred_arr[c]-tc) <= TrainCfg.bias_thr)[0]
+            pc = np.where(abs(pred_arr[c]-tc) <= BaseCfg.bias_thr)[0]
             if pc.size > 0:
                 true_positive[c] += 1
 
@@ -98,34 +98,33 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
         - false_positive: number of false positives of each ectopic beat type
         - false_negative: number of false negatives of each ectopic beat type
     """
-    s_score = np.zeros([len(sbp_true), ])
-    v_score = np.zeros([len(sbp_true), ])
+    s_score = np.zeros([len(sbp_true), ], dtype=int)
+    v_score = np.zeros([len(sbp_true), ], dtype=int)
     ## Scoring ##
-    for i, s_ref in enumerate(sbp_true):
-        v_ref = pvc_true[i]
-        s_pos = sbp_pred[i]
-        v_pos = pvc_pred[i]
+    for i, (s_ref, v_ref, s_pos, v_pos) in enumerate(zip(sbp_true, pvc_true, sbp_pred, pvc_pred)):
         s_tp = 0
         s_fp = 0
         s_fn = 0
         v_tp = 0
         v_fp = 0
         v_fn = 0
+        # SBP
         if s_ref.size == 0:
             s_fp = len(s_pos)
         else:
             for m, ans in enumerate(s_ref):
-                s_pos_cand = np.where(abs(s_pos-ans) <= TrainCfg.bias_thr)[0]
+                s_pos_cand = np.where(abs(s_pos-ans) <= BaseCfg.bias_thr)[0]
                 if s_pos_cand.size == 0:
                     s_fn += 1
                 else:
                     s_tp += 1
                     s_fp += len(s_pos_cand) - 1
+        # PVC
         if v_ref.size == 0:
             v_fp = len(v_pos)
         else:
             for m, ans in enumerate(v_ref):
-                v_pos_cand = np.where(abs(v_pos-ans) <= TrainCfg.bias_thr)[0]
+                v_pos_cand = np.where(abs(v_pos-ans) <= BaseCfg.bias_thr)[0]
                 if v_pos_cand.size == 0:
                     v_fn += 1
                 else:

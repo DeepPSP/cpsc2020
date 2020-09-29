@@ -19,12 +19,14 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 BaseCfg = ED()
+BaseCfg.fs = 400  # Hz, CPSC2020 data fs
+BaseCfg.bias_thr = 0.15 * BaseCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 BaseCfg.label_map = dict(N=0,S=1,V=2)
 BaseCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 
 
 PreprocCfg = ED()
-PreprocCfg.fs = 400  # Hz, CPSC2020 data fs
+PreprocCfg.fs = BaseCfg.fs
 # sequential, keep correct ordering, to add 'motion_artefact'
 PreprocCfg.preproc = ['baseline', 'bandpass',]
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)

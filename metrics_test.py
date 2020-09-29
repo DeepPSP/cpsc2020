@@ -5,9 +5,9 @@ from typing import Union, Optional, Any, List, Tuple
 import numpy as np
 from easydict import EasyDict as ED
 
-import utils
-from cfg import TrainCfg
-from metrics import CPSC2020_loss, CPSC2020_score
+from . import utils
+from .cfg import BaseCfg
+from .metrics import CPSC2020_loss, CPSC2020_score
 
 
 __all__ = [
@@ -48,14 +48,14 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
 
     true_positive = {c: 0 for c in classes}
 
     for c in classes:
         for tc in truth_arr[c]:
-            pc = np.where(abs(pred_arr[c]-tc) <= TrainCfg.bias_thr)[0]
+            pc = np.where(abs(pred_arr[c]-tc) <= BaseCfg.bias_thr)[0]
             if pc.size > 0:
                 true_positive[c] += 1
 
@@ -127,8 +127,8 @@ def CPSC2020_score_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarr
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
 
     retval = CPSC2020_score(
         [truth_arr['S']],[truth_arr['V']],[pred_arr['S']],[pred_arr['V']],
@@ -172,11 +172,11 @@ def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray,
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==TrainCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==TrainCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
 
     pred_intervals = {
-        c: [[idx-TrainCfg.bias_thr, idx+TrainCfg.bias_thr] for idx in pred_arr[c]] \
+        c: [[idx-BaseCfg.bias_thr, idx+BaseCfg.bias_thr] for idx in pred_arr[c]] \
             for c in classes
     }
 
