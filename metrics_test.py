@@ -5,7 +5,7 @@ from typing import Union, Optional, Any, List, Tuple
 import numpy as np
 from easydict import EasyDict as ED
 
-from . import utils
+from .utils import dict_to_str, in_generalized_interval
 from .cfg import BaseCfg
 from .metrics import CPSC2020_loss, CPSC2020_score
 
@@ -60,7 +60,7 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
                 true_positive[c] += 1
 
     # true_positive = {
-    #     c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+    #     c: np.array([in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
     #         for c in classes
     # }
     false_positive = {
@@ -73,9 +73,9 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
     false_positive_loss = {c: 1 for c in classes}
     false_negative_loss = {c: 5 for c in classes}
 
-    print(f"true_positive = {utils.dict_to_str(true_positive)}")
-    print(f"false_positive = {utils.dict_to_str(false_positive)}")
-    print(f"false_negative = {utils.dict_to_str(false_negative)}")
+    print(f"true_positive = {dict_to_str(true_positive)}")
+    print(f"false_positive = {dict_to_str(false_positive)}")
+    print(f"false_negative = {dict_to_str(false_negative)}")
 
     class_loss = {
         c: false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \
@@ -181,7 +181,7 @@ def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray,
     }
 
     true_positive = {
-        c: np.array([utils.in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
+        c: np.array([in_generalized_interval(idx, pred_intervals[c]) for idx in truth_arr[c]]).astype(int).sum() \
             for c in classes
     }
     false_positive = {

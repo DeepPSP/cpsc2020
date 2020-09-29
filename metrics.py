@@ -6,7 +6,7 @@ from typing import Union, Optional, Any, List, Tuple
 import numpy as np
 from easydict import EasyDict as ED
 
-from . import utils
+from .utils import dict_to_str
 from .cfg import BaseCfg
 
 
@@ -67,9 +67,9 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     false_negative_loss = {c: 5 for c in classes}
 
     if verbose >= 1:
-        print(f"true_positive = {utils.dict_to_str(true_positive)}")
-        print(f"false_positive = {utils.dict_to_str(false_positive)}")
-        print(f"false_negative = {utils.dict_to_str(false_negative)}")
+        print(f"true_positive = {dict_to_str(true_positive)}")
+        print(f"false_positive = {dict_to_str(false_positive)}")
+        print(f"false_negative = {dict_to_str(false_negative)}")
 
     total_loss = sum([
         false_positive[c] * false_positive_loss[c] + false_negative[c] * false_negative_loss[c] \

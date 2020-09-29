@@ -16,7 +16,7 @@ from scipy.io import loadmat, savemat
 import multiprocessing as mp
 from easydict import EasyDict as ED
 
-from . import utils
+from .utils import CPSC_STATS, get_optimal_covering
 from .cfg import PreprocCfg, FeatureCfg
 from .signal_processing.ecg_preproc import parallel_preprocess_signal
 from .signal_processing.ecg_features import compute_ecg_features
@@ -150,7 +150,7 @@ class CPSC2020Reader(object):
             "VS": ["A04", "A07"],
         })
 
-        self.df_stats = utils.CPSC_STATS
+        self.df_stats = CPSC_STATS
 
         self.palette = {"spb": "black", "pvc": "red",}
 
@@ -883,7 +883,7 @@ class CPSC2020Reader(object):
         sf, st = (sampfrom or 0), (sampto or len(data))
         premature_inds = premature_inds[(sf < premature_inds) & (premature_inds < st)]
         tot_interval = [sf, st]
-        premature_intervals, _ = utils.get_optimal_covering(
+        premature_intervals, _ = get_optimal_covering(
             total_interval=tot_interval,
             to_cover=premature_inds,
             min_len=window*self.freq//1000,
@@ -914,8 +914,8 @@ class CPSC2020Reader(object):
         sf, st = (sampfrom or 0), (sampto or len(data))
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
-        spb_indices = spb_indices[(sf < spb_indices) & (spb_indices < st))] - sf
-        pvc_indices = pvc_indices[(sf < pvc_indices) & (pvc_indices < st))] - sf
+        spb_indices = spb_indices[(sf < spb_indices) & (spb_indices < st)] - sf
+        pvc_indices = pvc_indices[(sf < pvc_indices) & (pvc_indices < st)] - sf
 
         default_fig_sz = 120
         line_len = self.freq * 25  # 25 seconds
@@ -1097,7 +1097,7 @@ def _ann_to_beat_ann_epoch_v3(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias
 
 
 if __name__ == "__main__":
-    from utils import dict_to_str
+    from .utils import dict_to_str, str2bool
     ap = argparse.ArgumentParser(
         description="preprocess CPSC2020 data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -1134,7 +1134,7 @@ if __name__ == "__main__":
     )
     ap.add_argument(
         "-a", "--augment",
-        type=utils.str2bool, default=True,
+        type=str2bool, default=True,
         help="whether or not using annotations to augment the rpeaks detected by algorithm",
         dest="augment",
     )
