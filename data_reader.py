@@ -17,7 +17,7 @@ import multiprocessing as mp
 from easydict import EasyDict as ED
 
 from utils import CPSC_STATS, get_optimal_covering
-from cfg import BaseCfg, PreprocCfg
+from cfg import BaseCfg, PreprocCfg, FeatureCfg
 from signal_processing.ecg_preproc import parallel_preprocess_signal
 from signal_processing.ecg_features import compute_ecg_features
 
@@ -131,8 +131,6 @@ class CPSC2020Reader(object):
         self.spacing = 1000/self.fs
         self.rec_ext = '.mat'
         self.ann_ext = '.mat'
-
-        self._to_mv = True
 
         self.nb_records = 10
         self.all_records = ["A{0:02d}".format(i) for i in range(1,1+self.nb_records)]
@@ -270,6 +268,8 @@ class CPSC2020Reader(object):
             the computed features, of shape (m,n), where
                 m = the number of beats (the number of rpeaks)
                 n = the dimension of the features
+
+        NOTE: for deep learning models, this function is not necessary
         """
         features = self._normalize_feature_names(features, True)
         preproc = self._normalize_preprocess_names(preproc, True)
@@ -366,6 +366,8 @@ class CPSC2020Reader(object):
             the computed features, of shape (m,n), where
                 m = the number of beats (the number of rpeaks)
                 n = the dimension of the features
+
+        NOTE: for deep learning models, this function is not necessary
         """
         features = self._normalize_feature_names(features, True)
         preproc = self._normalize_preprocess_names(preproc, True)
