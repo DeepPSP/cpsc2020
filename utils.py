@@ -141,7 +141,9 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:int, sp
         if isinstance(item, list):
             to_cover_intervals.append(item)
         else:
-            to_cover_intervals.append([item, item])
+            to_cover_intervals.append(
+                [max(tot_start, item-min_len//2), min(tot_end, item+min_len//2)]
+            )
     if traceback:
         replica_for_traceback = deepcopy(to_cover_intervals)
 

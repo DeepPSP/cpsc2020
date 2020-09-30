@@ -3,6 +3,7 @@
 import os
 from copy import deepcopy
 
+import pywt
 from easydict import EasyDict as ED
 
 
@@ -52,10 +53,13 @@ for qrs detectors:
 
 
 FeatureCfg = ED()
+FeatureCfg.fs = BaseCfg.fs
 FeatureCfg.features = ['wavelet', 'rr', 'morph',]
 
 FeatureCfg.wt_family = 'db1'
 FeatureCfg.wt_level = 3
+FeatureCfg.beat_winL = BaseCfg.beat_winL
+FeatureCfg.beat_winR = BaseCfg.beat_winR
 FeatureCfg.wt_feature_len = pywt.wavedecn_shapes(
     shape=(1+FeatureCfg.beat_winL+FeatureCfg.beat_winR,), 
     wavelet=FeatureCfg.wt_family,
@@ -63,7 +67,7 @@ FeatureCfg.wt_feature_len = pywt.wavedecn_shapes(
 )[0][0]
 
 FeatureCfg.rr_local_range = 10  # 10 r peaks
-FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
+FeatureCfg.rr_global_range = 5 * 60 * FeatureCfg.fs  # 5min, units in number of points
 
 FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 

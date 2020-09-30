@@ -854,7 +854,7 @@ class CPSC2020Reader(object):
         return x["train"], y["train"], y_indices["train"], x["test"], y["test"], y_indices["test"]
 
 
-    def locate_premature_beats(self, rec:Union[int,str], premature_type:Optional[str]=None, window:int=5000, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> List[List[int]]:
+    def locate_premature_beats(self, rec:Union[int,str], premature_type:Optional[str]=None, window:int=10000, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> List[List[int]]:
         """ finished, NOT checked,
 
         Parameters:
@@ -864,7 +864,7 @@ class CPSC2020Reader(object):
             or the record name
         premature_type: str, optional,
             premature beat type, can be one of "SPB", "PVC"
-        window: int, default 5000,
+        window: int, default 10000,
             window length of each premature beat
         sampfrom: int, optional,
             start index of the premature beats to locate
@@ -882,14 +882,18 @@ class CPSC2020Reader(object):
         else:
             premature_inds = np.append(ann["SPB_indices"], ann["PVC_indices"])
             premature_inds = np.sort(premature_inds)
-        sf, st = (sampfrom or 0), (sampto or len(data))
+        try:  # premature_inds empty?
+            sf, st = (sampfrom or 0), (sampto or premature_inds[-1]+1)
+        except:
+            premature_intervals = []
+            return premature_intervals
         premature_inds = premature_inds[(sf < premature_inds) & (premature_inds < st)]
         tot_interval = [sf, st]
         premature_intervals, _ = get_optimal_covering(
             total_interval=tot_interval,
             to_cover=premature_inds,
-            min_len=window*self.freq//1000,
-            split_threshold=window*self.freq//1000,
+            min_len=window*self.fs//1000,
+            split_threshold=window*self.fs//1000,
             traceback=False,
         )
         return premature_intervals
@@ -920,13 +924,13 @@ class CPSC2020Reader(object):
         pvc_indices = pvc_indices[(sf < pvc_indices) & (pvc_indices < st)] - sf
 
         default_fig_sz = 120
-        line_len = self.freq * 25  # 25 seconds
+        line_len = self.fs * 25  # 25 seconds
         nb_lines = math.ceil(len(data)/line_len)
 
         for idx in range(nb_lines):
             seg = data[idx*line_len: (idx+1)*line_len]
-            secs = (np.arange(len(seg)) + idx*line_len) / self.freq
-            fig_sz_w = int(round(4.8 * len(seg) / self.freq))
+            secs = (np.arange(len(seg)) + idx*line_len) / self.fs
+            fig_sz_w = int(round(4.8 * len(seg) / self.fs))
             y_range = np.max(np.abs(seg))
             fig_sz_h = 6 * y_range / 1500
             fig, ax = plt.subplots(figsize=(fig_sz_w, fig_sz_h))
