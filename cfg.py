@@ -26,8 +26,8 @@ BaseCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 
 BaseCfg.bias_thr = 0.15 * BaseCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 BaseCfg.beat_ann_bias_thr = 0.1 * BaseCfg.fs  # half width of broad qrs complex
-BaseCfg.beat_winL = 100  # corr. to 250 ms
-BaseCfg.beat_winR = 100  # corr. to 250 ms
+BaseCfg.beat_winL = 250 * BaseCfg.fs // 1000  # corr. to 250 ms
+BaseCfg.beat_winR = 250 * BaseCfg.fs // 1000  # corr. to 250 ms
 
 
 PreprocCfg = ED()
@@ -41,7 +41,7 @@ PreprocCfg.filter_band = [0.5, 45]
 PreprocCfg.parallel_epoch_len = 600  # second
 PreprocCfg.parallel_epoch_overlap = 10  # second
 PreprocCfg.parallel_keep_tail = True
-PreprocCfg.rpeaks = 'xqrs'
+PreprocCfg.rpeaks = 'xqrs'  # TODO: use deep learning models ?
 # or 'gqrs', or 'pantompkins', 'hamilton', 'ssf', 'christov', 'engzee', 'gamboa'
 # or empty string '' if not detecting rpeaks
 """
