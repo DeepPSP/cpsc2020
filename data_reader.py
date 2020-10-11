@@ -150,7 +150,7 @@ class CPSC2020Reader(object):
 
         self.df_stats = CPSC_STATS
 
-        self.palette = {"spb": "black", "pvc": "red",}
+        self.palette = {"spb": "green", "pvc": "red",}
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
         self.label_map = kwargs.get("label_map", BaseCfg.label_map)
@@ -855,7 +855,7 @@ class CPSC2020Reader(object):
 
 
     def locate_premature_beats(self, rec:Union[int,str], premature_type:Optional[str]=None, window:int=10000, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> List[List[int]]:
-        """ finished, NOT checked,
+        """ finished, checked,
 
         Parameters:
         -----------
@@ -900,13 +900,16 @@ class CPSC2020Reader(object):
 
     
     def plot(self, rec:Union[int,str], ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> NoReturn:
-        """ not finished, not checked,
+        """ finished, checked,
 
         Parameters:
         -----------
         rec: int or str,
             number of the record, NOTE that rec_no starts from 1,
             or the record name
+        ticks_granularity: int, default 0,
+            the granularity to plot axis ticks, the higher the more,
+            0 (no ticks) --> 1 (major ticks) --> 2 (major + minor ticks)
         sampfrom: int, optional,
             start index of the data to plot
         sampto: int, optional,
@@ -914,16 +917,18 @@ class CPSC2020Reader(object):
         """
         if 'plt' not in dir():
             import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+
+        patches = {}
 
         data = self.load_data(rec, units='uv', sampfrom=sampfrom, sampto=sampto, keep_dim=False)
         ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
         sf, st = (sampfrom or 0), (sampto or len(data))
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
-        spb_indices = spb_indices[(sf < spb_indices) & (spb_indices < st)] - sf
-        pvc_indices = pvc_indices[(sf < pvc_indices) & (pvc_indices < st)] - sf
+        spb_indices = spb_indices - sf
+        pvc_indices = pvc_indices - sf
 
-        default_fig_sz = 120
         line_len = self.fs * 25  # 25 seconds
         nb_lines = math.ceil(len(data)/line_len)
 
@@ -931,7 +936,7 @@ class CPSC2020Reader(object):
             seg = data[idx*line_len: (idx+1)*line_len]
             secs = (np.arange(len(seg)) + idx*line_len) / self.fs
             fig_sz_w = int(round(4.8 * len(seg) / self.fs))
-            y_range = np.max(np.abs(seg))
+            y_range = np.max(np.abs(seg)) + 100
             fig_sz_h = 6 * y_range / 1500
             fig, ax = plt.subplots(figsize=(fig_sz_w, fig_sz_h))
             ax.plot(secs, seg, c='black')
@@ -944,6 +949,32 @@ class CPSC2020Reader(object):
                 ax.xaxis.set_minor_locator(plt.MultipleLocator(0.04))
                 ax.yaxis.set_minor_locator(plt.MultipleLocator(100))
                 ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+            seg_spb = np.where( (spb_indices>=idx*line_len) & (spb_indices<(idx+1)*line_len) )[0]
+            # print(f"spb_indices = {spb_indices}, seg_spb = {seg_spb}")
+            if len(seg_spb) > 0:
+                seg_spb = spb_indices[seg_spb] / self.fs
+                patches["SPB"] = mpatches.Patch(color=self.palette["spb"], label="SPB")
+            seg_pvc = np.where( (pvc_indices>=idx*line_len) & (pvc_indices<(idx+1)*line_len) )[0]
+            # print(f"pvc_indices = {pvc_indices}, seg_pvc = {seg_pvc}")
+            if len(seg_pvc) > 0:
+                seg_pvc = pvc_indices[seg_pvc] / self.fs
+                patches["PVC"] = mpatches.Patch(color=self.palette["pvc"], label="PVC")
+            for t in seg_spb:
+                ax.axvspan(
+                    max(secs[0], t-0.05), min(secs[-1], t+0.05),
+                    color=self.palette["spb"], alpha=0.5
+                )
+            for t in seg_pvc:
+                ax.axvspan(
+                    max(secs[0], t-0.05), min(secs[-1], t+0.05),
+                    color=self.palette["pvc"], alpha=0.5
+                )
+            if len(patches) > 0:
+                ax.legend(
+                    handles=[v for _,v in patches.items()],
+                    loc="lower left",
+                    prop={"size": 16}
+                )
             ax.set_xlim(secs[0], secs[-1])
             ax.set_ylim(-y_range, y_range)
             ax.set_xlabel('Time [s]')
@@ -952,7 +983,7 @@ class CPSC2020Reader(object):
 
 
 def _ann_to_beat_ann_epoch_v1(rpeaks:np.ndarray, ann:Dict[str, np.ndarray], bias_thr:Real) -> dict:
-    """ finished, checked
+    """ finished, checked,
 
     the naive method to label beat types using annotations provided by the dataset
     
