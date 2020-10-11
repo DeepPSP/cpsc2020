@@ -28,6 +28,7 @@ __all__ = [
     "get_date_str",
     "mask_to_intervals",
     "list_sum",
+    "compute_local_average",
 ]
 
 
@@ -626,6 +627,41 @@ def list_sum(l:Sequence[list]) -> list:
     """ finished, checked,
     """
     return reduce(lambda a,b: a+b, l, [])
+
+
+def compute_local_average(arr:Union[Sequence,np.ndarray], radius:int) -> np.ndarray:
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    arr: sequence,
+        1d array
+    radius: int,
+        radius for computing average
+    
+    Returns:
+    --------
+    res: ndarray,
+    """
+    _arr = np.array(arr)
+    assert _arr.ndim == 1 and radius >= 1
+    if radius >= len(_arr) - 1:
+        res = np.full(_arr.shape, fill_value=np.mean(_arr))
+        return res
+    window = 2*radius + 1
+    if window >= len(_arr):
+        head = np.array([np.mean(_arr[:i+radius+1]) for i in range(radius)])
+        tail = np.array([np.mean(_arr[i-radius:]) for i in range(radius,len(_arr))])
+        res = np.concatenate((head, tail))
+        return res
+    body = np.vstack(
+        [np.concatenate((np.zeros((i,)), _arr, np.zeros((window-1-i,)))) for i in range(window)]
+    )
+    body = np.mean(body,axis=0)[2*radius:-2*radius]
+    head = np.array([np.mean(_arr[:i+radius+1]) for i in range(radius)])
+    tail = np.array([np.mean(_arr[i-2*radius:]) for i in range(radius)])
+    res = np.concatenate((head, body, tail))
+    return res
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats

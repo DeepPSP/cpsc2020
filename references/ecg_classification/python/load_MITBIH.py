@@ -527,7 +527,7 @@ def load_signal(DS, winL, winR, do_preprocess):
         annotations = []
         for line in f:
             annotations.append(line)
-        f.close
+        f.close()
         # 3. Preprocessing signal!
         if do_preprocess:
             #scipy.signal

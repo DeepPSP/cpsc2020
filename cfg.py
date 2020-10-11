@@ -68,6 +68,7 @@ FeatureCfg.wt_feature_len = pywt.wavedecn_shapes(
 
 FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5 * 60 * FeatureCfg.fs  # 5min, units in number of points
+FeatureCfg.rr_normalize_radius = 30  # number of beats (rpeaks)
 
 FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 

@@ -4,6 +4,10 @@ References:
 -----------
 [1] https://github.com/mondejar/ecg-classification
 [2] to add
+
+mainly RR intervals + morphological features
+
+--> (lstm using RR intervals) + (cnn using raw (or processed?) signal)
 """
 import os
 from copy import deepcopy
@@ -18,6 +22,7 @@ from scipy.io import savemat
 from easydict import EasyDict as ED
 
 from cfg import FeatureCfg
+from utils import list_sum, compute_local_average
 
 
 __all__ = [
@@ -141,8 +146,16 @@ def compute_rr_descriptor(rpeaks:np.ndarray, config:Optional[ED]=None) -> np.nda
     local_rr = _compute_local_rr(pre_rr, cfg)
     global_rr = _compute_global_rr(rpeaks, pre_rr, cfg)
 
-    features_rr = np.column_stack((pre_rr, post_rr, local_rr, global_rr))
-    features_rr = features_rr / cfg.fs  #  units to sec
+    if cfg.rr_normalize_radius is not None:
+        # normalized RR features: use local average
+        pre_rr = pre_rr / compute_local_average(pre_rr, cfg.rr_normalize_radius)
+        post_rr = post_rr / compute_local_average(post_rr, cfg.rr_normalize_radius)
+        local_rr = local_rr / compute_local_average(local_rr, cfg.rr_normalize_radius)
+        global_rr = global_rr / compute_local_average(global_rr, cfg.rr_normalize_radius)
+        features_rr = np.column_stack((pre_rr, post_rr, local_rr, global_rr))
+    else:
+        features_rr = np.column_stack((pre_rr, post_rr, local_rr, global_rr))
+        features_rr = features_rr / cfg.fs  #  units to sec
             
     return features_rr
 
@@ -275,8 +288,9 @@ def _compute_global_rr(rpeaks:np.ndarray, prev_rr:np.ndarray, config:ED) -> np.n
                     for idx in range(len(split_indices)-1)
             ],
         )
-    list_addition = lambda a,b: a+b
-    global_rr = np.array(reduce(list_addition, result))
+    # list_addition = lambda a,b: a+b
+    # global_rr = np.array(reduce(list_addition, result))
+    global_rr = np.array(list_sum(result))
     return global_rr
 
 
