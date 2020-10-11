@@ -28,10 +28,10 @@ __all__ = [
 ]
 
 
-def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[np.ndarray]:
-    """
+def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[List[int]]:
+    """ finished, NOT checked,
 
-    a naive function removing non-ECG segments
+    a naive function removing non-ECG segments (flat and motion artefact)
 
     Parameters:
     -----------
@@ -41,7 +41,13 @@ def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[np.ndarray]
         sampling frequency of `filtered_sig`
     config: dict,
         configs of relavant parameters, like window, step, etc.
+
+    Returns:
+    --------
+    intervals: list of (length 2) list of int,
+        list of intervals of non-noise segment of `filtered_sig`
     """
+    _LABEL_VALID, _LABEL_INVALID = 1, 0
     # constants
     siglen = len(filtered_sig)
     window = int(config.get("window", 2000) * fs / 1000)  # 2000 ms
@@ -55,6 +61,7 @@ def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[np.ndarray]
         result = []
         return result
 
+    # detect and remove flat part
     n_seg, residue = divmod(siglen-window+step, step)
     start_inds = [idx*step for idx in range(n_seg)]
     if residue != 0:
@@ -65,7 +72,7 @@ def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[np.ndarray]
         window_vals = filtered_sig[idx:idx+window]
         ampl = np.max(window_vals)-np.min(window_vals)
         if ampl > ampl_min:
-            mask[idx:idx+window] = 1
+            mask[idx:idx+window] = _LABEL_VALID
 
     # detect and remove motion artefact
     window = window // 2  # 1000 ms
@@ -80,9 +87,11 @@ def ecg_denoise(filtered_sig:np.ndarray, fs:Real, config:ED) -> List[np.ndarray]
         window_vals = filtered_sig[idx:idx+window]
         ampl = np.max(window_vals)-np.min(window_vals)
         if ampl > ampl_max:
-            mask[idx:idx+window] = 0
+            mask[idx:idx+window] = _LABEL_INVALID
 
     # mask to intervals
-    interval_threshold = int(5000*fs/1000)  # 5s
-    intervals = mask_to_intervals(mask, 1)
+    interval_threshold = int(config.get("len_threshold", 5)*fs)  # 5s
+    intervals = mask_to_intervals(mask, _LABEL_VALID)
     intervals = [item for item in intervals if item[1]-item[0]>interval_threshold]
+
+    return intervals
