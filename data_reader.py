@@ -914,8 +914,38 @@ class CPSC2020Reader(object):
         )
         return premature_intervals
 
+
+    def _auto_infer_units(self, sig:np.ndarray, sig_type:str="ECG") -> str:
+        """ finished, checked,
+
+        automatically infer the units of `data`,
+        under the assumption that `data` not raw data, with baseline removed
+
+        Parameters:
+        -----------
+        sig: ndarray,
+            the signal to infer its units
+        sig_type: str, default "ECG", case insensitive,
+            type of the signal
+
+        Returns:
+        --------
+        units: str,
+            units of `data`, 'μV' or 'mV'
+        """
+        if sig_type.lower() == "ecg":
+            _MAX_mV = 20  # 20mV, seldom an ECG device has range larger than this value
+            max_val = np.max(np.abs(data))
+            if max_val > _MAX_mV:
+                units = 'μV'
+            else:
+                units = 'mV'
+        else:
+            raise NotImplementedError(f"not implemented for {sig_type}")
+        return units
+
     
-    def plot(self, rec:Union[int,str], ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> NoReturn:
+    def plot(self, rec:Union[int,str], data:Optional[np.ndarray]=None, ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> NoReturn:
         """ finished, checked,
 
         Parameters:
@@ -923,6 +953,10 @@ class CPSC2020Reader(object):
         rec: int or str,
             number of the record, NOTE that rec_no starts from 1,
             or the record name
+        data: ndarray, optional,
+            ecg signal to plot,
+            if given, data of `rec` will not be used,
+            this is useful when plotting filtered data
         ticks_granularity: int, default 0,
             the granularity to plot axis ticks, the higher the more,
             0 (no ticks) --> 1 (major ticks) --> 2 (major + minor ticks)
@@ -937,19 +971,29 @@ class CPSC2020Reader(object):
 
         patches = {}
 
-        data = self.load_data(rec, units='uv', sampfrom=sampfrom, sampto=sampto, keep_dim=False)
+        if data is None:
+            _data = self.load_data(
+                rec, units="μV", sampfrom=sampfrom, sampto=sampto, keep_dim=False
+            )
+        else:
+            units = self._auto_infer_units(data)
+            if units == "mV":
+                _data = data * 1000
+            elif units == "μV":
+                _data = data.copy()
+
         ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
-        sf, st = (sampfrom or 0), (sampto or len(data))
+        sf, st = (sampfrom or 0), (sampto or len(_data))
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
         spb_indices = spb_indices - sf
         pvc_indices = pvc_indices - sf
 
         line_len = self.fs * 25  # 25 seconds
-        nb_lines = math.ceil(len(data)/line_len)
+        nb_lines = math.ceil(len(_data)/line_len)
 
         for idx in range(nb_lines):
-            seg = data[idx*line_len: (idx+1)*line_len]
+            seg = _data[idx*line_len: (idx+1)*line_len]
             secs = (np.arange(len(seg)) + idx*line_len) / self.fs
             fig_sz_w = int(round(4.8 * len(seg) / self.fs))
             y_range = np.max(np.abs(seg)) + 100
