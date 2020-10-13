@@ -77,28 +77,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     prob = list(repeat(0,half_overlap_len)) + prob + list(repeat(0,half_overlap_len))
     prob = np.array(prob)
 
-    # prob to mask, mask to intervals, intervals to rpeaks
-    mask = (prob > 0.5).astype(int)
-    qrs_intervals = mask_to_intervals(mask, 1)
-    # should be 8 * (itv[0]+itv[1]) / 2
-    rpeaks = 4 * np.array([itv[0]+itv[1] for itv in qrs_intervals])
-
-    # post-process
-    rpeaks_diff = np.diff(rpeaks)
-    check = True
-    while check:
-        rpeaks_diff = np.diff(rpeaks)
-        for r in range(len(rpeaks_diff)):
-            if rpeaks_diff[r] < 100:  # 200 ms
-                if prob[int(rpeaks[r]/8)] > prob[int(rpeaks[r+1]/8)]:
-                    rpeaks = np.delete(rpeaks, r+1)
-                    check = True
-                    break
-                else:
-                    rpeaks = np.delete(rpeaks, r)
-                    check = True
-                    break
-            check = False
+    rpeaks = _seq_lab_net_post_process(prob, 0.5)
 
     # convert from resampled positions to original positions
     rpeaks = (np.round((fs/model_fs) * rpeaks)).astype(int)
@@ -111,5 +90,45 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
         sampling_rate=fs,
         tol=0.05,
     )
+    return rpeaks
 
+
+def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray:
+    """ finished, checked,
+
+    convert the array of probability predictions into the array of indices of rpeaks
+
+    Parameters:
+    -----------
+    prob: ndarray,
+    prob_thr: float, default 0.5,
+
+    Returns:
+    --------
+    """
+    _prob = prob.squeeze()
+    assert _prob.ndim == 1, \
+        "only support single record processing, batch processing not supported!"
+    # prob to mask, mask to intervals, intervals to rpeaks
+    mask = (_prob > prob_thr).astype(int)
+    qrs_intervals = mask_to_intervals(mask, 1)
+    # should be 8 * (itv[0]+itv[1]) / 2
+    rpeaks = 4 * np.array([itv[0]+itv[1] for itv in qrs_intervals])
+
+    # post-process
+    rpeaks_diff = np.diff(rpeaks)
+    check = True
+    while check:
+        rpeaks_diff = np.diff(rpeaks)
+        for r in range(len(rpeaks_diff)):
+            if rpeaks_diff[r] < 100:  # 200 ms
+                if _prob[int(rpeaks[r]/8)] > _prob[int(rpeaks[r+1]/8)]:
+                    rpeaks = np.delete(rpeaks, r+1)
+                    check = True
+                    break
+                else:
+                    rpeaks = np.delete(rpeaks, r)
+                    check = True
+                    break
+            check = False
     return rpeaks
