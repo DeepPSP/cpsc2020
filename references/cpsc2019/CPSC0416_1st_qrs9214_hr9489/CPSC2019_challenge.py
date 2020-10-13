@@ -1,13 +1,14 @@
 import numpy as np
 
 def CPSC2019_challenge(result):
-    pos=np.argwhere(result>0.5).flatten()
+    pos = np.argwhere(result>0.5).flatten()
     rpos = []
     pre = 0
     last = len(pos)
+    # to intervals of qrs
     for j in np.where(np.diff(pos)>2)[0]:
         if j-pre>2:
-            rpos.append((pos[pre]+pos[j])*4)
+            rpos.append((pos[pre]+pos[j])*4)  # avg of onset and offset of qrs
         pre = j+1
     rpos.append((pos[pre]+pos[last-1])*4)
     qrs = np.array(rpos)
@@ -16,7 +17,7 @@ def CPSC2019_challenge(result):
     while check:
         qrs_diff = np.diff(qrs)
         for r in range(len(qrs_diff)):
-            if qrs_diff[r]<100:
+            if qrs_diff[r]<100:  # 200 ms
                 if result[int(qrs[r]/8)]>result[int(qrs[r+1]/8)]:
                     qrs = np.delete(qrs,r+1)
                     check = True

@@ -11,6 +11,11 @@ except:
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+__all__ = [
+    "load_model",
+]
+
+
 def load_model(name:str) -> Union[Model, Tuple[Model,...]]:
     """ NOT finished, NOT checked,
 

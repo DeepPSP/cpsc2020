@@ -13,7 +13,7 @@ except:
 
 def pp(data):
     x = np.max(data)
-    if x>20:
+    if x>20:  # 20 mV
         b = np.argwhere(data>20)
         for k in b[:,0]:
             if k>0:
