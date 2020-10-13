@@ -30,11 +30,17 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
         the (raw) ECG signal
     fs: real number,
         sampling frequency of `sig`
+    kwargs: dict,
+        not used, to keep in accordance with other rpeak detection function
 
     Returns:
     --------
     rpeaks: ndarray,
         indices of rpeaks in `sig`
+
+    References:
+    -----------
+    [1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
     """
     cnn_model, crnn_model = load_model("ecg_seq_lab_net")
 
@@ -105,6 +111,8 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray
 
     Returns:
     --------
+    rpeaks: ndarray,
+        indices of rpeaks in converted from the array `prob`
     """
     _prob = prob.squeeze()
     assert _prob.ndim == 1, \

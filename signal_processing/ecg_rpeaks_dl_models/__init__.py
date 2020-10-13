@@ -1,4 +1,9 @@
 """
+
+References:
+-----------
+[1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
+[2] to add more
 """
 import os
 from typing import Union, Optional, Tuple
@@ -17,7 +22,7 @@ __all__ = [
 
 
 def load_model(name:str) -> Union[Model, Tuple[Model,...]]:
-    """ NOT finished, NOT checked,
+    """ finished, checked,
 
     Parameters:
     -----------
@@ -32,7 +37,9 @@ def load_model(name:str) -> Union[Model, Tuple[Model,...]]:
 
 
 def _load_ecg_seq_lab_net() -> Tuple[Model,Model]:
-    """ NOT finished, NOT checked,
+    """ finished, checked,
+
+    load the CNN model and CRNN model from the entry 0416 of CPSC2019
     """
     cnn_config_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.json")
     cnn_h5_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.h5")
