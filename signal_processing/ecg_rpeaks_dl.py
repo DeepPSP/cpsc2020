@@ -106,4 +106,3 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     )
 
     return rpeaks
-    
