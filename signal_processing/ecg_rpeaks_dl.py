@@ -24,6 +24,8 @@ __all__ = [
 def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     """ finished, NOT checked,
 
+    model of entry 0416 of CPSC2019
+
     Parameters:
     -----------
     sig: ndarray,
@@ -42,8 +44,9 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     -----------
     [1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
     """
-    cnn_model, crnn_model = load_model("ecg_seq_lab_net")
+    verbose = kwargs.get("verbose", 0)
 
+    cnn_model, crnn_model = load_model("ecg_seq_lab_net")
     model_fs = 500
     model_input_len = 5000
 
@@ -52,10 +55,15 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     forward_len = model_input_len - overlap_len
     batch_size = 128
 
+    # pre-process
+    sig_rsmp = _remove_spikes_naive(sig)
+    # TODO: consider "To achieve better model generalization, 
+    # the mean of signal values is subtracted" in ref. [1]
+
     if fs != model_fs:
-        sig_rsmp = resample_poly(sig, up=model_fs, down=int(fs))
+        sig_rsmp = resample_poly(sig_rsmp, up=model_fs, down=int(fs))
     else:
-        sig_rsmp = np.array(sig).copy()
+        sig_rsmp = np.array(sig_rsmp).copy()
 
     n_segs, residue = divmod(len(sig_rsmp), forward_len)
     if residue != 0:
@@ -83,10 +91,12 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     prob = list(repeat(0,half_overlap_len)) + prob + list(repeat(0,half_overlap_len))
     prob = np.array(prob)
 
+    # prob --> qrs mask --> qrs intervals --> rpeaks
     rpeaks = _seq_lab_net_post_process(prob, 0.5)
 
     # convert from resampled positions to original positions
     rpeaks = (np.round((fs/model_fs) * rpeaks)).astype(int)
+    rpeaks = rpeaks[np.where(rpeaks < len(sig))[0]]
 
     # adjust to the "true" rpeaks, 
     # i.e. the max in a small nbh of each element in `rpeaks`
@@ -117,7 +127,7 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray
     _prob = prob.squeeze()
     assert _prob.ndim == 1, \
         "only support single record processing, batch processing not supported!"
-    # prob to mask, mask to intervals, intervals to rpeaks
+    # prob --> qrs mask --> qrs intervals --> rpeaks
     mask = (_prob > prob_thr).astype(int)
     qrs_intervals = mask_to_intervals(mask, 1)
     # should be 8 * (itv[0]+itv[1]) / 2
@@ -140,3 +150,28 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray
                     break
             check = False
     return rpeaks
+
+
+def _remove_spikes_naive(sig:np.ndarray) -> np.ndarray:
+    """ finished, NOT checked,
+
+    remove `spikes` from `sig` using a naive method proposed in entry 0416 of CPSC2019
+
+    `spikes` here refers to abrupt large bumps with (abs) value larger than 20 mV,
+    do NOT confuse with `spikes` in paced rhythm
+
+    Parameters:
+    -----------
+    sig: ndarray,
+        single-lead ECG signal with potential spikes
+    
+    Returns:
+    --------
+    filtered_sig: ndarray,
+        ECG signal with `spikes` removed
+    """
+    b = list(filter(lambda k: k > 0, np.argwhere(np.abs(sig)>20).squeeze())
+    filtered_sig = sig.copy()
+    for k in b:
+        filtered_sig[k] = filtered_sig[k-1]
+    return filtered_sig
