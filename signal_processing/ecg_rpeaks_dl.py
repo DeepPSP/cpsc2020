@@ -45,15 +45,10 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     [1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
     """
     verbose = kwargs.get("verbose", 0)
+    batch_size = kwargs.get("batch_size", None)
 
     cnn_model, crnn_model = load_model("ecg_seq_lab_net")
     model_fs = 500
-    model_input_len = 5000
-
-    half_overlap_len = 500
-    overlap_len = 2 * half_overlap_len
-    forward_len = model_input_len - overlap_len
-    batch_size = 128
 
     # pre-process
     sig_rsmp = _remove_spikes_naive(sig)
@@ -65,31 +60,42 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     else:
         sig_rsmp = np.array(sig_rsmp).copy()
 
-    n_segs, residue = divmod(len(sig_rsmp), forward_len)
-    if residue != 0:
-        sig_rsmp = np.append(sig_rsmp, np.zeros((forward_len-residue,)))
-        n_segs += 1
+    if batch_size is not None:
+        model_input_len = 5000
 
-    n_batches = math.ceil(n_segs / batch_size)
+        half_overlap_len = 500
+        overlap_len = 2 * half_overlap_len
+        forward_len = model_input_len - overlap_len
 
-    prob = []
-    segs = list(range(n_segs))
-    for b_idx in range(n_batches):
-        # b_start = b_idx * batch_size * forward_len
-        b_start = b_dix * batch_size
-        b_segs = segs[b_start: b_start + batch_size]
-        b_input = np.vstack(
-            [sig_rsmp[idx*forward_len: idx*forward_len+model_input_len] for idx in b_segs]
-        ).reshape((-1, model_input_len, 1))
-        prob_cnn = cnn_model.predict(b_input)
-        prob_crnn = crnn_model.predict(b_input)
-        b_prob = (prob_cnn[...,0] + prob_crnn[...,0]) / 2
-        b_prob = b_prob[..., half_overlap_len: -half_overlap_len]
-        prob += b_prob.flatten()
-    # prob, output from the for loop,
-    # is the array of probabilities for sig_rsmp[half_overlap_len: -half_overlap_len]
-    prob = list(repeat(0,half_overlap_len)) + prob + list(repeat(0,half_overlap_len))
-    prob = np.array(prob)
+        n_segs, residue = divmod(len(sig_rsmp), forward_len)
+        if residue != 0:
+            sig_rsmp = np.append(sig_rsmp, np.zeros((forward_len-residue,)))
+            n_segs += 1
+
+        n_batches = math.ceil(n_segs / batch_size)
+
+        prob = []
+        segs = list(range(n_segs))
+        for b_idx in range(n_batches):
+            # b_start = b_idx * batch_size * forward_len
+            b_start = b_dix * batch_size
+            b_segs = segs[b_start: b_start + batch_size]
+            b_input = np.vstack(
+                [sig_rsmp[idx*forward_len: idx*forward_len+model_input_len] for idx in b_segs]
+            ).reshape((-1, model_input_len, 1))
+            prob_cnn = cnn_model.predict(b_input)
+            prob_crnn = crnn_model.predict(b_input)
+            b_prob = (prob_cnn[...,0] + prob_crnn[...,0]) / 2
+            b_prob = b_prob[..., half_overlap_len: -half_overlap_len]
+            prob += b_prob.flatten()
+        # prob, output from the for loop,
+        # is the array of probabilities for sig_rsmp[half_overlap_len: -half_overlap_len]
+        prob = list(repeat(0,half_overlap_len)) + prob + list(repeat(0,half_overlap_len))
+        prob = np.array(prob)
+    else:
+        prob_cnn = cnn_model.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
+        prob_crnn = crnn_model.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
+        prob = ((prob_cnn + prob_crnn) / 2).squeeze()
 
     # prob --> qrs mask --> qrs intervals --> rpeaks
     rpeaks = _seq_lab_net_post_process(prob, 0.5)
@@ -107,6 +113,12 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
         tol=0.05,
     )
     return rpeaks
+
+
+def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
+    """
+    """
+    raise NotImplementedError
 
 
 def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray:
