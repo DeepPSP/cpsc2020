@@ -29,6 +29,8 @@ BaseCfg.beat_ann_bias_thr = 0.1 * BaseCfg.fs  # half width of broad qrs complex
 BaseCfg.beat_winL = 250 * BaseCfg.fs // 1000  # corr. to 250 ms
 BaseCfg.beat_winR = 250 * BaseCfg.fs // 1000  # corr. to 250 ms
 
+BaseCfg.torch_dtype = "float"  # "double"
+
 
 PreprocCfg = ED()
 PreprocCfg.fs = BaseCfg.fs
@@ -51,7 +53,7 @@ for qrs detectors:
 """
 
 
-
+# FeatureCfg only for ML models, deprecated
 FeatureCfg = ED()
 FeatureCfg.fs = BaseCfg.fs
 FeatureCfg.features = ['wavelet', 'rr', 'morph',]
@@ -75,7 +77,35 @@ FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 
 
 ModelCfg = ED()
-
+ModelCfg.fs = BaseCfg.fs
+ModelCfg.torch_dtype = BaseCfg.torch_dtype
 
 
 TrainCfg = ED()
+TrainCfg.fs = ModelCfg.fs
+TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
+TrainCfg.overlap_len = int(8 * TrainCfg.fs)  # 8 s
+TrainCfg.label
+TrainCfg.normalize_data = True
+
+# data augmentation
+TrainCfg.flip = True
+TrainCfg.label_smoothing = 0.1
+TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
+TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis
+# TODO: add more data augmentation
+
+# configs of training epochs, batch, etc.
+TrainCfg.n_epochs = 300
+TrainCfg.batch_size = 128
+# TrainCfg.max_batches = 500500
+
+# configs of optimizers and lr_schedulers
+TrainCfg.train_optimizer = "adam"  # "sgd"
+
+TrainCfg.learning_rate = 0.0001
+TrainCfg.lr = TrainCfg.learning_rate
+TrainCfg.lr_step_size = 50
+TrainCfg.lr_gamma = 0.1
+
+TrainCfg.lr_scheduler = None  # 'plateau', 'burn_in', 'step', None

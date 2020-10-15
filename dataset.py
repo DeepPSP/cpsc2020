@@ -33,9 +33,23 @@ class CPSC2020(Dataset):
     """
     """
     def __init__(self, config:ED, training:bool=True) -> NoReturn:
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        config: dict,
+            configurations for the Dataset,
+            ref. `cfg.TrainCfg`
+        training: bool, default True,
+            if True, the training set will be loaded, otherwise the test set
         """
-        """
-        raise NotImplementedError
+        super().__init__()
+        self.config = deepcopy(config)
+        self.reader = CR(db_dir=config.db_dir)
+        if ModelCfg.torch_dtype.lower() == 'double':
+            self.dtype = np.float64
+        else:
+            self.dtype = np.float32
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
         """
