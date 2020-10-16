@@ -7,7 +7,7 @@ def CPSC2019_challenge(result):
     last = len(pos)
     # to intervals of qrs
     for j in np.where(np.diff(pos)>2)[0]:
-        if j-pre>2:
+        if j-pre>2:  # duration > 2 * (8 * 2 ms)
             rpos.append((pos[pre]+pos[j])*4)  # avg of onset and offset of qrs
         pre = j+1
     rpos.append((pos[pre]+pos[last-1])*4)

@@ -94,6 +94,10 @@ TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis
 # TODO: add more data augmentation
+# gaussain noise
+# sinusoidal signal with random initial phase and amplitude
+# randomly shifting the baseline
+TrainCfg.flip = True  # making the signal upside down
 
 # configs of training epochs, batch, etc.
 TrainCfg.n_epochs = 300

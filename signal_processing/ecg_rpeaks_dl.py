@@ -49,6 +49,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     cnn_model, crnn_model = load_model("ecg_seq_lab_net")
     model_fs = 500
+    model_granularity = 8  # 1/8 times of model_fs
 
     # pre-process
     sig_rsmp = _remove_spikes_naive(sig)
@@ -116,12 +117,21 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
 
 def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
+    """ NOT finished, NOT checked,
+
+    Parameters:
+    -----------
+    sig: ndarray,
+
+    Returns:
+    --------
+    sig_processed: ndarray,
     """
-    """
-    raise NotImplementedError
+    sig_processed = _remove_spikes_naive(sig)
+    return sig_processed
 
 
-def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray:
+def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=[200,1200]) -> np.ndarray:
     """ finished, checked,
 
     convert the array of probability predictions into the array of indices of rpeaks
@@ -129,30 +139,52 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray
     Parameters:
     -----------
     prob: ndarray,
+        the array of probabilities of qrs complex
     prob_thr: float, default 0.5,
+        threshold of probability for predicting qrs complex
+    duration_thr: int, default 4*16,
+        minimum duration for a "true" qrs complex, units in ms
+    dist_thr: int or sequence of int, default [200, 1200],
+        0. minimum distance for two consecutive qrs complexes, units in ms;
+        1. maximum distance for checking missing qrs complexes, units in ms
+        if is int, then is 0.
 
     Returns:
     --------
     rpeaks: ndarray,
         indices of rpeaks in converted from the array `prob`
     """
+    model_fs = 500
+    model_granularity = 8  # 1/8 times of model_fs
     _prob = prob.squeeze()
     assert _prob.ndim == 1, \
         "only support single record processing, batch processing not supported!"
     # prob --> qrs mask --> qrs intervals --> rpeaks
     mask = (_prob > prob_thr).astype(int)
     qrs_intervals = mask_to_intervals(mask, 1)
+    # threshold of 64 ms for the duration of clustering positive samples
+    # is set to eliminate some wrong predictions
+    _duration_thr = duration_thr / (1000/model_fs) / model_granularity
+    qrs_intervals = [
+        itv for itv in qrs_intervals if itv[1]-itv[0] >= _duration_thr
+    ]
     # should be 8 * (itv[0]+itv[1]) / 2
-    rpeaks = 4 * np.array([itv[0]+itv[1] for itv in qrs_intervals])
+    rpeaks = (model_granularity//2) * np.array([itv[0]+itv[1] for itv in qrs_intervals])
+
+    _dist_thr = [dist_thr] if isinstance(dist_thr, int) else dist_thr
+    assert len(_dist_thr) <= 2
 
     # post-process
     rpeaks_diff = np.diff(rpeaks)
     check = True
+    dist_thr_inds = _dist_thr[0] / model_fs
     while check:
         rpeaks_diff = np.diff(rpeaks)
         for r in range(len(rpeaks_diff)):
-            if rpeaks_diff[r] < 100:  # 200 ms
-                if _prob[int(rpeaks[r]/8)] > _prob[int(rpeaks[r+1]/8)]:
+            if rpeaks_diff[r] < dist_thr_inds:  # 200 ms
+                prev_r_ind = int(rpeaks[r]/model_granularity)  # ind in _prob
+                next_r_ind = int(rpeaks[r+1]/model_granularity)  # ind in _prob
+                if _prob[prev_r_ind] > _prob[next_r_ind]:
                     rpeaks = np.delete(rpeaks, r+1)
                     check = True
                     break
@@ -161,11 +193,21 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5) -> np.ndarray
                     check = True
                     break
             check = False
+    if len(_dist_thr) == 1:
+        return rpeaks
+    check = True
+    # TODO
+    # further search should be performed to locate where the
+    # distances are greater than 1200 ms between adjacent QRS complexes
+    # if there exists at least one point that is great than 0.5, 
+    # the threshold of the duration of clustering positive samples is reduced by 16 ms 
+    # and this process will continue until a new QRS candidate is found 
+    # or the threshold decreases to zero
     return rpeaks
 
 
 def _remove_spikes_naive(sig:np.ndarray) -> np.ndarray:
-    """ finished, NOT checked,
+    """ finished, checked,
 
     remove `spikes` from `sig` using a naive method proposed in entry 0416 of CPSC2019
 
