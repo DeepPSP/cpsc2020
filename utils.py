@@ -602,7 +602,7 @@ def mask_to_intervals(mask:np.ndarray, vals:Optional[Union[int,Sequence[int]]]=N
         _vals = [vals]
     else:
         _vals = vals
-    assert set(_vals) & set(mask) == set(_vals)
+    # assert set(_vals) & set(mask) == set(_vals)
 
     intervals = {v:[] for v in _vals}
     for v in _vals:

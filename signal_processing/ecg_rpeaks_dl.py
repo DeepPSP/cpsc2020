@@ -21,6 +21,9 @@ __all__ = [
 ]
 
 
+CNN_MODEL, CRNN_MODEL = load_model("ecg_seq_lab_net")
+
+
 def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     """ finished, NOT checked,
 
@@ -47,14 +50,11 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     verbose = kwargs.get("verbose", 0)
     batch_size = kwargs.get("batch_size", None)
 
-    cnn_model, crnn_model = load_model("ecg_seq_lab_net")
     model_fs = 500
     model_granularity = 8  # 1/8 times of model_fs
 
     # pre-process
-    sig_rsmp = _remove_spikes_naive(sig)
-    # TODO: consider "To achieve better model generalization, 
-    # the mean of signal values is subtracted" in ref. [1]
+    sig_rsmp = _seq_lab_net_pre_process(sig)
 
     if fs != model_fs:
         sig_rsmp = resample_poly(sig_rsmp, up=model_fs, down=int(fs))
@@ -84,8 +84,8 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
             b_input = np.vstack(
                 [sig_rsmp[idx*forward_len: idx*forward_len+model_input_len] for idx in b_segs]
             ).reshape((-1, model_input_len, 1))
-            prob_cnn = cnn_model.predict(b_input)
-            prob_crnn = crnn_model.predict(b_input)
+            prob_cnn = CNN_MODEL.predict(b_input)
+            prob_crnn = CRNN_MODEL.predict(b_input)
             b_prob = (prob_cnn[...,0] + prob_crnn[...,0]) / 2
             b_prob = b_prob[..., half_overlap_len: -half_overlap_len]
             prob += b_prob.flatten()
@@ -122,12 +122,19 @@ def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
     Parameters:
     -----------
     sig: ndarray,
+        the ECG signal to be pre-processed
 
     Returns:
     --------
     sig_processed: ndarray,
+        the processed ECG signal
     """
+    # Single towering spike whose voltage is more than 20 mV is examined 
+    # and replaced by the normal sample immediately before it
     sig_processed = _remove_spikes_naive(sig)
+    # TODO:
+    # To achieve better model generalization,
+    # the (local?) mean of signal values is subtracted for each recording
     return sig_processed
 
 
@@ -160,25 +167,22 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     assert _prob.ndim == 1, \
         "only support single record processing, batch processing not supported!"
     # prob --> qrs mask --> qrs intervals --> rpeaks
-    mask = (_prob > prob_thr).astype(int)
+    mask = (_prob >= prob_thr).astype(int)
     qrs_intervals = mask_to_intervals(mask, 1)
     # threshold of 64 ms for the duration of clustering positive samples
     # is set to eliminate some wrong predictions
     _duration_thr = duration_thr / (1000/model_fs) / model_granularity
-    qrs_intervals = [
-        itv for itv in qrs_intervals if itv[1]-itv[0] >= _duration_thr
-    ]
     # should be 8 * (itv[0]+itv[1]) / 2
-    rpeaks = (model_granularity//2) * np.array([itv[0]+itv[1] for itv in qrs_intervals])
+    rpeaks = (model_granularity//2) * np.array([itv[0]+itv[1] for itv in qrs_intervals if itv[1]-itv[0] >= _duration_thr])
 
     _dist_thr = [dist_thr] if isinstance(dist_thr, int) else dist_thr
     assert len(_dist_thr) <= 2
 
     # post-process
-    rpeaks_diff = np.diff(rpeaks)
     check = True
     dist_thr_inds = _dist_thr[0] / model_fs
     while check:
+        check = False
         rpeaks_diff = np.diff(rpeaks)
         for r in range(len(rpeaks_diff)):
             if rpeaks_diff[r] < dist_thr_inds:  # 200 ms
@@ -192,17 +196,41 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
                     rpeaks = np.delete(rpeaks, r)
                     check = True
                     break
-            check = False
     if len(_dist_thr) == 1:
         return rpeaks
     check = True
-    # TODO
     # further search should be performed to locate where the
     # distances are greater than 1200 ms between adjacent QRS complexes
     # if there exists at least one point that is great than 0.5, 
     # the threshold of the duration of clustering positive samples is reduced by 16 ms 
     # and this process will continue until a new QRS candidate is found 
     # or the threshold decreases to zero
+    check = True
+    dist_thr_inds = _dist_thr[1] / model_fs
+    while check:
+        check = False
+        rpeaks_diff = np.diff(rpeaks)
+        for r in range(len(rpeaks_diff)):
+            if rpeaks_diff[r] >= dist_thr_inds:  # 1200 ms
+                prev_r_ind = int(rpeaks[r]/model_granularity)  # ind in _prob
+                next_r_ind = int(rpeaks[r+1]/model_granularity)  # ind in _prob
+                prev_qrs = [itv for itv in qrs_intervals if itv[0]<=prev_r_ind<=itv[1]][0]
+                next_qrs = [itv for itv in qrs_intervals if itv[0]<=next_r_ind<=itv[1]][0]
+                check_itv = [prev_qrs[1], next_qrs[0]]
+                l_new_itv = mask_to_intervals(mask[check_itv[0]: check_itv[1]], 1)
+                if len(l_new_itv) == 0:
+                    continue
+                l_new_itv = [[itv[0]+check_itv[0], itv[1]+check_itv[0]] for itv in l_new_itv]
+                new_itv = max(l_new_itv, key=lambda itv: itv[1]-itv[0])
+                new_max_prob = (_prob[new_itv[0]:new_itv[1]]).max()
+                for itv in l_new_itv:
+                    itv_prob = (_prob[itv[0]:itv[1]]).max()
+                    if itv[1] - itv[0] == new_itv[1] - new_itv[0] and itv_prob > new_max_prob:
+                        new_itv = itv
+                        new_max_prob = itv_prob
+                rpeaks = np.insert(rpeaks, r+1, 4*(new_itv[0]+new_itv[1]))
+                check = True
+                break
     return rpeaks
 
 

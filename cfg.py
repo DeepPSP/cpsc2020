@@ -85,7 +85,6 @@ TrainCfg = ED()
 TrainCfg.fs = ModelCfg.fs
 TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
 TrainCfg.overlap_len = int(8 * TrainCfg.fs)  # 8 s
-TrainCfg.label
 TrainCfg.normalize_data = True
 
 # data augmentation
