@@ -22,7 +22,8 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BaseCfg = ED()
 BaseCfg.fs = 400  # Hz, CPSC2020 data fs
 BaseCfg.label_map = dict(N=0, S=1, V=2)
-BaseCfg.training_data = os.path.join(_BASE_DIR, "training_data")
+# BaseCfg.training_data = os.path.join(_BASE_DIR, "training_data")
+BaseCfg.db_dir = "/media/cfs/wenhao71/data/CPSC2020/TrainingSet/"
 
 BaseCfg.bias_thr = 0.15 * BaseCfg.fs  # keep the same with `THR` in `CPSC202_score.py`
 BaseCfg.beat_ann_bias_thr = 0.1 * BaseCfg.fs  # half width of broad qrs complex
@@ -35,7 +36,7 @@ BaseCfg.torch_dtype = "float"  # "double"
 PreprocCfg = ED()
 PreprocCfg.fs = BaseCfg.fs
 # sequential, keep correct ordering, to add 'motion_artefact'
-PreprocCfg.preproc = ['baseline', 'bandpass',]
+PreprocCfg.preproc = ['bandpass',]  # 'baseline',
 # for 200 ms and 600 ms, ref. (`ecg_classification` in `reference`)
 PreprocCfg.baseline_window1 = int(0.2*PreprocCfg.fs)  # 200 ms window
 PreprocCfg.baseline_window2 = int(0.6*PreprocCfg.fs)  # 600 ms window
@@ -83,17 +84,18 @@ ModelCfg.torch_dtype = BaseCfg.torch_dtype
 
 TrainCfg = ED()
 TrainCfg.fs = ModelCfg.fs
+TrainCfg.db_dir = BaseCfg.db_dir
 TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
 TrainCfg.overlap_len = int(8 * TrainCfg.fs)  # 8 s
 TrainCfg.normalize_data = True
 
 # data augmentation
-TrainCfg.flip = True
+TrainCfg.flip = True  # signal upside down
 TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis
 # TODO: add more data augmentation
-# gaussain noise
+TrainCfg.gaussian_std = 0.05  # gaussian noise, with mean 0; if std = 0, gaussian noise not added
 # sinusoidal signal with random initial phase and amplitude
 # randomly shifting the baseline
 TrainCfg.flip = True  # making the signal upside down

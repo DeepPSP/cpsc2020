@@ -94,5 +94,5 @@ def train(**config):
     cfg.update(config or {})
     verbose = cfg.get("verbose", 0)
 
-    data_gen = CPSC2020Reader(db_dir=cfg.training_data, working_dir=cfg.training_workdir)
+    data_gen = CPSC2020Reader(db_dir=cfg.db_dir, working_dir=cfg.training_workdir)
     

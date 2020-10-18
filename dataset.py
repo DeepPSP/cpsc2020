@@ -60,3 +60,10 @@ class CPSC2020(Dataset):
         """
         """
         raise NotImplementedError
+
+    def persistence(self) -> NoReturn:
+        """ NOT finished, NOT checked,
+
+        make the dataset persistent w.r.t. the ratios in `self.config`
+        """
+        raise NotImplementedError
