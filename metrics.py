@@ -80,7 +80,8 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
 
 
 def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Union[Tuple[int],dict]:
-    """
+    """ finished, checked,
+
     Score Function for all (test) records
 
     Parameters:
