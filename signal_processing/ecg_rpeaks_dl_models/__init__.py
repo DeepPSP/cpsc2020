@@ -12,6 +12,9 @@ try:
     from keras.models import model_from_json, Model
 except:
     from tensorflow.keras.models import model_from_json, Model
+import torch
+from torch import nn
+
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,7 +24,7 @@ __all__ = [
 ]
 
 
-def load_model(name:str) -> Union[Model, Tuple[Model,...]]:
+def load_model(name:str) -> Union[Model, Tuple[Model,...], nn.Module, Tuple[nn.Module,...]]:
     """ finished, checked,
 
     Parameters:
@@ -29,14 +32,16 @@ def load_model(name:str) -> Union[Model, Tuple[Model,...]]:
     name: str,
         name of the model
     """
-    if name.lower() == "ecg_seq_lab_net":
-        cnn_model, crnn_model = _load_ecg_seq_lab_net()
+    if name.lower() == "keras_ecg_seq_lab_net":
+        cnn_model, crnn_model = _load_keras_ecg_seq_lab_net()
         return cnn_model, crnn_model
+    elif name.lower() == "pytorch_ecg_seq_lab_net":
+        raise NotImplementedError
     else:
         raise NotImplementedError
 
 
-def _load_ecg_seq_lab_net() -> Tuple[Model,Model]:
+def _load_keras_ecg_seq_lab_net() -> Tuple[Model,Model]:
     """ finished, checked,
 
     load the CNN model and CRNN model from the entry 0416 of CPSC2019
@@ -52,3 +57,9 @@ def _load_ecg_seq_lab_net() -> Tuple[Model,Model]:
     crnn_model.load_weights(crnn_h5_path)
 
     return cnn_model, crnn_model
+
+
+def _load_pytorch_ecg_seq_lab_net():
+    """
+    """
+    raise NotImplementedError

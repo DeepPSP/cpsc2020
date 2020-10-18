@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-CNN_MODEL, CRNN_MODEL = load_model("ecg_seq_lab_net")
+CNN_MODEL, CRNN_MODEL = load_model("keras_ecg_seq_lab_net")
 
 
 def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
@@ -61,9 +61,10 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     else:
         sig_rsmp = np.array(sig_rsmp).copy()
 
-    if batch_size is not None:
+    # TODO: split into batches for sig with too long duration
+    max_single_batch_half_len = 10 * 60 * model_fs
+    if batch_size is not None or len(sig_rsmp) > 2 * max_single_batch_half_len:
         model_input_len = 5000
-
         half_overlap_len = 500
         overlap_len = 2 * half_overlap_len
         forward_len = model_input_len - overlap_len
@@ -117,7 +118,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
 
 def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
-    """ NOT finished, NOT checked,
+    """ partly finished, partly checked,
 
     Parameters:
     -----------
@@ -139,7 +140,7 @@ def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
 
 
 def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=[200,1200]) -> np.ndarray:
-    """ finished, checked,
+    """ finished, partly checked,
 
     convert the array of probability predictions into the array of indices of rpeaks
 
