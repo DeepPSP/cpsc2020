@@ -35,6 +35,7 @@ from .ecg_rpeaks import (
     xqrs_detect, gqrs_detect, pantompkins,
     hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,
 )
+from .ecg_rpeaks_dl import seq_lab_net_detect
 
 
 __all__ = [
@@ -53,7 +54,11 @@ QRS_DETECTORS = {
     "christov": christov_detect,
     "engzee": engzee_detect,
     "gamboa": gamboa_detect,
+    "seq_lab": seq_lab_net_detect,
 }
+DL_QRS_DETECTORS = [
+    "seq_lab",
+]
 
 
 def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
@@ -103,7 +108,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
             frequency=cfg.filter_band,
         )['signal']
 
-    if cfg.rpeaks:
+    if cfg.rpeaks and cfg.rpeaks.lower() not in DL_QRS_DETECTORS:
         detector = QRS_DETECTORS[cfg.rpeaks.lower()]
         rpeaks = detector(sig=filtered_ecg, fs=fs).astype(int)
     else:
@@ -190,6 +195,9 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
         filtered_ecg = np.append(filtered_ecg, tail_result['filtered_ecg'][epoch_overlap_half:])
         tail_rpeaks = tail_result['rpeaks'][np.where(tail_result['rpeaks'] >= epoch_overlap_half)[0]]
         rpeaks = np.append(rpeaks, len(result)*epoch_forward + tail_rpeaks)
+
+    if cfg.rpeaks and cfg.rpeaks.lower() in DL_QRS_DETECTORS:
+        rpeaks = QRS_DETECTORS[cfg.rpeaks.lower()](sig=raw_sig, fs=fs).astype(int)
 
     if save_dir:
         # NOTE: this part is not tested

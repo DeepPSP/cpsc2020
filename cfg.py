@@ -44,7 +44,7 @@ PreprocCfg.filter_band = [0.5, 45]
 PreprocCfg.parallel_epoch_len = 600  # second
 PreprocCfg.parallel_epoch_overlap = 10  # second
 PreprocCfg.parallel_keep_tail = True
-PreprocCfg.rpeaks = 'xqrs'  # TODO: use deep learning models ?
+PreprocCfg.rpeaks = 'seq_lab'  # 'xqrs'  # TODO: use deep learning models ?
 # or 'gqrs', or 'pantompkins', 'hamilton', 'ssf', 'christov', 'engzee', 'gamboa'
 # or empty string '' if not detecting rpeaks
 """
@@ -90,7 +90,6 @@ TrainCfg.overlap_len = int(8 * TrainCfg.fs)  # 8 s
 TrainCfg.normalize_data = True
 
 # data augmentation
-TrainCfg.flip = True  # signal upside down
 TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis

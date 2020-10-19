@@ -37,7 +37,10 @@ from copy import deepcopy
 from typing import Union, Optional, Any, List, Tuple, NoReturn
 
 import numpy as np
-from tqdm import tqdm
+try:
+    from tqdm.auto import tqdm
+except ModuleNotFoundError:
+    from tqdm import tqdm
 import xgboost as xgb
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.utils.class_weight import compute_class_weight
