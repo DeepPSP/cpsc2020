@@ -17,7 +17,7 @@ import multiprocessing as mp
 from easydict import EasyDict as ED
 
 from utils import CPSC_STATS, get_optimal_covering
-from cfg import BaseCfg
+from cfg import BaseCfg, PlotCfg
 
 
 __all__ = [
@@ -76,6 +76,49 @@ class CPSC2020Reader(object):
     >>> dr = CR(db_dir)
     >>> rec = dr.all_records[1]
     >>> dr.plot(rec, sampfrom=0, sampto=4000, ticks_granularity=2)
+    3. PVC and SPB can also co-exist, as illustrated via the following code (from CINC2020):
+    >>> from utils.scoring_aux_data import dx_cooccurrence_all
+    >>> dx_cooccurrence_all.loc[["PVC","VPB"], ["PAC","SVPB",]]
+    ... 	PAC	SVPB
+    ... PVC	14	1
+    ... VPB	27	0
+    and also from the following code:
+    >>> for rec in dr.all_records:
+    >>>     ann = dr.load_ann(rec)
+    >>>     spb = ann["SPB_indices"]
+    >>>     pvc = ann["PVC_indices"]
+    >>>     if len(np.diff(spb)) > 0:
+    >>>         print(f"{rec}: min dist among SPB = {np.min(np.diff(spb))}")
+    >>>     if len(np.diff(pvc)) > 0:
+    >>>         print(f"{rec}: min dist among PVC = {np.min(np.diff(pvc))}")
+    >>>     diff = [s-p for s,p in product(spb, pvc)]
+    >>>     if len(diff) > 0:
+    >>>         print(f"{rec}: min dist between SPB and PVC = {np.min(np.abs(diff))}")
+    ... A01: min dist among SPB = 630
+    ... A02: min dist among SPB = 696
+    ... A02: min dist among PVC = 87
+    ... A02: min dist between SPB and PVC = 562
+    ... A03: min dist among SPB = 7044
+    ... A03: min dist among PVC = 151
+    ... A03: min dist between SPB and PVC = 3750
+    ... A04: min dist among SPB = 175
+    ... A04: min dist among PVC = 156
+    ... A04: min dist between SPB and PVC = 178
+    ... A05: min dist among SPB = 182
+    ... A05: min dist between SPB and PVC = 22320
+    ... A06: min dist among SPB = 455158
+    ... A07: min dist among SPB = 603
+    ... A07: min dist among PVC = 153
+    ... A07: min dist between SPB and PVC = 257
+    ... A08: min dist among SPB = 2903029
+    ... A08: min dist among PVC = 106
+    ... A08: min dist between SPB and PVC = 350
+    ... A09: min dist among SPB = 180
+    ... A09: min dist among PVC = 7719290
+    ... A09: min dist between SPB and PVC = 1271
+    ... A10: min dist among SPB = 148
+    ... A10: min dist among PVC = 708
+    ... A10: min dist between SPB and PVC = 177
 
     ISSUES:
     -------
@@ -478,12 +521,12 @@ class CPSC2020Reader(object):
                 patches["PVC"] = mpatches.Patch(color=self.palette["pvc"], label="PVC")
             for t in seg_spb:
                 ax.axvspan(
-                    max(secs[0], t-0.05), min(secs[-1], t+0.05),
+                    max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
                     color=self.palette["spb"], alpha=0.5
                 )
             for t in seg_pvc:
                 ax.axvspan(
-                    max(secs[0], t-0.05), min(secs[-1], t+0.05),
+                    max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
                     color=self.palette["pvc"], alpha=0.5
                 )
             if len(patches) > 0:

@@ -13,6 +13,7 @@ __all__ = [
     "FeatureCfg",
     "ModelCfg",
     "TrainCfg",
+    "PlotCfg",
 ]
 
 
@@ -113,3 +114,8 @@ TrainCfg.lr_step_size = 50
 TrainCfg.lr_gamma = 0.1
 
 TrainCfg.lr_scheduler = None  # 'plateau', 'burn_in', 'step', None
+
+
+PlotCfg = ED()
+PlotCfg.winL = 0.06  # second
+PlotCfg.winR = 0.08  # second
