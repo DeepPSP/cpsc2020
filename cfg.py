@@ -22,7 +22,8 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 BaseCfg = ED()
 BaseCfg.fs = 400  # Hz, CPSC2020 data fs
-BaseCfg.label_map = dict(N=0, S=1, V=2)
+BaseCfg.classes = ["N", "S", "V"]
+BaseCfg.class_map = {c: idx for idx, c in enumerate(BaseCfg.classes)}
 # BaseCfg.training_data = os.path.join(_BASE_DIR, "training_data")
 BaseCfg.db_dir = "/media/cfs/wenhao71/data/CPSC2020/TrainingSet/"
 
@@ -81,6 +82,85 @@ FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 ModelCfg = ED()
 ModelCfg.fs = BaseCfg.fs
 ModelCfg.torch_dtype = BaseCfg.torch_dtype
+ModelCfg.classes = deepcopy(BaseCfg.classes)
+ModelCfg.class_map = deepcopy(BaseCfg.class_map)
+
+ModelCfg.cnn = ED()
+ModelCfg.cnn.name = 'multi_scopic'
+ModelCfg.cnn.multi_scopic = ED()
+ModelCfg.cnn.multi_scopic.groups = 1
+ModelCfg.cnn.multi_scopic.scopes = [
+    [
+        [1,],
+        [1,1,],
+        [1,1,1,],
+    ],
+    [
+        [2,],
+        [2,4,],
+        [8,8,8,],
+    ],
+    [
+        [4,],
+        [4,8,],
+        [16,32,64,],
+    ],
+]
+ModelCfg.cnn.multi_scopic.filter_lengths = [
+    [11, 7, 5,],
+    [11, 7, 5,],
+    [11, 7, 5,],
+]
+ModelCfg.cnn.multi_scopic.subsample_lengths = list(repeat(2, len(multi_scopic.scopes)))
+_base_num_filters = 16
+ModelCfg.cnn.multi_scopic.num_filters = [
+    [
+        _base_num_filters*4,
+        _base_num_filters*8,
+        _base_num_filters*16,
+    ],
+    [
+        _base_num_filters*4,
+        _base_num_filters*8,
+        _base_num_filters*16,
+    ],
+    [
+        _base_num_filters*4,
+        _base_num_filters*8,
+        _base_num_filters*16,
+    ],
+]
+ModelCfg.cnn.multi_scopic.dropouts = [
+    [0, 0.2, 0],
+    [0, 0.2, 0],
+    [0, 0.2, 0],
+]
+ModelCfg.cnn.multi_scopic.bias = True
+ModelCfg.cnn.multi_scopic.kernel_initializer = "he_normal"
+ModelCfg.cnn.multi_scopic.kw_initializer = {}
+ModelCfg.cnn.multi_scopic.activation = "relu"
+ModelCfg.cnn.multi_scopic.kw_activation = {"inplace": True}
+ModelCfg.cnn.multi_scopic.block = ED()
+ModelCfg.cnn.multi_scopic.block.subsample_mode = 'max'  # or 'conv', 'avg', 'nearest', 'linear', 'bilinear'
+ModelCfg.cnn.multi_scopic.block.bias = ModelCfg.cnn.multi_scopic.bias
+ModelCfg.cnn.multi_scopic.block.kernel_initializer = multi_scopic.kernel_initializer
+ModelCfg.cnn.multi_scopic.block.kw_initializer = \
+    deepcopy(ModelCfg.cnn.multi_scopic.kw_initializer)
+ModelCfg.cnn.multi_scopic.block.activation = ModelCfg.cnn.multi_scopic.activation
+ModelCfg.cnn.multi_scopic.block.kw_activation = \
+    deepcopy(ModelCfg.cnn.multi_scopic.kw_activation)
+
+# rnn part
+ModelCfg.rnn = ED()
+ModelCfg.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
+
+# ModelCfg.rnn.lstm = deepcopy(lstm)
+# ModelCfg.rnn.attention = deepcopy(attention)
+# ModelCfg.rnn.linear = deepcopy(linear)
+
+# global pooling
+# currently is fixed using `AdaptiveMaxPool1d`
+ModelCfg.global_pool = 'max'  # 'avg', 'attentive'
 
 
 TrainCfg = ED()
@@ -88,6 +168,8 @@ TrainCfg.fs = ModelCfg.fs
 TrainCfg.db_dir = BaseCfg.db_dir
 TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
 TrainCfg.overlap_len = int(8 * TrainCfg.fs)  # 8 s
+TrainCfg.classes = deepcopy(BaseCfg.classes)
+TrainCfg.class_map = deepcopy(BaseCfg.class_map)
 TrainCfg.normalize_data = True
 
 # data augmentation
