@@ -81,6 +81,7 @@ FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
 
 ModelCfg = ED()
 ModelCfg.fs = BaseCfg.fs
+ModelCfg.n_leads = 1
 ModelCfg.torch_dtype = BaseCfg.torch_dtype
 ModelCfg.classes = deepcopy(BaseCfg.classes)
 ModelCfg.class_map = deepcopy(BaseCfg.class_map)
@@ -165,6 +166,7 @@ ModelCfg.global_pool = 'max'  # 'avg', 'attentive'
 
 TrainCfg = ED()
 TrainCfg.fs = ModelCfg.fs
+TrainCfg.n_leads = 1
 TrainCfg.db_dir = BaseCfg.db_dir
 TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
 TrainCfg.overlap_len = int(9 * TrainCfg.fs)  # 9 s

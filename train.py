@@ -33,6 +33,7 @@ from torch_ecg.torch_ecg.models.nets import (
 from utils import get_date_str, dict_to_str, str2bool
 from cfg import ModelCfg, TrainCfg
 from dataset import CPSC2020
+from metrics import eval_score, CPSC2020_loss, CPSC2020_score
 
 if ModelCfg.torch_dtype.lower() == 'double':
     torch.set_default_tensor_type(torch.DoubleTensor)
@@ -217,61 +218,57 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
             writer.add_scalar('train/epoch_loss', epoch_loss, global_step)
 
             # eval for each epoch using `evaluate`
-            # if debug:
-            #     eval_train_res = evaluate(model, val_train_loader, config, device, debug)
-            #     writer.add_scalar('train/auroc', eval_train_res[0], global_step)
-            #     writer.add_scalar('train/auprc', eval_train_res[1], global_step)
-            #     writer.add_scalar('train/accuracy', eval_train_res[2], global_step)
-            #     writer.add_scalar('train/f_measure', eval_train_res[3], global_step)
-            #     writer.add_scalar('train/f_beta_measure', eval_train_res[4], global_step)
-            #     writer.add_scalar('train/g_beta_measure', eval_train_res[5], global_step)
-            #     writer.add_scalar('train/challenge_metric', eval_train_res[6], global_step)
+            if debug:
+                eval_train_res = evaluate(model, val_train_loader, config, device, debug)
+                writer.add_scalar('train/auroc', eval_train_res[0], global_step)
+                writer.add_scalar('train/auprc', eval_train_res[1], global_step)
+                writer.add_scalar('train/accuracy', eval_train_res[2], global_step)
+                writer.add_scalar('train/f_measure', eval_train_res[3], global_step)
+                writer.add_scalar('train/f_beta_measure', eval_train_res[4], global_step)
+                writer.add_scalar('train/g_beta_measure', eval_train_res[5], global_step)
 
-            # eval_res = evaluate(model, val_loader, config, device, debug)
-            # model.train()
-            # writer.add_scalar('test/auroc', eval_res[0], global_step)
-            # writer.add_scalar('test/auprc', eval_res[1], global_step)
-            # writer.add_scalar('test/accuracy', eval_res[2], global_step)
-            # writer.add_scalar('test/f_measure', eval_res[3], global_step)
-            # writer.add_scalar('test/f_beta_measure', eval_res[4], global_step)
-            # writer.add_scalar('test/g_beta_measure', eval_res[5], global_step)
-            # writer.add_scalar('test/challenge_metric', eval_res[6], global_step)
+            eval_res = evaluate(model, val_loader, config, device, debug)
+            model.train()
+            writer.add_scalar('test/auroc', eval_res[0], global_step)
+            writer.add_scalar('test/auprc', eval_res[1], global_step)
+            writer.add_scalar('test/accuracy', eval_res[2], global_step)
+            writer.add_scalar('test/f_measure', eval_res[3], global_step)
+            writer.add_scalar('test/f_beta_measure', eval_res[4], global_step)
+            writer.add_scalar('test/g_beta_measure', eval_res[5], global_step)
 
-            # if config.lr_scheduler is None:
-            #     pass
-            # elif config.lr_scheduler.lower() == 'plateau':
-            #     scheduler.step(metrics=eval_res[6])
-            # elif config.lr_scheduler.lower() == 'step':
-            #     scheduler.step()
+            if config.lr_scheduler is None:
+                pass
+            elif config.lr_scheduler.lower() == 'plateau':
+                scheduler.step(metrics=eval_res[6])
+            elif config.lr_scheduler.lower() == 'step':
+                scheduler.step()
 
-            # if debug:
-            #     eval_train_msg = f"""
-            #     train/auroc:             {eval_train_res[0]}
-            #     train/auprc:             {eval_train_res[1]}
-            #     train/accuracy:          {eval_train_res[2]}
-            #     train/f_measure:         {eval_train_res[3]}
-            #     train/f_beta_measure:    {eval_train_res[4]}
-            #     train/g_beta_measure:    {eval_train_res[5]}
-            #     train/challenge_metric:  {eval_train_res[6]}
-            # """
-            # else:
-            #     eval_train_msg = ""
-            # msg = f"""
-            #     Train epoch_{epoch + 1}:
-            #     --------------------
-            #     train/epoch_loss:        {epoch_loss}{eval_train_msg}
-            #     test/auroc:              {eval_res[0]}
-            #     test/auprc:              {eval_res[1]}
-            #     test/accuracy:           {eval_res[2]}
-            #     test/f_measure:          {eval_res[3]}
-            #     test/f_beta_measure:     {eval_res[4]}
-            #     test/g_beta_measure:     {eval_res[5]}
-            #     test/challenge_metric:   {eval_res[6]}
-            #     ---------------------------------
-            # """
-            # print(msg)  # in case no logger
-            # if logger:
-            #     logger.info(msg)
+            if debug:
+                eval_train_msg = f"""
+                train/auroc:             {eval_train_res[0]}
+                train/auprc:             {eval_train_res[1]}
+                train/accuracy:          {eval_train_res[2]}
+                train/f_measure:         {eval_train_res[3]}
+                train/f_beta_measure:    {eval_train_res[4]}
+                train/g_beta_measure:    {eval_train_res[5]}
+            """
+            else:
+                eval_train_msg = ""
+            msg = f"""
+                Train epoch_{epoch + 1}:
+                --------------------
+                train/epoch_loss:        {epoch_loss}{eval_train_msg}
+                test/auroc:              {eval_res[0]}
+                test/auprc:              {eval_res[1]}
+                test/accuracy:           {eval_res[2]}
+                test/f_measure:          {eval_res[3]}
+                test/f_beta_measure:     {eval_res[4]}
+                test/g_beta_measure:     {eval_res[5]}
+                ---------------------------------
+            """
+            print(msg)  # in case no logger
+            if logger:
+                logger.info(msg)
 
             try:
                 os.makedirs(config.checkpoints, exist_ok=True)
@@ -279,7 +276,7 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                     logger.info('Created checkpoint directory')
             except OSError:
                 pass
-            save_suffix = f'epochloss_{epoch_loss:.5f}_fb_{eval_res[4]:.2f}_gb_{eval_res[5]:.2f}_cm_{eval_res[6]:.2f}'
+            save_suffix = f'epochloss_{epoch_loss:.5f}_fb_{eval_res[4]:.2f}_gb_{eval_res[5]:.2f}'
             save_filename = f'{save_prefix}{epoch + 1}_{get_date_str()}_{save_suffix}.pth'
             save_path = os.path.join(config.checkpoints, save_filename)
             torch.save(model.state_dict(), save_path)
@@ -295,11 +292,6 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                     logger.info(f'failed to remove {model_to_remove}')
 
     writer.close()
-
-
-# def train_one_epoch(model:nn.Module, criterion:nn.Module, optimizer:optim.Optimizer, data_loader:DataLoader, device:torch.device, epoch:int) -> NoReturn:
-#     """
-#     """
 
 
 @torch.no_grad()
@@ -322,63 +314,62 @@ def evaluate(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.
     --------
     eval_res: tuple of float,
         evaluation results, including
-        auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure, challenge_metric
+        auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure
     """
-    raise NotImplementedError
-    # model.eval()
+    model.eval()
     # data_loader.dataset.disable_data_augmentation()
 
-    # all_scalar_preds = []
-    # all_bin_preds = []
-    # all_labels = []
+    all_scalar_preds = []
+    all_bin_preds = []
+    all_labels = []
 
-    # for signals, labels in data_loader:
-    #     signals = signals.to(device=device, dtype=_DTYPE)
-    #     labels = labels.numpy()
-    #     all_labels.append(labels)
+    for signals, labels in data_loader:
+        signals = signals.to(device=device, dtype=_DTYPE)
+        labels = labels.numpy()
+        all_labels.append(labels)
 
-    #     if torch.cuda.is_available():
-    #         torch.cuda.synchronize()
-    #     preds, bin_preds = model.inference(signals)
-    #     all_scalar_preds.append(preds)
-    #     all_bin_preds.append(bin_preds)
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        preds, bin_preds = model.inference(signals)
+        all_scalar_preds.append(preds)
+        all_bin_preds.append(bin_preds)
     
-    # all_scalar_preds = np.concatenate(all_scalar_preds, axis=0)
-    # all_bin_preds = np.concatenate(all_bin_preds, axis=0)
-    # all_labels = np.concatenate(all_labels, axis=0)
-    # classes = data_loader.dataset.all_classes
+    all_scalar_preds = np.concatenate(all_scalar_preds, axis=0)
+    all_bin_preds = np.concatenate(all_bin_preds, axis=0)
+    all_labels = np.concatenate(all_labels, axis=0)
+    classes = data_loader.dataset.all_classes
 
-    # if debug:
-    #     print(f"all_scalar_preds.shape = {all_scalar_preds.shape}, all_labels.shape = {all_labels.shape}")
-    #     head_num = 5
-    #     head_scalar_preds = all_scalar_preds[:head_num,...]
-    #     head_bin_preds = all_bin_preds[:head_num,...]
-    #     head_preds_classes = [np.array(classes)[np.where(row)] for row in head_bin_preds]
-    #     head_labels = all_labels[:head_num,...]
-    #     head_labels_classes = [np.array(classes)[np.where(row)] for row in head_labels]
-    #     for n in range(head_num):
-    #         print(f"""
-    #         ----------------------------------------------
-    #         scalar prediction:    {[round(n, 3) for n in head_scalar_preds[n].tolist()]}
-    #         binary prediction:    {head_bin_preds[n].tolist()}
-    #         labels:               {head_labels[n].astype(int).tolist()}
-    #         predicted classes:    {head_preds_classes[n].tolist()}
-    #         label classes:        {head_labels_classes[n].tolist()}
-    #         ----------------------------------------------
-    #         """)
+    if debug:
+        print(f"all_scalar_preds.shape = {all_scalar_preds.shape}, all_labels.shape = {all_labels.shape}")
+        head_num = 5
+        head_scalar_preds = all_scalar_preds[:head_num,...]
+        head_bin_preds = all_bin_preds[:head_num,...]
+        head_preds_classes = [np.array(classes)[np.where(row)] for row in head_bin_preds]
+        head_labels = all_labels[:head_num,...]
+        head_labels_classes = [np.array(classes)[np.where(row)] for row in head_labels]
+        for n in range(head_num):
+            print(f"""
+            ----------------------------------------------
+            scalar prediction:    {[round(n, 3) for n in head_scalar_preds[n].tolist()]}
+            binary prediction:    {head_bin_preds[n].tolist()}
+            labels:               {head_labels[n].astype(int).tolist()}
+            predicted classes:    {head_preds_classes[n].tolist()}
+            label classes:        {head_labels_classes[n].tolist()}
+            ----------------------------------------------
+            """)
 
-    # auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure, challenge_metric = \
-    #     evaluate_12ECG_score(
-    #         classes=classes,
-    #         truth=all_labels,
-    #         scalar_pred=all_scalar_preds,
-    #         binary_pred=all_bin_preds,
-    #     )
-    # eval_res = auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure, challenge_metric
+    auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure = \
+        eval_score(
+            classes=classes,
+            truth=all_labels,
+            scalar_pred=all_scalar_preds,
+            binary_pred=all_bin_preds,
+        )
+    eval_res = auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure
 
-    # model.train()
+    model.train()
 
-    # return eval_res
+    return eval_res
 
 
 def get_args(**kwargs):
@@ -393,16 +384,6 @@ def get_args(**kwargs):
     #     metavar='LR', type=float, nargs='?', default=0.001,
     #     help='Learning rate',
     #     dest='learning_rate')
-    # parser.add_argument(
-    #     '-g', '--gpu',
-    #     metavar='G', type=str, default='0',
-    #     help='GPU',
-    #     dest='gpu')
-    parser.add_argument(
-        '-t', '--tranches',
-        type=str, default='',
-        help='the tranches for training',
-        dest='tranches_for_training')
     parser.add_argument(
         '-b', '--batch-size',
         type=int, default=128,
@@ -458,29 +439,24 @@ if __name__ == "__main__":
     print(f"Using torch of version {torch.__version__}")
     print(f'with configuration\n{dict_to_str(config)}')
 
-    tranches = config.tranches_for_training
-    if tranches:
-        classes = config.tranche_classes[tranches]
-    else:
-        classes = config.classes
+    classes = config.classes
 
-    model_config = deepcopy(ECG_CRNN_CONFIG)
+    model_config = deepcopy(ModelCfg)
     model_config.cnn.name = config.cnn_name
     model_config.rnn.name = config.rnn_name
 
-    model = ECG_CRNN(
-        classes=classes,
-        n_leads=config.n_leads,
-        input_len=config.input_len,
-        config=model_config,
-    )
+    if config.model_name.lower() == "crnn":
+        model = ECG_CRNN(
+            classes=classes,
+            n_leads=config.n_leads,
+            input_len=config.input_len,
+            config=model_config,
+        )
+    else:
+        raise NotImplementedError
 
     if not DAS and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
-    # if not DAS:
-    #     model.to(device=device)
-    # else:
-    #     model.cuda()
     model.to(device=device)
 
     try:

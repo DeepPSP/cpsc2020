@@ -63,6 +63,7 @@ class CPSC2020(Dataset):
         else:
             self.dtype = np.float32
         self.allowed_preproc = PreprocCfg.preproc
+        self.all_classes = self.config.classes
         self.n_classes = len(self.config.classes)
 
         # preprocess_dir stores pre-processed signals
