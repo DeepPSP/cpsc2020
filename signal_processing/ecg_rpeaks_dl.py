@@ -1,8 +1,14 @@
 """
+R peaks detection using deep learning models for single-lead ECG signal
+
+References:
+-----------
+[1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
 """
 import os
 import math
-from typing import Union, Optional, NoReturn
+from itertools import repeat
+from typing import Union, Optional, Sequence, NoReturn
 from numbers import Real
 
 import numpy as np
@@ -25,7 +31,7 @@ CNN_MODEL, CRNN_MODEL = load_model("keras_ecg_seq_lab_net")
 
 
 def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
-    """ finished, NOT checked,
+    """ finished, checked,
 
     model of entry 0416 of CPSC2019
 
@@ -36,7 +42,11 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     fs: real number,
         sampling frequency of `sig`
     kwargs: dict,
-        not used, to keep in accordance with other rpeak detection function
+        optional key word arguments, including
+        - verbose, int, default 0,
+            print verbosity
+        - batch_size, int, default None,
+            batch size for feeding into the model
 
     Returns:
     --------
@@ -54,33 +64,39 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     model_granularity = 8  # 1/8 times of model_fs
 
     # pre-process
-    sig_rsmp = _seq_lab_net_pre_process(sig)
+    sig_rsmp = _seq_lab_net_pre_process(sig, verbose=verbose)
 
     if fs != model_fs:
         sig_rsmp = resample_poly(sig_rsmp, up=model_fs, down=int(fs))
     else:
         sig_rsmp = np.array(sig_rsmp).copy()
 
-    # TODO: split into batches for sig with too long duration
     max_single_batch_half_len = 10 * 60 * model_fs
-    if batch_size is not None or len(sig_rsmp) > 2 * max_single_batch_half_len:
+    if len(sig_rsmp) > 2 * max_single_batch_half_len:
+        batch_size = 64
+        if verbose >= 1:
+            print(f"the signal is too long, hence split into segments for parallel computing of batch size {batch_size}")
+    if batch_size is not None:
         model_input_len = 5000
-        half_overlap_len = 500
+        half_overlap_len = 256  # should be divisible by `model_granularity`
+        half_overlap_len_prob = half_overlap_len // model_granularity
         overlap_len = 2 * half_overlap_len
         forward_len = model_input_len - overlap_len
 
-        n_segs, residue = divmod(len(sig_rsmp), forward_len)
+        n_segs, residue = divmod(len(sig_rsmp)-overlap_len, forward_len)
         if residue != 0:
             sig_rsmp = np.append(sig_rsmp, np.zeros((forward_len-residue,)))
             n_segs += 1
 
         n_batches = math.ceil(n_segs / batch_size)
+        if verbose >= 2:
+            print(f"number of batches = {n_batches}")
 
         prob = []
         segs = list(range(n_segs))
         for b_idx in range(n_batches):
             # b_start = b_idx * batch_size * forward_len
-            b_start = b_dix * batch_size
+            b_start = b_idx * batch_size
             b_segs = segs[b_start: b_start + batch_size]
             b_input = np.vstack(
                 [sig_rsmp[idx*forward_len: idx*forward_len+model_input_len] for idx in b_segs]
@@ -88,19 +104,26 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
             prob_cnn = CNN_MODEL.predict(b_input)
             prob_crnn = CRNN_MODEL.predict(b_input)
             b_prob = (prob_cnn[...,0] + prob_crnn[...,0]) / 2
-            b_prob = b_prob[..., half_overlap_len: -half_overlap_len]
-            prob += b_prob.flatten()
+            b_prob = b_prob[..., half_overlap_len_prob: -half_overlap_len_prob]
+            prob += b_prob.flatten().tolist()
+            if b_idx == 0:
+                head_prob = (b_prob[0, :half_overlap_len_prob]).tolist()
+            if b_idx == n_batches - 1:
+                tail_prob = (b_prob[-1, -half_overlap_len_prob:]).tolist()
+            if verbose >= 1:
+                print(f"{b_idx+1}/{n_batches} batches", end="\r")
         # prob, output from the for loop,
         # is the array of probabilities for sig_rsmp[half_overlap_len: -half_overlap_len]
-        prob = list(repeat(0,half_overlap_len)) + prob + list(repeat(0,half_overlap_len))
+        prob = list(repeat(0,half_overlap_len_prob)) + prob + list(repeat(0,half_overlap_len_prob))
+        # prob = head_prob + prob + tail_prob  # head and tail might not be trustable
         prob = np.array(prob)
     else:
-        prob_cnn = cnn_model.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
-        prob_crnn = crnn_model.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
+        prob_cnn = CNN_MODEL.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
+        prob_crnn = CRNN_MODEL.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
         prob = ((prob_cnn + prob_crnn) / 2).squeeze()
 
     # prob --> qrs mask --> qrs intervals --> rpeaks
-    rpeaks = _seq_lab_net_post_process(prob, 0.5)
+    rpeaks = _seq_lab_net_post_process(prob, 0.5, verbose=verbose)
 
     # convert from resampled positions to original positions
     rpeaks = (np.round((fs/model_fs) * rpeaks)).astype(int)
@@ -108,7 +131,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     # adjust to the "true" rpeaks, 
     # i.e. the max in a small nbh of each element in `rpeaks`
-    rpeaks = BSE.correct_rpeaks(
+    rpeaks, = BSE.correct_rpeaks(
         signal=sig,
         rpeaks=rpeaks,
         sampling_rate=fs,
@@ -117,13 +140,15 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     return rpeaks
 
 
-def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
+def _seq_lab_net_pre_process(sig:np.ndarray, verbose:int=0) -> np.ndarray:
     """ partly finished, partly checked,
 
     Parameters:
     -----------
     sig: ndarray,
         the ECG signal to be pre-processed
+    verbose: int, default 0,
+        print verbosity
 
     Returns:
     --------
@@ -139,8 +164,8 @@ def _seq_lab_net_pre_process(sig:np.ndarray) -> np.ndarray:
     return sig_processed
 
 
-def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=[200,1200]) -> np.ndarray:
-    """ finished, partly checked,
+def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=[200,1200], verbose:int=0) -> np.ndarray:
+    """ finished, checked,
 
     convert the array of probability predictions into the array of indices of rpeaks
 
@@ -156,6 +181,8 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
         0. minimum distance for two consecutive qrs complexes, units in ms;
         1. maximum distance for checking missing qrs complexes, units in ms
         if is int, then is 0.
+    verbose: int, default 0,
+        print verbosity
 
     Returns:
     --------
@@ -163,6 +190,7 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
         indices of rpeaks in converted from the array `prob`
     """
     model_fs = 500
+    model_spacing = 1000 / model_fs  # units in ms
     model_granularity = 8  # 1/8 times of model_fs
     _prob = prob.squeeze()
     assert _prob.ndim == 1, \
@@ -172,16 +200,19 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     qrs_intervals = mask_to_intervals(mask, 1)
     # threshold of 64 ms for the duration of clustering positive samples
     # is set to eliminate some wrong predictions
-    _duration_thr = duration_thr / (1000/model_fs) / model_granularity
+    _duration_thr = duration_thr / model_spacing / model_granularity
     # should be 8 * (itv[0]+itv[1]) / 2
     rpeaks = (model_granularity//2) * np.array([itv[0]+itv[1] for itv in qrs_intervals if itv[1]-itv[0] >= _duration_thr])
+
+    if verbose >= 1:
+        print(f"raw rpeak predictions = {rpeaks.tolist()}")
 
     _dist_thr = [dist_thr] if isinstance(dist_thr, int) else dist_thr
     assert len(_dist_thr) <= 2
 
-    # post-process
+    # filter out those rpeaks that are too close to each other
     check = True
-    dist_thr_inds = _dist_thr[0] / model_fs
+    dist_thr_inds = _dist_thr[0] / model_spacing
     while check:
         check = False
         rpeaks_diff = np.diff(rpeaks)
@@ -190,13 +221,14 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
                 prev_r_ind = int(rpeaks[r]/model_granularity)  # ind in _prob
                 next_r_ind = int(rpeaks[r+1]/model_granularity)  # ind in _prob
                 if _prob[prev_r_ind] > _prob[next_r_ind]:
-                    rpeaks = np.delete(rpeaks, r+1)
-                    check = True
-                    break
+                    del_ind = r+1
                 else:
-                    rpeaks = np.delete(rpeaks, r)
-                    check = True
-                    break
+                    del_ind = r
+                rpeaks = np.delete(rpeaks, del_ind)
+                check = True
+                if verbose >= 2:
+                    print(f"the {del_ind}-th R peak was removed since too close to another R peak")
+                break
     if len(_dist_thr) == 1:
         return rpeaks
     check = True
@@ -207,7 +239,7 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     # and this process will continue until a new QRS candidate is found 
     # or the threshold decreases to zero
     check = True
-    dist_thr_inds = _dist_thr[1] / model_fs
+    dist_thr_inds = _dist_thr[1] / model_spacing
     while check:
         check = False
         rpeaks_diff = np.diff(rpeaks)
@@ -231,6 +263,8 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
                         new_max_prob = itv_prob
                 rpeaks = np.insert(rpeaks, r+1, 4*(new_itv[0]+new_itv[1]))
                 check = True
+                if verbose >= 2:
+                    print(f"found back an rpeak inside the {r}-th RR interval")
                 break
     return rpeaks
 
@@ -253,7 +287,7 @@ def _remove_spikes_naive(sig:np.ndarray) -> np.ndarray:
     filtered_sig: ndarray,
         ECG signal with `spikes` removed
     """
-    b = list(filter(lambda k: k > 0, np.argwhere(np.abs(sig)>20).squeeze())
+    b = list(filter(lambda k: k > 0, np.argwhere(np.abs(sig)>20).squeeze()))
     filtered_sig = sig.copy()
     for k in b:
         filtered_sig[k] = filtered_sig[k-1]
