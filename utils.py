@@ -5,6 +5,7 @@ import argparse
 from io import StringIO
 from functools import reduce
 from copy import deepcopy
+from itertools import repeat
 from numbers import Real, Number
 from typing import Union, Optional, List, Tuple, Sequence, NoReturn
 
@@ -29,6 +30,7 @@ __all__ = [
     "mask_to_intervals",
     "list_sum",
     "compute_local_average",
+    "gen_gaussian_noise", "gen_sinusoidal_noise", "gen_baseline_wander",
 ]
 
 
@@ -662,6 +664,107 @@ def compute_local_average(arr:Union[Sequence,np.ndarray], radius:int) -> np.ndar
     tail = np.array([np.mean(_arr[i-2*radius:]) for i in range(radius)])
     res = np.concatenate((head, body, tail))
     return res
+
+
+def gen_gaussian_noise(siglen:int, mean:Real=0, std:Real=0) -> np.ndarray:
+    """ finished, checked,
+
+    generate 1d Gaussian noise of given length, mean, and standard deviation
+
+    Parameters:
+    -----------
+    siglen: int,
+        length of the noise signal
+    mean: real number, default 0,
+        mean of the noise
+    std: real number, default 0,
+        standard deviation of the noise
+
+    Returns:
+    --------
+    gn: ndarray,
+        the gaussian noise of given length, mean, and standard deviation
+    """
+    gn = np.random.normal(mean, std, siglen)
+    return gn
+
+
+def gen_sinusoidal_noise(siglen:int, start_phase:Real, end_phase:Real, amplitude:Real, amplitude_mean:Real=0, amplitude_std:Real=0) -> np.ndarray:
+    """ finished, checked,
+
+    generate 1d sinusoidal noise of given length, amplitude, start phase, and end phase
+
+    Parameters:
+    -----------
+    siglen: int,
+        length of the (noise) signal
+    start_phase: real number,
+        start phase, with units in degrees
+    end_phase: real number,
+        end phase, with units in degrees
+    amplitude: real number,
+        amplitude of the sinusoidal curve
+    amplitude_mean: real number,
+        mean amplitude of an extra Gaussian noise
+    amplitude_std: real number, default 0,
+        standard deviation of an extra Gaussian noise
+
+    Returns:
+    --------
+    sn: ndarray,
+        the sinusoidal noise of given length, amplitude, start phase, and end phase
+    """
+    sn = np.linspace(start_phase, end_phase, siglen)
+    sn = amplitude * np.sin(np.pi * sn / 180)
+    sn += gen_gaussian_noise(siglen, amplitude_mean, amplitude_std)
+    return sn
+
+
+def gen_baseline_wander(siglen:int, fs:Real, bw_fs:Union[Real,Sequence[Real]], amplitude:Union[Real,Sequence[Real]], amplitude_mean:Real=0, amplitude_std:Real=0) -> np.ndarray:
+    """ finished, checked,
+
+    generate 1d baseline wander of given length, amplitude, and frequency
+
+    Parameters:
+    -----------
+    siglen: int,
+        length of the (noise) signal
+    fs: real number,
+        sampling frequency of the original signal
+    bw_fs: real number, or list of real numbers,
+        frequency (frequencies) of the baseline wander
+    amplitude: real number, or list of real numbers,
+        amplitude of the baseline wander (corr. to each frequency band)
+    amplitude_mean: real number, default 0,
+        mean amplitude of an extra Gaussian noise
+    amplitude_std: real number, default 0,
+        standard deviation of an extra Gaussian noise
+
+    Returns:
+    --------
+    bw: ndarray,
+        the baseline wander of given length, amplitude, frequency
+
+    Example:
+    --------
+    >>> gen_baseline_wander(4000, 400, [0.4,0.1,0.05], [0.1,0.2,0.4])
+    """
+    bw = gen_gaussian_noise(siglen, amplitude_mean, amplitude_std)
+    if isinstance(bw_fs, Real):
+        _bw_fs = [bw_fs]
+    else:
+        _bw_fs = bw_fs
+    if isinstance(amplitude, Real):
+        _amplitude = list(repeat(amplitude, len(_bw_fs)))
+    else:
+        _amplitude = amplitude
+    assert len(_bw_fs) == len(_amplitude)
+    duration = (siglen / fs)
+    for bf, a in zip(_bw_fs, _amplitude):
+        start_phase = np.random.randint(0,360)
+        end_phase = duration * bf * 360 + start_phase
+        bw += gen_sinusoidal_noise(siglen, start_phase, end_phase, a, 0, 0)
+    return bw
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
