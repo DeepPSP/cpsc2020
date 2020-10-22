@@ -68,8 +68,6 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     if fs != model_fs:
         sig_rsmp = resample_poly(sig_rsmp, up=model_fs, down=int(fs))
-    else:
-        sig_rsmp = np.array(sig_rsmp).copy()
 
     max_single_batch_half_len = 10 * 60 * model_fs
     if len(sig_rsmp) > 2 * max_single_batch_half_len:
