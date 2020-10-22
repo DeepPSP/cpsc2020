@@ -4,6 +4,7 @@ import os
 from copy import deepcopy
 
 import pywt
+import numpy as np
 from easydict import EasyDict as ED
 
 
@@ -107,13 +108,17 @@ ModelCfg.cnn.multi_scopic.scopes = [
         [16,32,64,],
     ],
 ]
+# TODO:
+# as sampling frequencies of CPSC2019 and CINC2020 are 500Hz
+# while CPSC2020 is 400 Hz
+# should the filter_lengths be adjusted?
 ModelCfg.cnn.multi_scopic.filter_lengths = [
     [11, 7, 5,],
     [11, 7, 5,],
     [11, 7, 5,],
 ]
 ModelCfg.cnn.multi_scopic.subsample_lengths = list(repeat(2, len(multi_scopic.scopes)))
-_base_num_filters = 16
+_base_num_filters = 8
 ModelCfg.cnn.multi_scopic.num_filters = [
     [
         _base_num_filters*4,
@@ -181,8 +186,15 @@ TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis
 # TODO: add more data augmentation
 TrainCfg.gaussian_std = 0.05  # gaussian noise, with mean 0; if std = 0, gaussian noise not added
-# sinusoidal signal with random initial phase and amplitude
-# randomly shifting the baseline
+TrainCfg.random_normalize = False  # (re-)normalize to random mean and std
+TrainCfg.sinusoidal_noise = False  # sinusoidal signal with random initial phase and amplitude
+TrainCfg.bw = True  # randomly shifting the baseline
+TrainCfg.bw_fs = np.array([0.33, 0.1, 0.05, 0.01])
+TrainCfg.bw_ampl_ratio = np.array([
+    [0.02, 0.04, 0.07, 0.1],  # low
+    [0.05, 0.1, 0.16, 0.25],  # medium
+    [0.1, 0.15, 0.25, 0.4],  # high
+])
 TrainCfg.flip = True  # making the signal upside down
 
 # configs of training epochs, batch, etc.
