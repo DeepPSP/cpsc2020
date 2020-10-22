@@ -8,16 +8,18 @@ References:
 
 [2] [BioSPPy](https://github.com/PIA-Group/BioSPPy)
 
-[3] to add more ...
+[3] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
+
+[4] [torch_ecg](https://github.com/wenh06/torch_ecg)
 
 
 TODO:
 -----
-[1] more robust qrs detector
+[1] more robust qrs detector (finished)
 
-[2] feature engineering
+[2] feature engineering (deprecated)
 
-[3] deep learning model structure design (refine)
+[3] deep learning model structure design (ongoing)
 
 [4] use SNR to deal with (eliminate?) too noisy segments?
 
