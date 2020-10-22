@@ -1,5 +1,21 @@
 """
 data generator for feeding data into pytorch models
+
+Augmentations:
+--------------
+label smoothing (label)
+(re-)normalize to random mean and std (signal, offline)
+baseline wandering (signal, on the fly)
+flip (signal, on the fly)
+sinusoidal noise (signal, the same as baseline wandering?)
+gaussian noise (signal, offline)
+stretch and compress (signal, offline)
+
+References:
+-----------
+[1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
+[2] Tan, Jen Hong, et al. "Application of stacked convolutional and long short-term memory network for accurate identification of CAD ECG signals." Computers in biology and medicine 94 (2018): 19-26.
+[3] Yao, Qihang, et al. "Multi-class Arrhythmia detection from 12-lead varied-length ECG using Attention-based Time-Incremental Convolutional Neural Network." Information Fusion 53 (2020): 174-182.
 """
 import os, sys
 import json
@@ -10,6 +26,7 @@ from typing import Union, Optional, List, Tuple, Dict, Sequence, Set, NoReturn
 
 import numpy as np
 np.set_printoptions(precision=5, suppress=True)
+from scipy import signal as SS
 from easydict import EasyDict as ED
 try:
     from tqdm.auto import tqdm
@@ -22,7 +39,10 @@ from sklearn.preprocessing import StandardScaler
 from cfg import TrainCfg, ModelCfg, PreprocCfg
 from data_reader import CPSC2020Reader as CR
 from signal_processing.ecg_preproc import parallel_preprocess_signal
-from utils import dict_to_str, mask_to_intervals
+from utils import (
+    dict_to_str, mask_to_intervals,
+    gen_gaussian_noise, gen_sinusoidal_noise, gen_baseline_wander,
+)
 
 if ModelCfg.torch_dtype.lower() == 'double':
     torch.set_default_tensor_type(torch.DoubleTensor)
@@ -90,10 +110,15 @@ class CPSC2020(Dataset):
         raise NotImplementedError
 
 
-    def persistence(self) -> NoReturn:
+    def persistence(self, force_recompute:bool=False) -> NoReturn:
         """ NOT finished, NOT checked,
 
         make the dataset persistent w.r.t. the ratios in `self.config`
+
+        Parameters:
+        -----------
+        force_recompute: bool, default False,
+            if True, recompute regardless of possible existing files
         """
         self._preprocess_data(self.allowed_preproc)
         self._slice_data()
@@ -109,6 +134,8 @@ class CPSC2020(Dataset):
         preproc: list of str,
             type of preprocesses to perform,
             should be sublist of `self.allowed_preproc`
+        force_recompute: bool, default False,
+            if True, recompute regardless of possible existing files
         """
         preproc = self._normalize_preprocess_names(preproc, True)
         suffix = self._get_rec_suffix(preproc)
@@ -174,8 +201,13 @@ class CPSC2020(Dataset):
         suffix = '-'.join(sorted([item.lower() for item in operations]))
         return suffix
 
-    def _slice_data(self) -> NoReturn:
-        """
+    def _slice_data(self, force_recompute:bool=False) -> NoReturn:
+        """ NOT finished, NOT checked,
+        
+        Parameters:
+        -----------
+        force_recompute: bool, default False,
+            if True, recompute regardless of possible existing files
         """
         for rec in self.reader.all_records:
             rec_name = self.reader._get_rec_name(rec)
@@ -189,24 +221,27 @@ class CPSC2020(Dataset):
             pvc_mask = np.zeros((len(data),), dtype=int)
             spb_mask[ann["SPB_indices"]] = 1
             pvc_mask[ann["PVC_indices"]] = 1
-            # generate initial segments with no overlap
+            # generate initial segments with no overlap for non premature beats
             n_init_seg = len(data)//self.config.input_len
-            segments = np.array(data[:self.config.input_len*n_init_seg]).reshape((n_init_seg, self.config.input_len))
+            segments = (data[:self.config.input_len*n_init_seg]).reshape((n_init_seg, self.config.input_len))
             labels = np.zeros((n_init_seg, self.n_classes))
             labels[..., self.config.class_map["N"]] = 1
-            for idx in range(n_init_seg):
-                start_idx = idx * self.config.input_len
-                end_idx = start_idx + self.config.input_len
-                if spb_mask[start_idx:end_idx].any():
-                    labels[idx, self.config.class_map["S"]] = 1
-                    labels[idx, self.config.class_map["N"]] = 0
-                if pvc_mask[start_idx:end_idx].any():
-                    labels[idx, self.config.class_map["V"]] = 1
-                    labels[idx, self.config.class_map["N"]] = 0
+            # for idx in range(n_init_seg):
+            #     start_idx = idx * self.config.input_len
+            #     end_idx = start_idx + self.config.input_len
+            #     if spb_mask[start_idx:end_idx].any():
+            #         labels[idx, self.config.class_map["S"]] = 1
+            #         labels[idx, self.config.class_map["N"]] = 0
+            #     if pvc_mask[start_idx:end_idx].any():
+            #         labels[idx, self.config.class_map["V"]] = 1
+            #         labels[idx, self.config.class_map["N"]] = 0
+            # leave only non premature segments
+            non_premature = np.logical_or(spb_mask, pvc_mask)[:self.config.input_len*n_init_seg]
+            non_premature = non_premature.reshape((n_init_seg, self.config.input_len)).sum(axis=1)
+            segments = segments[non_premature, ...]
+            labels = labels[non_premature, ...]
 
             # do data augmentation for premature beats
-            aug_segments = np.array([], dtype=float)
-            aug_labels = np.array([], dtype=int)
             # first locate all possible premature segments
             # mask for segment start indices
             premature_mask = np.zeros((len(data),), dtype=int)
@@ -222,22 +257,49 @@ class CPSC2020(Dataset):
                     end_idx = start_idx + self.config.input_len
                     new_seg = data[start_idx:end_idx]
                     new_label = np.zeros((self.n_classes,))
-                    aug_segments = np.append(aug_segments, new_seg)
                     if spb_mask[start_idx:end_idx].any():
                         new_label[self.config.class_map["S"]] = 1
                     if pvc_mask[start_idx:end_idx].any():
                         new_label[self.config.class_map["V"]] = 1
-                    aug_labels = np.append(aug_labels, new_label)
+                    new_label = new_label.reshape((1,-1))
+                    segments = np.append(segments, new_seg)
+                    labels = np.append(labels, new_label, axis=0)
+                    
                     # TODO: perform data augmentation on such segments
+                    seg_ampl = np.max(new_seg) - np.min(new_seg)
+                    if self.config.bw:
+                        for ar in self.config.bw_ampl_ratio:
+                            bw_ampl = ar * seg_ampl
+                            bw = gen_baseline_wander(
+                                siglen=self.config.input_len,
+                                fs=self.config.fs,
+                                bw_fs=self.config.bw_fs,
+                                amplitude=bw_ampl,
+                            )
+                            aug_seg = (new_seg + bw).reshape((1,-1))
+                            segments = np.append(segments, aug_seg, axis=0)
+                            labels = np.append(labels, new_label, axis=0)
                     if self.config.gaussian_std > 0:
-                        guassian_noise = \
-                            np.random.normal(0, self.config.gaussian_std, self.config.input_len)
-                        aug_segments = np.append(aug_segments, new_seg + guassian_noise)
-                        aug_labels = np.append(aug_labels, new_label)
+                        gn = gen_gaussian_noise(
+                            siglen=self.config.input_len,
+                            mean=0,
+                            std=self.config.gaussian_std
+                        )
+                        aug_seg = (new_seg + gn).reshape((1,-1))
+                        segments = np.append(segments, aug_seg, axis=0)
+                        labels = np.append(labels, new_label, axis=0)
                     if self.config.stretch_compress != 1:
-                        pass
+                        aug_seg = data[start_idx: int(round(self.config.stretch_compress*self.config.input_len))]
+                        aug_seg = SS.resample(aug_seg, self.config.input_len).reshape((1,-1))
+                        segments = np.append(segments, aug_seg, axis=0)
+                        labels = np.append(labels, new_label, axis=0)
                     if self.config.flip:
                         pass
-                    start_idx += forward_len
 
+                    start_idx += forward_len
+        # randomly shuffle the data
+        seg_inds = list(range(segments.shape[0]))
+        shuffle(seg_inds)
+        segments = segments[seg_inds, ...]
+        labels = labels[seg_inds, ...]
         raise NotImplementedError
