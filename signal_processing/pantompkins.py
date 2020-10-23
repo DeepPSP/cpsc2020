@@ -19,7 +19,6 @@ class PanTompkins(object):
     """
     Class for implementing the Pan-Tompkins
     qrs detection algorithm.
-
     """
     def __init__(self, sig=None, fs=None, streamsig=None, verbose=0):
         self.sig = sig

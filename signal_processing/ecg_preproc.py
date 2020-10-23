@@ -109,6 +109,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         )['signal']
 
     if cfg.rpeaks and cfg.rpeaks.lower() not in DL_QRS_DETECTORS:
+        # dl detectors not for parallel computing using `mp`
         detector = QRS_DETECTORS[cfg.rpeaks.lower()]
         rpeaks = detector(sig=filtered_ecg, fs=fs).astype(int)
     else:
@@ -233,19 +234,3 @@ say for record A01, one can call
 
 or one can use the 'dataset.py'
 """
-
-
-def denoise_signal(filtered_ecg:np.ndarray,) -> Any:
-    """
-
-    function dealing with noise (mainly motion artefact)
-
-    Parameters:
-    -----------
-    to write
-
-    Returns:
-    --------
-    to write
-    """
-    raise NotImplementedError
