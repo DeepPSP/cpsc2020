@@ -68,7 +68,7 @@ class CPSC2020(Dataset):
     """
     __DEBUG__ = True
     __name__ = "CPSC2020"
-    
+
     def __init__(self, config:ED, training:bool=True) -> NoReturn:
         """ finished, checked,
 
@@ -90,6 +90,7 @@ class CPSC2020(Dataset):
         self.allowed_preproc = PreprocCfg.preproc
         self.all_classes = self.config.classes
         self.n_classes = len(self.config.classes)
+        self.training = training
 
         # preprocess_dir stores pre-processed signals
         self.preprocess_dir = os.path.join(config.db_dir, "preprocessed")

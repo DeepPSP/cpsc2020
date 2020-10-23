@@ -170,7 +170,7 @@ class CPSC2020Reader(object):
     [2] https://github.com/PIA-Group/BioSPPy
     """
     __name__ = "CPSC2020Reader"
-    
+
     def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=1, **kwargs):
         """ finished, to be improved,
 
@@ -209,7 +209,7 @@ class CPSC2020Reader(object):
 
         self.df_stats = CPSC_STATS
 
-        self.palette = {"spb": "green", "pvc": "red",}
+        self.palette = {"spb": "yellow", "pvc": "red",}
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
         self.class_map = kwargs.get("class_map", BaseCfg.class_map)
