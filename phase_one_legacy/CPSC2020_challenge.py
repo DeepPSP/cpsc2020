@@ -64,7 +64,7 @@ def CPSC2020_challenge(ECG:np.ndarray, fs:Real=400) -> Tuple[np.ndarray,np.ndarr
 
     S_pos, V_pos = utils.pred_to_indices(
         y_pred, filtered_rpeaks,
-        label_map=FeatureCfg.label_map
+        class_map=FeatureCfg.class_map
     )
 
     return S_pos, V_pos

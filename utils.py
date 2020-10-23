@@ -440,7 +440,7 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
     return sample_weight
 
 
-def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tuple[np.ndarray, np.ndarray]:
+def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, class_map:dict) -> Tuple[np.ndarray, np.ndarray]:
     """ finished, checked,
 
     Parameters:
@@ -449,7 +449,7 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
         array of model prediction
     rpeaks: ndarray,
         indices of rpeaks, and of `y_pred` in the corresponding ECG signal
-    label_map: dict,
+    class_map: dict,
         mapping from classes of string type to int,
         if elements of `y_pred` is of string type, then this mapping will not be used
 
@@ -465,7 +465,7 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, label_map:dict) -> Tup
     pred_arr = {}
     if isinstance(y_pred[0], Real):
         for c in classes:
-            pred_arr[c] = rpeaks[np.where(y_pred==label_map[c])[0]]
+            pred_arr[c] = rpeaks[np.where(y_pred==class_map[c])[0]]
     else:  # of string type
         for c in classes:
             pred_arr[c] = rpeaks[np.where(y_pred==c)[0]]

@@ -56,7 +56,7 @@ FeatureCfg.wt_feature_len = pywt.wavedecn_shapes(
 FeatureCfg.rr_local_range = 10  # 10 r peaks
 FeatureCfg.rr_global_range = 5*60*FeatureCfg.fs  # 5min, units in number of points
 FeatureCfg.morph_intervals = [[0,45], [85,95], [110,120], [170,200]]
-FeatureCfg.label_map = dict(N=0,S=1,V=2)
+FeatureCfg.class_map = dict(N=0,S=1,V=2)
 FeatureCfg.beat_ann_bias_thr = 0.1*FeatureCfg.fs  # half width of broad qrs complex
 
 
@@ -81,7 +81,7 @@ TrainCfg.model_in_use = ED({
 })
 TrainCfg.SEED = 42
 TrainCfg.verbose = 1
-TrainCfg.label_map = deepcopy(FeatureCfg.label_map)
+TrainCfg.class_map = deepcopy(FeatureCfg.class_map)
 TrainCfg.test_rec_num = 1
 TrainCfg.augment_rpeaks = True
 TrainCfg.preproc = deepcopy(PreprocCfg.preproc)

@@ -177,7 +177,7 @@ class ECGPrematureDetector(object):
             print(f"feature_scaler.variance = {self.feature_scaler.var_}")
 
         if int_labels:
-            class_weight = {self.config.label_map[k]: v for k,v in self.config.class_weight.items()}
+            class_weight = {self.config.class_map[k]: v for k,v in self.config.class_weight.items()}
         else:
             class_weight = self.config.class_weight
 

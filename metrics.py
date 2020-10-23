@@ -46,8 +46,8 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.class_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.class_map[c])[0]]
 
     true_positive = {c: 0 for c in classes}
 

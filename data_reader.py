@@ -210,7 +210,7 @@ class CPSC2020Reader(object):
         self.palette = {"spb": "green", "pvc": "red",}
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
-        self.label_map = kwargs.get("label_map", BaseCfg.label_map)
+        self.class_map = kwargs.get("class_map", BaseCfg.class_map)
 
         # TODO: add logger
     

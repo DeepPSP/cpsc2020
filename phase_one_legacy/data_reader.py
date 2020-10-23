@@ -169,7 +169,7 @@ class CPSC2020Reader(object):
         self.palette = {"spb": "green", "pvc": "red",}
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
-        self.label_map = kwargs.get("label_map", BaseCfg.label_map)
+        self.class_map = kwargs.get("class_map", BaseCfg.class_map)
 
         # NOTE:
         # the ordering of `self.allowed_preproc` and `self.allowed_features`
@@ -462,7 +462,7 @@ class CPSC2020Reader(object):
         return_aux_data: bool, default False,
             whether or not return auxiliary data, including
                 - the augmented rpeaks
-                - the beat_ann mapped to int annotations via `self.label_map`
+                - the beat_ann mapped to int annotations via `self.class_map`
         force_recompute: bool, default False,
             force recompute, regardless of the existing precomputed feature files
         
@@ -533,7 +533,7 @@ class CPSC2020Reader(object):
         return_aux_data: bool, default False,
             whether or not return auxiliary data, including
                 - the augmented rpeaks
-                - the beat_ann mapped to int annotations via `self.label_map`
+                - the beat_ann mapped to int annotations via `self.class_map`
         save: bool, default False,
             save the outcome beat annotations (along with 'augmented' rpeaks) to file or not
         
@@ -630,7 +630,7 @@ class CPSC2020Reader(object):
         to_save_mdict = {
             "rpeaks": augmented_rpeaks.astype(int),
             "beat_ann": beat_ann,
-            "beat_ann_int": np.vectorize(lambda a:self.label_map[a])(beat_ann)
+            "beat_ann_int": np.vectorize(lambda a:self.class_map[a])(beat_ann)
         }
         savemat(fp, to_save_mdict, format='5')
 
@@ -817,7 +817,7 @@ class CPSC2020Reader(object):
         augment: bool, default True,
             features are computed using augmented rpeaks or not
         int_labels: bool, default True,
-            use the 'beat_ann_int', which is mapped into int via `label_map`
+            use the 'beat_ann_int', which is mapped into int via `class_map`
 
         Returns:
         --------

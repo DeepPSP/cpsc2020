@@ -36,6 +36,7 @@ __all__ = [
     "hamilton_detect", "ssf_detect", "christov_detect", "engzee_detect", "gamboa_detect",
 ]
 
+
 # ---------------------------------------------------------------------
 # algorithms from wfdb
 def pantompkins(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:

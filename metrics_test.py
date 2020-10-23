@@ -48,8 +48,8 @@ def CPSC2020_loss_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarra
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.class_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.class_map[c])[0]]
 
     true_positive = {c: 0 for c in classes}
 
@@ -127,8 +127,8 @@ def CPSC2020_score_test(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarr
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.class_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.class_map[c])[0]]
 
     retval = CPSC2020_score(
         [truth_arr['S']],[truth_arr['V']],[pred_arr['S']],[pred_arr['V']],
@@ -172,8 +172,8 @@ def CPSC2020_loss_v0(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray,
             pred_arr[c] = y_indices[np.where(y_pred==c)[0]]
     elif dtype == int:
         for c in classes:
-            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.label_map[c])[0]]
-            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.label_map[c])[0]]
+            truth_arr[c] = y_indices[np.where(y_true==BaseCfg.class_map[c])[0]]
+            pred_arr[c] = y_indices[np.where(y_pred==BaseCfg.class_map[c])[0]]
 
     pred_intervals = {
         c: [[idx-BaseCfg.bias_thr, idx+BaseCfg.bias_thr] for idx in pred_arr[c]] \
