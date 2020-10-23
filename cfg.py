@@ -1,6 +1,7 @@
 """
 """
 import os
+from itertools import repeat
 from copy import deepcopy
 
 import pywt
@@ -183,17 +184,24 @@ TrainCfg.normalize_data = True
 # data augmentation
 TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
-TrainCfg.stretch_compress = 1.0  # stretch or compress in time axis
+TrainCfg.stretch_compress = 5  # stretch or compress in time axis, units in percentage (0 - inf)
 # TODO: add more data augmentation
-TrainCfg.gaussian_std = 0.05  # gaussian noise, with mean 0; if std = 0, gaussian noise not added
+# TrainCfg.gaussian_std = 0.05  # gaussian noise, with mean 0; if std = 0, gaussian noise not added
 TrainCfg.random_normalize = False  # (re-)normalize to random mean and std
 TrainCfg.sinusoidal_noise = False  # sinusoidal signal with random initial phase and amplitude
-TrainCfg.bw = True  # randomly shifting the baseline
+TrainCfg.baseline_wander = True  # randomly shifting the baseline
+TrainCfg.bw = TrainCfg.baseline_wander  # alias
 TrainCfg.bw_fs = np.array([0.33, 0.1, 0.05, 0.01])
 TrainCfg.bw_ampl_ratio = np.array([
     [0.02, 0.04, 0.07, 0.1],  # low
     [0.05, 0.1, 0.16, 0.25],  # medium
     [0.1, 0.15, 0.25, 0.4],  # high
+    []
+])
+TrainCfg.bw_gaussian = np.array([  # mean and std, ratio
+    [0.0, 0.0],
+    [0.0, 0.01],
+    [0.0, 0.03],
 ])
 TrainCfg.flip = True  # making the signal upside down
 
