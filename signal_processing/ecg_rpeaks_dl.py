@@ -71,12 +71,13 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
 
     max_single_batch_half_len = 10 * 60 * model_fs
     if len(sig_rsmp) > 2 * max_single_batch_half_len:
-        batch_size = 64
+        if batch_size is None:
+            batch_size = 64
         if verbose >= 1:
             print(f"the signal is too long, hence split into segments for parallel computing of batch size {batch_size}")
     if batch_size is not None:
         model_input_len = 5000
-        half_overlap_len = 256  # should be divisible by `model_granularity`
+        half_overlap_len = 256  # approximately 0.5s, should be divisible by `model_granularity`
         half_overlap_len_prob = half_overlap_len // model_granularity
         overlap_len = 2 * half_overlap_len
         forward_len = model_input_len - overlap_len
@@ -113,7 +114,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
         # prob, output from the for loop,
         # is the array of probabilities for sig_rsmp[half_overlap_len: -half_overlap_len]
         prob = list(repeat(0,half_overlap_len_prob)) + prob + list(repeat(0,half_overlap_len_prob))
-        # prob = head_prob + prob + tail_prob  # head and tail might not be trustable
+        # prob = head_prob + prob + tail_prob  # NOTE: head and tail might not be trustable
         prob = np.array(prob)
     else:
         prob_cnn = CNN_MODEL.predict(sig_rsmp.reshape((1,len(sig_rsmp),1)))
