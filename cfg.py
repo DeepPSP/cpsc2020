@@ -151,7 +151,7 @@ ModelCfg.cnn.multi_scopic.kw_activation = {"inplace": True}
 ModelCfg.cnn.multi_scopic.block = ED()
 ModelCfg.cnn.multi_scopic.block.subsample_mode = 'max'  # or 'conv', 'avg', 'nearest', 'linear', 'bilinear'
 ModelCfg.cnn.multi_scopic.block.bias = ModelCfg.cnn.multi_scopic.bias
-ModelCfg.cnn.multi_scopic.block.kernel_initializer = multi_scopic.kernel_initializer
+ModelCfg.cnn.multi_scopic.block.kernel_initializer = ModelCfg.cnn.multi_scopic.kernel_initializer
 ModelCfg.cnn.multi_scopic.block.kw_initializer = \
     deepcopy(ModelCfg.cnn.multi_scopic.kw_initializer)
 ModelCfg.cnn.multi_scopic.block.activation = ModelCfg.cnn.multi_scopic.activation
