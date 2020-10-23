@@ -169,6 +169,8 @@ class CPSC2020Reader(object):
     [1] http://www.icbeb.org/CPSC2020.html
     [2] https://github.com/PIA-Group/BioSPPy
     """
+    __name__ = "CPSC2020Reader"
+    
     def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=1, **kwargs):
         """ finished, to be improved,
 

@@ -66,6 +66,9 @@ class CPSC2020(Dataset):
     and of overlap length `TrainCfg.overlap_len` around premature beats
     2. do augmentations for premature segments
     """
+    __DEBUG__ = True
+    __name__ = "CPSC2020"
+    
     def __init__(self, config:ED, training:bool=True) -> NoReturn:
         """ finished, checked,
 
@@ -218,7 +221,7 @@ class CPSC2020(Dataset):
     def _slice_data(self, force_recompute:bool=False) -> NoReturn:
         """ finished, NOT checked,
 
-        slice all records into segments of length `self.config.input_len`,
+        slice all records into segments of length `self.config.input_len`, i.e. `self.siglen`,
         and perform data augmentations specified in `self.config`
         
         Parameters:
@@ -236,7 +239,7 @@ class CPSC2020(Dataset):
     def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False) -> NoReturn:
         """ NOT finished, NOT checked,
 
-        slice one record into segments of length `self.config.input_len`,
+        slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
         and perform data augmentations specified in `self.config`
         
         Parameters:
@@ -251,7 +254,7 @@ class CPSC2020(Dataset):
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
         border_dist = int(2 * self.config.fs)
-        forward_len = self.config.input_len - self.config.overlap_len
+        forward_len = self.siglen - self.config.overlap_len
 
         spb_mask = np.zeros((len(data),), dtype=int)
         pvc_mask = np.zeros((len(data),), dtype=int)
@@ -259,13 +262,13 @@ class CPSC2020(Dataset):
         pvc_mask[ann["PVC_indices"]] = 1
 
         # generate initial segments with no overlap for non premature beats
-        n_init_seg = len(data) // self.config.input_len
-        segments = (data[:self.config.input_len*n_init_seg]).reshape((n_init_seg, self.config.input_len))
+        n_init_seg = len(data) // self.siglen
+        segments = (data[:self.siglen*n_init_seg]).reshape((n_init_seg, self.siglen))
         labels = np.zeros((n_init_seg, self.n_classes))
         labels[..., self.config.class_map["N"]] = 1
         # for idx in range(n_init_seg):
-        #     start_idx = idx * self.config.input_len
-        #     end_idx = start_idx + self.config.input_len
+        #     start_idx = idx * self.siglen
+        #     end_idx = start_idx + self.siglen
         #     if spb_mask[start_idx:end_idx].any():
         #         labels[idx, self.config.class_map["S"]] = 1
         #         labels[idx, self.config.class_map["N"]] = 0
@@ -273,8 +276,8 @@ class CPSC2020(Dataset):
         #         labels[idx, self.config.class_map["V"]] = 1
         #         labels[idx, self.config.class_map["N"]] = 0
         # leave only non premature segments
-        non_premature = np.logical_or(spb_mask, pvc_mask)[:self.config.input_len*n_init_seg]
-        non_premature = non_premature.reshape((n_init_seg, self.config.input_len)).sum(axis=1)
+        non_premature = np.logical_or(spb_mask, pvc_mask)[:self.siglen*n_init_seg]
+        non_premature = non_premature.reshape((n_init_seg, self.siglen)).sum(axis=1)
         segments = segments[non_premature, ...]
         labels = labels[non_premature, ...]
         beat_ann = list(repeat(
@@ -287,15 +290,15 @@ class CPSC2020(Dataset):
         # mask for segment start indices
         premature_mask = np.zeros((len(data),), dtype=int)
         for idx in np.concatenate((ann["SPB_indices"], ann["PVC_indices"])):
-            start_idx = max(0, idx-self.config.input_len+border_dist)
-            end_idx = max(start_idx, min(idx-border_dist, len(data)-self.config.input_len))
+            start_idx = max(0, idx-self.siglen+border_dist)
+            end_idx = max(start_idx, min(idx-border_dist, len(data)-self.siglen))
             premature_mask[start_idx: end_idx] = 1
         # intervals for allowed start of augmented segments
         premature_intervals = mask_to_intervals(premature_mask, 1)
         for itv in premature_intervals:
             start_idx = itv[0]
             while start_idx < itv[1]:
-                end_idx = start_idx + self.config.input_len
+                end_idx = start_idx + self.siglen
 
                 # the segment of original signal, with no augmentation
                 new_seg = data[start_idx:end_idx]
@@ -325,7 +328,7 @@ class CPSC2020(Dataset):
                         bw_ampl = ar * seg_ampl
                         g_ampl = gm * seg_ampl
                         bw = gen_baseline_wander(
-                            siglen=self.config.input_len,
+                            siglen=self.siglen,
                             fs=self.config.fs,
                             bw_fs=self.config.bw_fs,
                             amplitude=bw_ampl,
@@ -341,9 +344,9 @@ class CPSC2020(Dataset):
                     for sign in [-1, 1]:
                         sc_ratio = self.config.stretch_compress
                         sc_ratio = 1 + (uniform(sc_ratio/4, sc_ratio) * sign) / 100
-                        sc_len = int(round(sc_ratio * self.config.input_len))
+                        sc_len = int(round(sc_ratio * self.siglen))
                         aug_seg = data[start_idx: start_idx+sc_len]
-                        aug_seg = SS.resample(x=aug_seg, num=self.config.input_len).reshape((1,-1))
+                        aug_seg = SS.resample(x=aug_seg, num=self.siglen).reshape((1,-1))
                         sc_spb_inds = np.where(spb_mask[start_idx: start_idx+sc_len]==1)[0]
                         sc_pvc_inds = np.where(pvc_mask[start_idx: start_idx+sc_len]==1)[0]
                         sc_beat_ann = {
