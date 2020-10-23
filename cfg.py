@@ -118,7 +118,8 @@ ModelCfg.cnn.multi_scopic.filter_lengths = [
     [11, 7, 5,],
     [11, 7, 5,],
 ]
-ModelCfg.cnn.multi_scopic.subsample_lengths = list(repeat(2, len(multi_scopic.scopes)))
+ModelCfg.cnn.multi_scopic.subsample_lengths = \
+    list(repeat(2, len(ModelCfg.cnn.multi_scopic.scopes)))
 _base_num_filters = 8
 ModelCfg.cnn.multi_scopic.num_filters = [
     [
