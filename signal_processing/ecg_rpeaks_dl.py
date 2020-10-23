@@ -33,12 +33,13 @@ CNN_MODEL, CRNN_MODEL = load_model("keras_ecg_seq_lab_net")
 def seq_lab_net_detect(sig:np.ndarray, fs:Real, **kwargs) -> np.ndarray:
     """ finished, checked,
 
-    model of entry 0416 of CPSC2019
+    use model of entry 0416 of CPSC2019,
+    to detect R peaks in single-lead ECGs of arbitrary length
 
     Parameters:
     -----------
     sig: ndarray,
-        the (raw) ECG signal
+        the (raw) ECG signal or arbitrary length
     fs: real number,
         sampling frequency of `sig`
     kwargs: dict,

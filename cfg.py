@@ -37,6 +37,7 @@ BaseCfg.beat_winR = 250 * BaseCfg.fs // 1000  # corr. to 250 ms
 BaseCfg.torch_dtype = "float"  # "double"
 
 
+
 PreprocCfg = ED()
 PreprocCfg.fs = BaseCfg.fs
 # sequential, keep correct ordering, to add 'motion_artefact'
@@ -89,7 +90,7 @@ ModelCfg.classes = deepcopy(BaseCfg.classes)
 ModelCfg.class_map = deepcopy(BaseCfg.class_map)
 
 ModelCfg.cnn = ED()
-ModelCfg.cnn.name = 'multi_scopic'
+ModelCfg.cnn.name = 'multi_scopic'  # resnet, resnet_gc, vgg, cpsc2018, etc.
 ModelCfg.cnn.multi_scopic = ED()
 ModelCfg.cnn.multi_scopic.groups = 1
 ModelCfg.cnn.multi_scopic.scopes = [
@@ -171,6 +172,7 @@ ModelCfg.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
 ModelCfg.global_pool = 'max'  # 'avg', 'attentive'
 
 
+
 TrainCfg = ED()
 TrainCfg.fs = ModelCfg.fs
 TrainCfg.n_leads = 1
@@ -186,25 +188,23 @@ TrainCfg.normalize_data = True
 TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 5  # stretch or compress in time axis, units in percentage (0 - inf)
-# TODO: add more data augmentation
-# TrainCfg.gaussian_std = 0.05  # gaussian noise, with mean 0; if std = 0, gaussian noise not added
 TrainCfg.random_normalize = False  # (re-)normalize to random mean and std
-TrainCfg.sinusoidal_noise = False  # sinusoidal signal with random initial phase and amplitude
 TrainCfg.baseline_wander = True  # randomly shifting the baseline
 TrainCfg.bw = TrainCfg.baseline_wander  # alias
 TrainCfg.bw_fs = np.array([0.33, 0.1, 0.05, 0.01])
 TrainCfg.bw_ampl_ratio = np.array([
     [0.02, 0.04, 0.07, 0.1],  # low
     [0.05, 0.1, 0.16, 0.25],  # medium
-    [0.1, 0.15, 0.25, 0.4],  # high
-    []
+    [0.1, 0.15, 0.25, 0.3],  # high
+    [0.25, 0.25, 0.3, 0.35],  # extremely high
 ])
 TrainCfg.bw_gaussian = np.array([  # mean and std, ratio
-    [0.0, 0.0],
+    [0.0, 0.0],  # ensure one with no gaussian noise
+    [0.0, 0.003],
     [0.0, 0.01],
-    [0.0, 0.03],
 ])
 TrainCfg.flip = True  # making the signal upside down
+# TODO: explore and add more data augmentations
 
 # configs of training epochs, batch, etc.
 TrainCfg.n_epochs = 300
@@ -220,6 +220,7 @@ TrainCfg.lr_step_size = 50
 TrainCfg.lr_gamma = 0.1
 
 TrainCfg.lr_scheduler = None  # 'plateau', 'burn_in', 'step', None
+
 
 
 PlotCfg = ED()
