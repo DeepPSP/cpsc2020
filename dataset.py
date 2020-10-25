@@ -42,7 +42,7 @@ from cfg import TrainCfg, ModelCfg, PreprocCfg
 from data_reader import CPSC2020Reader as CR
 from signal_processing.ecg_preproc import parallel_preprocess_signal
 from utils import (
-    dict_to_str, mask_to_intervals,
+    dict_to_str, mask_to_intervals, list_sum,
     gen_gaussian_noise, gen_sinusoidal_noise, gen_baseline_wander,
 )
 
@@ -88,10 +88,19 @@ class CPSC2020(Dataset):
         else:
             self.dtype = np.float32
         self.allowed_preproc = PreprocCfg.preproc
+
         self.all_classes = self.config.classes
         self.n_classes = len(self.config.classes)
-        self.training = training
 
+        self.training = training
+        split_res = self.reader.train_test_split_rec(
+            test_rec_num=self.config.test_rec_num
+        )
+        self.__data_aug = self.training
+
+        self.siglen = self.config.input_len  # alias, for simplicity
+
+        # create directories if needed
         # preprocess_dir stores pre-processed signals
         self.preprocess_dir = os.path.join(config.db_dir, "preprocessed")
         os.makedirs(self.preprocess_dir, exist_ok=True)
@@ -102,24 +111,64 @@ class CPSC2020(Dataset):
         self.rpeaks_dir = os.path.join(config.db_dir, "rpeaks")
         os.makedirs(self.rpeaks_dir, exist_ok=True)
 
-        self.siglen = self.config.input_len
+        if self.config.model_name.lower() == "crnn":
+            self.segments_dirs = ED()
+            for item in ["data", "ann"]:
+                for rec in self.reader.all_records:
+                    self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
+                    os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
+            self.__all_segments = list_sum([
+                os.listdir(self.segments_dirs.data[rec]) \
+                    for rec in self.reader.all_records
+            ])
 
-        # self.records = self._train_test_split(config.train_ratio, force_recompute=False)
-        # self.records = [r for r in self.records if r not in self.reader.exceptional_records]
-
-        self.__data_aug = self.training
+            if self.training:
+                self.segments = list_sum([
+                    os.listdir(self.segments_dirs.data[rec]) \
+                        for rec in split_res.train
+                ])
+            else:
+                self.segments = list_sum([
+                    os.listdir(self.segments_dirs.data[rec]) \
+                        for rec in split_res.test
+                ])
+        else:
+            raise NotImplementedError(f"data generator for model \042{self.config.model_name}\042 not implemented")
 
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
         """
         """
+        seg_data_fp = self._get_seg_data_path(self.segments[index])
+        data = loadmat(seg_data_fp)["ecg"]
+        seg_ann_fp = self._get_seg_ann_path(self.segments[index])
+        ann = loadmat(seg_ann_fp)
+        label = ann["label"]
+        spb_indices = ann["SPB_indices"]
+        pvc_indices = ann["PVC_indices"]
         raise NotImplementedError
 
 
     def __len__(self) -> int:
         """
         """
-        raise NotImplementedError
+        return len(self.segments)
+
+
+    def _get_seg_data_path(self, seg:str) -> str:
+        """
+        """
+        rec = seg.split("_")[0].replace("S", "A")
+        fp = os.path.join(self.segments_dir, "data", rec)
+        return fp
+
+
+    def _get_seg_ann_path(self, seg:str) -> str:
+        """
+        """
+        rec = seg.split("_")[0].replace("S", "A")
+        fp = os.path.join(self.segments_dir, "ann", rec)
+        return fp
 
 
     def disable_data_augmentation(self) -> NoReturn:
@@ -141,6 +190,7 @@ class CPSC2020(Dataset):
         self._preprocess_data(self.allowed_preproc)
         self._slice_data()
 
+
     def _preprocess_data(self, preproc:List[str], force_recompute:bool=False) -> NoReturn:
         """ finished, checked,
 
@@ -156,23 +206,39 @@ class CPSC2020(Dataset):
             if True, recompute regardless of possible existing files
         """
         preproc = self._normalize_preprocess_names(preproc, True)
-        suffix = self._get_rec_suffix(preproc)
         config = deepcopy(PreprocCfg)
         config.preproc = preproc
-        save_fp = ED()
         for rec in self.reader.all_records:
-            # format save path
-            rec_name = self.reader._get_rec_name(rec)
-            save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{suffix}{self.reader.rec_ext}")
-            save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{suffix}{self.reader.rec_ext}")
-            if (not force_recompute) and os.path.isdir(save_fp.data) and os.path.isdir(save_fp.rpeaks):
-                continue
-            # perform pre-process
-            pps = parallel_preprocess_signal(self.reader.load_data(rec, keep_dim=False), fs=self.fs, config=config)
-            pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
-            # save mat, keep in accordance with original mat files
-            savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
-            savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
+            self._preprocess_one_record(rec=rec, config=config)
+
+    def _preprocess_one_record(self, rec:Union[int,str], config:dict) -> NoReturn:
+        """ finished, checked,
+
+        preprocesses the ecg data in advance for further use,
+        offline for `self.persistence`
+
+        Parameters:
+        -----------
+        rec: int or str,
+            number of the record, NOTE that rec_no starts from 1,
+            or the record name
+        config: dict,
+            configurations of preprocessing
+        """
+        # format save path
+        save_fp = ED()
+        rec_name = self.reader._get_rec_name(rec)
+        suffix = self._get_rec_suffix(config.preproc)
+        save_fp.data = os.path.join(self.preprocess_dir, f"{rec_name}-{suffix}{self.reader.rec_ext}")
+        save_fp.rpeaks = os.path.join(self.rpeaks_dir, f"{rec_name}-{suffix}{self.reader.rec_ext}")
+        if (not force_recompute) and os.path.isfile(save_fp.data) and os.path.isfile(save_fp.rpeaks):
+            return
+        # perform pre-process
+        pps = parallel_preprocess_signal(self.reader.load_data(rec, keep_dim=False), fs=self.fs, config=config)
+        pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
+        # save mat, keep in accordance with original mat files
+        savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
+        savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
 
     def _normalize_preprocess_names(self, preproc:List[str], ensure_nonempty:bool) -> List[str]:
         """ finished, checked
@@ -219,6 +285,7 @@ class CPSC2020(Dataset):
         suffix = '-'.join(sorted([item.lower() for item in operations]))
         return suffix
 
+
     def _slice_data(self, force_recompute:bool=False) -> NoReturn:
         """ finished, NOT checked,
 
@@ -235,10 +302,9 @@ class CPSC2020(Dataset):
                 rec=rec,
                 force_recompute=force_recompute
             )
-            
 
     def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False) -> NoReturn:
-        """ NOT finished, NOT checked,
+        """ finished, NOT checked,
 
         slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
         and perform data augmentations specified in `self.config`
@@ -252,6 +318,13 @@ class CPSC2020(Dataset):
             if True, recompute regardless of possible existing files
         """
         rec_name = self.reader._get_rec_name(rec)
+        save_dirs = ED()
+        save_dirs.data = self.segments_dirs.data[rec_name]
+        save_dirs.ann = self.segments_dirs.ann[rec_name]
+        os.makedirs(save_dirs.data, exist_ok=True)
+        os.makedirs(save_dirs.data, exist_ok=True)
+        if not force_recompute and 
+
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
         border_dist = int(2 * self.config.fs)
@@ -362,6 +435,7 @@ class CPSC2020(Dataset):
                         sc_label = sc_label.reshape((1,-1))
                         segments = np.append(segments, aug_seg, axis=0)
                         labels = np.append(labels, sc_label, axis=0)
+                        beat_ann.append(sc_beat_ann)
 
                 start_idx += forward_len
 
@@ -370,8 +444,9 @@ class CPSC2020(Dataset):
         shuffle(seg_inds)
         for i, ind in enumerate(seg_inds):
             save_fp = ED()
-            save_fp.data = os.path.join(self.segments_dir, "data", rec_name, f"S{i:07d}{self.reader.rec_ext}")
-            save_fp.ann = os.path.join(self.segments_dir, "ann", rec_name, f"S{i:07d}{self.reader.rec_ext}")
+            seg_name = f"{rec_name.replace('A', 'S')}_{i:07d}{self.reader.rec_ext}
+            save_fp.data = os.path.join(self.record_dirs.data, seg_name)
+            save_fp.ann = os.path.join(self.record_dirs.ann, seg_name)
             seg = segments[ind, ...]
             savemat(save_fp.data, {"ecg": seg}, format="5")
             seg_label = labels[ind, ...]

@@ -182,6 +182,8 @@ TrainCfg.overlap_len = int(9 * TrainCfg.fs)  # 9 s
 TrainCfg.model_name = "crnn"  # "seq_lab", "unet"
 TrainCfg.classes = deepcopy(BaseCfg.classes)
 TrainCfg.class_map = deepcopy(BaseCfg.class_map)
+TrainCfg.test_rec_num = 1
+
 TrainCfg.normalize_data = True
 
 # data augmentation
