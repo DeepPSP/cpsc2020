@@ -113,15 +113,8 @@ class CPSC2020(Dataset):
 
         if self.config.model_name.lower() == "crnn":
             self.segments_dirs = ED()
-            for item in ["data", "ann"]:
-                for rec in self.reader.all_records:
-                    self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
-                    os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
-            seg_filename_pattern = f"S\d{{2}}_\d{{7}}{self.reader.rec_ext}"
-            self.__all_segments = ED({
-                rec: get_record_list_recursive3(self.segments_dirs.data[rec], seg_filename_pattern) \
-                    for rec in self.reader.all_records
-            })
+            self.__all_segments = ED()
+            self._ls_segments()
 
             if self.training:
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.train])
@@ -130,6 +123,29 @@ class CPSC2020(Dataset):
         else:
             raise NotImplementedError(f"data generator for model \042{self.config.model_name}\042 not implemented")
 
+
+    def _ls_segments(self) -> NoReturn:
+        """
+        """
+        for item in ["data", "ann"]:
+            self.segments_dirs[item] = ED()
+            for rec in self.reader.all_records:
+                self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
+                os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
+        filename = "crnn_segments.json"
+        if os.path.isfile(filename):
+            with open(filename, "r") as f:
+                self.__all_segments = json.load(f)
+            return
+        seg_filename_pattern = f"S\d{{2}}_\d{{7}}{self.reader.rec_ext}"
+        self.__all_segments = ED({
+            rec: get_record_list_recursive3(self.segments_dirs.data[rec], seg_filename_pattern) \
+                for rec in self.reader.all_records
+        })
+
+    @property
+    def all_segments(self):
+        return self.__all_segments
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -151,18 +167,18 @@ class CPSC2020(Dataset):
 
 
     def _get_seg_data_path(self, seg:str) -> str:
-        """
+        """ finished, checked,
         """
         rec = seg.split("_")[0].replace("S", "A")
-        fp = os.path.join(self.segments_dir, "data", rec)
+        fp = os.path.join(self.segments_dir, "data", rec, f"{seg}{self.reader.rec_ext}")
         return fp
 
 
     def _get_seg_ann_path(self, seg:str) -> str:
-        """
+        """ finished, checked,
         """
         rec = seg.split("_")[0].replace("S", "A")
-        fp = os.path.join(self.segments_dir, "ann", rec)
+        fp = os.path.join(self.segments_dir, "ann", rec, f"{seg}{self.reader.rec_ext}")
         return fp
 
 
@@ -172,8 +188,8 @@ class CPSC2020(Dataset):
         self.__data_aug = False
 
 
-    def persistence(self, force_recompute:bool=False) -> NoReturn:
-        """ NOT finished, NOT checked,
+    def persistence(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
+        """ finished, NOT checked,
 
         make the dataset persistent w.r.t. the ratios in `self.config`
 
@@ -181,12 +197,23 @@ class CPSC2020(Dataset):
         -----------
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        verbose: int, default 0,
+            print verbosity
         """
-        self._preprocess_data(self.allowed_preproc)
-        self._slice_data()
+        if force_recompute:
+            self.__all_segments = ED()
+        self._preprocess_data(
+            self.allowed_preproc,
+            force_recompute=force_recompute,
+            verbose=verbose,
+        )
+        self._slice_data(
+            force_recompute=force_recompute,
+            verbose=verbose,
+        )
 
 
-    def _preprocess_data(self, preproc:List[str], force_recompute:bool=False) -> NoReturn:
+    def _preprocess_data(self, preproc:List[str], force_recompute:bool=False, verbose:int=0) -> NoReturn:
         """ finished, checked,
 
         preprocesses the ecg data in advance for further use,
@@ -199,14 +226,18 @@ class CPSC2020(Dataset):
             should be sublist of `self.allowed_preproc`
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        verbose: int, default 0,
+            print verbosity
         """
         preproc = self._normalize_preprocess_names(preproc, True)
         config = deepcopy(PreprocCfg)
         config.preproc = preproc
-        for rec in self.reader.all_records:
+        for idx, rec in enumerate(self.reader.all_records):
             self._preprocess_one_record(rec=rec, config=config)
+            if verbose >= 1:
+                print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
 
-    def _preprocess_one_record(self, rec:Union[int,str], config:dict) -> NoReturn:
+    def _preprocess_one_record(self, rec:Union[int,str], config:dict, force_recompute:bool=False) -> NoReturn:
         """ finished, checked,
 
         preprocesses the ecg data in advance for further use,
@@ -219,6 +250,8 @@ class CPSC2020(Dataset):
             or the record name
         config: dict,
             configurations of preprocessing
+        force_recompute: bool, default False,
+            if True, recompute regardless of possible existing files
         """
         # format save path
         save_fp = ED()
@@ -229,8 +262,12 @@ class CPSC2020(Dataset):
         if (not force_recompute) and os.path.isfile(save_fp.data) and os.path.isfile(save_fp.rpeaks):
             return
         # perform pre-process
-        pps = parallel_preprocess_signal(self.reader.load_data(rec, keep_dim=False), fs=self.fs, config=config)
-        pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.beat_winL) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.beat_winR) )[0]]
+        pps = parallel_preprocess_signal(
+            self.reader.load_data(rec, keep_dim=False),
+            fs=self.reader.fs,
+            config=config
+        )
+        pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.rpeaks_dist2border) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.rpeaks_dist2border) )[0]]
         # save mat, keep in accordance with original mat files
         savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
@@ -281,7 +318,7 @@ class CPSC2020(Dataset):
         return suffix
 
 
-    def _slice_data(self, force_recompute:bool=False) -> NoReturn:
+    def _slice_data(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
         """ finished, NOT checked,
 
         slice all records into segments of length `self.config.input_len`, i.e. `self.siglen`,
@@ -291,14 +328,18 @@ class CPSC2020(Dataset):
         -----------
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        verbose: int, default 0,
+            print verbosity
         """
-        for rec in self.reader.all_records:
+        for idx,rec in enumerate(self.reader.all_records):
             self._slice_one_record(
                 rec=rec,
                 force_recompute=force_recompute
             )
+            if verbose >= 1:
+                print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
 
-    def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False) -> NoReturn:
+    def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False, verbose:int=0) -> NoReturn:
         """ finished, NOT checked,
 
         slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
@@ -311,6 +352,8 @@ class CPSC2020(Dataset):
             or the record name
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        verbose: int, default 0,
+            print verbosity
         """
         rec_name = self.reader._get_rec_name(rec)
         save_dirs = ED()
@@ -348,12 +391,17 @@ class CPSC2020(Dataset):
         # leave only non premature segments
         non_premature = np.logical_or(spb_mask, pvc_mask)[:self.siglen*n_init_seg]
         non_premature = non_premature.reshape((n_init_seg, self.siglen)).sum(axis=1)
+        non_premature = np.where(non_premature > 0)[0]
         segments = segments[non_premature, ...]
         labels = labels[non_premature, ...]
         beat_ann = list(repeat(
             {"SPB_indices":np.array([],dtype=int), "PVC_indices":np.array([],dtype=int)},
             len(non_premature)
         ))
+
+        if verbose >= 1:
+            print(f"finish extracting non-premature segments, totally {len(non_premature)}")
+            print("start doing augmentations...")
 
         # do data augmentation for premature beats
         # first locate all possible premature segments
@@ -365,9 +413,11 @@ class CPSC2020(Dataset):
             premature_mask[start_idx: end_idx] = 1
         # intervals for allowed start of augmented segments
         premature_intervals = mask_to_intervals(premature_mask, 1)
+        n_original = 0
         for itv in premature_intervals:
             start_idx = itv[0]
             while start_idx < itv[1]:
+                n_original += 1
                 end_idx = start_idx + self.siglen
 
                 # the segment of original signal, with no augmentation
@@ -435,14 +485,18 @@ class CPSC2020(Dataset):
 
                 start_idx += forward_len
 
+        if verbose >= 1:
+            print(f"generate {segments.shape[0]} premature segments out from {n_original} in total via data augmentation")
+
         # randomly shuffle the data and save into separate files
         seg_inds = list(range(segments.shape[0]))
         shuffle(seg_inds)
         for i, ind in enumerate(seg_inds):
             save_fp = ED()
-            seg_name = f"{rec_name.replace('A', 'S')}_{i:07d}{self.reader.rec_ext}
-            save_fp.data = os.path.join(self.record_dirs.data, seg_name)
-            save_fp.ann = os.path.join(self.record_dirs.ann, seg_name)
+            seg_name = f"{rec_name.replace('A', 'S')}_{i:07d}"
+            self.__all_segments[rec_name].append(seg_name)
+            save_fp.data = os.path.join(self.record_dirs.data, f"{seg_name}{self.reader.rec_ext}")
+            save_fp.ann = os.path.join(self.record_dirs.ann, f"{seg_name}{self.reader.rec_ext}")
             seg = segments[ind, ...]
             savemat(save_fp.data, {"ecg": seg}, format="5")
             seg_label = labels[ind, ...]
@@ -450,4 +504,3 @@ class CPSC2020(Dataset):
             save_ann_dict = seg_beat_ann.copy()
             save_ann_dict = save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
-

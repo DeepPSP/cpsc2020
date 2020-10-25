@@ -49,7 +49,7 @@ PreprocCfg.filter_band = [0.5, 45]
 PreprocCfg.parallel_epoch_len = 600  # second
 PreprocCfg.parallel_epoch_overlap = 10  # second
 PreprocCfg.parallel_keep_tail = True
-PreprocCfg.rpeaks = 'seq_lab'  # 'xqrs'  # TODO: use deep learning models ?
+PreprocCfg.rpeaks = 'seq_lab'  # 'xqrs'
 # or 'gqrs', or 'pantompkins', 'hamilton', 'ssf', 'christov', 'engzee', 'gamboa'
 # or empty string '' if not detecting rpeaks
 """
@@ -57,6 +57,8 @@ for qrs detectors:
     `xqrs` sometimes detects s peak (valley) as r peak,
     but according to Jeethan, `xqrs` has the best performance
 """
+# least distance of an valid R peak to be to two ends of ECG signals
+PreprocCfg.rpeaks_dist2border = int(0.5 * PreprocCfg.fs)  # 0.5s
 
 
 # FeatureCfg only for ML models, deprecated
