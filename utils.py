@@ -7,7 +7,7 @@ from functools import reduce
 from copy import deepcopy
 from itertools import repeat
 from numbers import Real, Number
-from typing import Union, Optional, List, Tuple, Sequence, NoReturn
+from typing import Union, Optional, List, Tuple, Dict, Sequence, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ __all__ = [
     "list_sum",
     "compute_local_average",
     "gen_gaussian_noise", "gen_sinusoidal_noise", "gen_baseline_wander",
+    "get_record_list_recursive3",
 ]
 
 
@@ -765,6 +766,56 @@ def gen_baseline_wander(siglen:int, fs:Real, bw_fs:Union[Real,Sequence[Real]], a
         end_phase = duration * bf * 360 + start_phase
         bw += gen_sinusoidal_noise(siglen, start_phase, end_phase, a, 0, 0)
     return bw
+
+
+def get_record_list_recursive3(db_dir:str, rec_patterns:Union[str,Dict[str,str]]) -> Union[List[str], Dict[str, List[str]]]:
+    """ finished, checked,
+
+    get the list of records in `db_dir` recursively,
+    for example, there are two folders 'patient1', 'patient2' in `db_dir`,
+    and there are records 'A0001', 'A0002', ... in 'patient1'; 'B0001', 'B0002', ... in 'patient2',
+    then the output would be 'patient1{sep}A0001', ..., 'patient2{sep}B0001', ...,
+    sep is determined by the system
+
+    Parameters:
+    -----------
+    db_dir: str,
+        the parent (root) path of the whole database
+    rec_patterns: str or dict,
+        pattern of the record filenames, e.g. "A(?:\d+).mat",
+        or patterns of several subsets, e.g. `{"A": "A(?:\d+).mat"}`
+
+    Returns:
+    --------
+    res: list of str,
+        list of records, in lexicographical order
+    """
+    if isinstance(rec_patterns, str):
+        res = []
+    elif isinstance(rec_patterns, dict):
+        res = {k:[] for k in rec_patterns.keys()}
+    db_dir = os.path.join(db_dir, "tmp").replace("tmp", "")  # make sure `db_dir` ends with a sep
+    roots = [db_dir]
+    while len(roots) > 0:
+        new_roots = []
+        for r in roots:
+            tmp = [os.path.join(r, item) for item in os.listdir(r)]
+            # res += [item for item in tmp if os.path.isfile(item)]
+            if isinstance(rec_patterns, str):
+                res += list(filter(re.compile(rec_patterns).search, tmp))
+            elif isinstance(rec_patterns, dict):
+                for k in rec_patterns.keys():
+                    res[k] += list(filter(re.compile(rec_patterns[k]).search, tmp))
+            new_roots += [item for item in tmp if os.path.isdir(item)]
+        roots = deepcopy(new_roots)
+    if isinstance(rec_patterns, str):
+        res = [os.path.splitext(item)[0].replace(db_dir, "") for item in res]
+        res = sorted(res)
+    elif isinstance(rec_patterns, dict):
+        for k in rec_patterns.keys():
+            res[k] = [os.path.splitext(item)[0].replace(db_dir, "") for item in res[k]]
+            res[k] = sorted(res[k])
+    return res
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
