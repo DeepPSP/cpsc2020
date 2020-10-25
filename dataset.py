@@ -17,8 +17,7 @@ References:
 [2] Tan, Jen Hong, et al. "Application of stacked convolutional and long short-term memory network for accurate identification of CAD ECG signals." Computers in biology and medicine 94 (2018): 19-26.
 [3] Yao, Qihang, et al. "Multi-class Arrhythmia detection from 12-lead varied-length ECG using Attention-based Time-Incremental Convolutional Neural Network." Information Fusion 53 (2020): 174-182.
 """
-import os, sys
-import json
+import os, sys, re, json
 from random import shuffle, randint, uniform
 from copy import deepcopy
 from functools import reduce
@@ -44,6 +43,7 @@ from signal_processing.ecg_preproc import parallel_preprocess_signal
 from utils import (
     dict_to_str, mask_to_intervals, list_sum,
     gen_gaussian_noise, gen_sinusoidal_noise, gen_baseline_wander,
+    get_record_list_recursive3,
 )
 
 if ModelCfg.torch_dtype.lower() == 'double':
@@ -117,21 +117,16 @@ class CPSC2020(Dataset):
                 for rec in self.reader.all_records:
                     self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
                     os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
-            self.__all_segments = list_sum([
-                os.listdir(self.segments_dirs.data[rec]) \
+            seg_filename_pattern = f"S\d{{2}}_\d{{7}}{self.reader.rec_ext}"
+            self.__all_segments = ED({
+                rec: get_record_list_recursive3(self.segments_dirs.data[rec], seg_filename_pattern) \
                     for rec in self.reader.all_records
-            ])
+            })
 
             if self.training:
-                self.segments = list_sum([
-                    os.listdir(self.segments_dirs.data[rec]) \
-                        for rec in split_res.train
-                ])
+                self.segments = list_sum([self.__all_segments[rec] for rec in split_res.train])
             else:
-                self.segments = list_sum([
-                    os.listdir(self.segments_dirs.data[rec]) \
-                        for rec in split_res.test
-                ])
+                self.segments = list_sum([self.__all_segments[rec] for rec in split_res.test])
         else:
             raise NotImplementedError(f"data generator for model \042{self.config.model_name}\042 not implemented")
 
@@ -323,7 +318,8 @@ class CPSC2020(Dataset):
         save_dirs.ann = self.segments_dirs.ann[rec_name]
         os.makedirs(save_dirs.data, exist_ok=True)
         os.makedirs(save_dirs.data, exist_ok=True)
-        if not force_recompute and 
+        if (not force_recompute) and len(self.__all_segments[rec_name].data) > 0:
+            return
 
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
