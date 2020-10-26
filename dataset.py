@@ -6,9 +6,9 @@ Augmentations:
     - label smoothing (label, on the fly)
     - flip (signal, on the fly)
     - (re-)normalize to random mean and std (signal, on the fly)
-    - baseline wander (signal, offline, combination of sinusoidal noise of several different frequencies, together with an optional Gaussian noise)
-    - sinusoidal noise (signal, offline, done in baseline wander)
-    - Gaussian noise (signal, offline, done in baseline wander)
+    - baseline wander (signal, on the fly, combination of sinusoidal noise of several different frequencies, together with an optional Gaussian noise)
+    - sinusoidal noise (signal, on the fly, done in baseline wander)
+    - Gaussian noise (signal, on the fly, done in baseline wander)
     - stretch and compress (signal, offline)
 
 References:
@@ -123,6 +123,10 @@ class CPSC2020(Dataset):
         else:
             raise NotImplementedError(f"data generator for model \042{self.config.model_name}\042 not implemented")
 
+        if self.config.bw:
+            self._n_bw_choices = len(self.config.bw_ampl_ratio)
+            self._n_gn_choices = len(self.config.bw_gaussian)
+
 
     def _ls_segments(self) -> NoReturn:
         """
@@ -151,12 +155,33 @@ class CPSC2020(Dataset):
         """
         """
         seg_data_fp = self._get_seg_data_path(self.segments[index])
-        data = loadmat(seg_data_fp)["ecg"]
+        seg_data = loadmat(seg_data_fp)["ecg"].squeeze()
+        seg_ampl = np.max(seg_data) - np.min(seg_data)
         seg_ann_fp = self._get_seg_ann_path(self.segments[index])
         ann = loadmat(seg_ann_fp)
         label = ann["label"]
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
+        if self.config.bw:
+            ar = self.config.bw_ampl_ratio[randint(0, self._n_bw_choices-1)]
+            gm, gs = self.config.bw_gaussian[randint(0, self._n_gn_choices-1)]
+            bw_ampl = ar * seg_ampl
+            g_ampl = gm * seg_ampl
+            bw = gen_baseline_wander(
+                siglen=self.siglen,
+                fs=self.config.fs,
+                bw_fs=self.config.bw_fs,
+                amplitude=bw_ampl,
+                amplitude_mean=gm,
+                amplitude_std=gs,
+            )
+            seg_data = seg_data + bw
+        if self.config.flip:
+            pass
+        if self.config.random_normalize:
+            pass
+        if self.config.label_smoothing > 0:
+            pass
         raise NotImplementedError
 
 
@@ -445,29 +470,30 @@ class CPSC2020(Dataset):
                 beat_ann.append(seg_beat_ann.copy())
                 n_added += 1
                 if verbose >= 1:
-                    print(f"{n_added} aug", end="\r")
+                    print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 seg_ampl = np.max(new_seg) - np.min(new_seg)
                 # add baseline wander
-                if self.config.bw:
-                    for ar, (gm, gs) in product(self.config.bw_ampl_ratio, self.config.bw_gaussian):
-                        bw_ampl = ar * seg_ampl
-                        g_ampl = gm * seg_ampl
-                        bw = gen_baseline_wander(
-                            siglen=self.siglen,
-                            fs=self.config.fs,
-                            bw_fs=self.config.bw_fs,
-                            amplitude=bw_ampl,
-                            amplitude_mean=gm,
-                            amplitude_std=gs,
-                        )
-                        aug_seg = (new_seg + bw).reshape((1,-1))
-                        segments = np.append(segments, aug_seg, axis=0)
-                        labels = np.append(labels, seg_label.copy(), axis=0)
-                        beat_ann.append(seg_beat_ann.copy())
-                        n_added += 1
-                        if verbose >= 1:
-                            print(f"{n_added} aug", end="\r")
+                # moved to self.__getitem__
+                # if self.config.bw:
+                #     for ar, (gm, gs) in product(self.config.bw_ampl_ratio, self.config.bw_gaussian):
+                #         bw_ampl = ar * seg_ampl
+                #         g_ampl = gm * seg_ampl
+                #         bw = gen_baseline_wander(
+                #             siglen=self.siglen,
+                #             fs=self.config.fs,
+                #             bw_fs=self.config.bw_fs,
+                #             amplitude=bw_ampl,
+                #             amplitude_mean=gm,
+                #             amplitude_std=gs,
+                #         )
+                #         aug_seg = (new_seg + bw).reshape((1,-1))
+                #         segments = np.append(segments, aug_seg, axis=0)
+                #         labels = np.append(labels, seg_label.copy(), axis=0)
+                #         beat_ann.append(seg_beat_ann.copy())
+                #         n_added += 1
+                #         if verbose >= 1:
+                #             print(f"{n_added} aug, {start_idx}/{len(data)}", end="\r")
                 # stretch and compress the signal
                 if self.config.stretch_compress != 0:
                     for sign in [-1, 1]:
@@ -493,12 +519,12 @@ class CPSC2020(Dataset):
                         beat_ann.append(sc_beat_ann)
                         n_added += 1
                         if verbose >= 1:
-                            print(f"{n_added} aug", end="\r")
+                            print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 start_idx += forward_len
 
         if verbose >= 1:
-            print(f"generate {segments.shape[0]} premature segments out from {n_original} in total via data augmentation")
+            print(f"\ngenerate {n_added} premature segments out from {n_original} in total via data augmentation")
 
         # randomly shuffle the data and save into separate files
         seg_inds = list(range(segments.shape[0]))
@@ -507,12 +533,12 @@ class CPSC2020(Dataset):
             save_fp = ED()
             seg_name = f"{rec_name.replace('A', 'S')}_{i:07d}"
             self.__all_segments[rec_name].append(seg_name)
-            save_fp.data = os.path.join(self.record_dirs.data, f"{seg_name}{self.reader.rec_ext}")
-            save_fp.ann = os.path.join(self.record_dirs.ann, f"{seg_name}{self.reader.rec_ext}")
+            save_fp.data = os.path.join(self.segments_dirs.data[rec_name], f"{seg_name}{self.reader.rec_ext}")
+            save_fp.ann = os.path.join(self.segments_dirs.ann[rec_name], f"{seg_name}{self.reader.rec_ext}")
             seg = segments[ind, ...]
             savemat(save_fp.data, {"ecg": seg}, format="5")
             seg_label = labels[ind, ...]
             seg_beat_ann = beat_ann[ind]
             save_ann_dict = seg_beat_ann.copy()
-            save_ann_dict = save_ann_dict.update({"label": seg_label})
+            save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
