@@ -361,7 +361,7 @@ class CPSC2020(Dataset):
         save_dirs.ann = self.segments_dirs.ann[rec_name]
         os.makedirs(save_dirs.data, exist_ok=True)
         os.makedirs(save_dirs.data, exist_ok=True)
-        if (not force_recompute) and len(self.__all_segments[rec_name].data) > 0:
+        if (not force_recompute) and len(self.all_segments[rec_name]) > 0:
             return
 
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
@@ -391,7 +391,7 @@ class CPSC2020(Dataset):
         # leave only non premature segments
         non_premature = np.logical_or(spb_mask, pvc_mask)[:self.siglen*n_init_seg]
         non_premature = non_premature.reshape((n_init_seg, self.siglen)).sum(axis=1)
-        non_premature = np.where(non_premature > 0)[0]
+        non_premature = np.where(non_premature == 0)[0]
         segments = segments[non_premature, ...]
         labels = labels[non_premature, ...]
         beat_ann = list(repeat(
@@ -400,6 +400,8 @@ class CPSC2020(Dataset):
         ))
 
         if verbose >= 1:
+            print(f"n_init_seg = {n_init_seg}")
+            print(f"segments.shape = {segments.shape}")
             print(f"finish extracting non-premature segments, totally {len(non_premature)}")
             print("start doing augmentations...")
 
@@ -414,6 +416,7 @@ class CPSC2020(Dataset):
         # intervals for allowed start of augmented segments
         premature_intervals = mask_to_intervals(premature_mask, 1)
         n_original = 0
+        n_added = 0
         for itv in premature_intervals:
             start_idx = itv[0]
             while start_idx < itv[1]:
@@ -437,9 +440,12 @@ class CPSC2020(Dataset):
                     seg_label[self.config.class_map["V"]] = 1
                 seg_label = seg_label.reshape((1,-1))
 
-                segments = np.append(segments, new_seg)
+                segments = np.append(segments, new_seg.reshape((1,-1)), axis=0)
                 labels = np.append(labels, seg_label.copy(), axis=0)
                 beat_ann.append(seg_beat_ann.copy())
+                n_added += 1
+                if verbose >= 1:
+                    print(f"{n_added} aug", end="\r")
 
                 seg_ampl = np.max(new_seg) - np.min(new_seg)
                 # add baseline wander
@@ -459,6 +465,9 @@ class CPSC2020(Dataset):
                         segments = np.append(segments, aug_seg, axis=0)
                         labels = np.append(labels, seg_label.copy(), axis=0)
                         beat_ann.append(seg_beat_ann.copy())
+                        n_added += 1
+                        if verbose >= 1:
+                            print(f"{n_added} aug", end="\r")
                 # stretch and compress the signal
                 if self.config.stretch_compress != 0:
                     for sign in [-1, 1]:
@@ -482,6 +491,9 @@ class CPSC2020(Dataset):
                         segments = np.append(segments, aug_seg, axis=0)
                         labels = np.append(labels, sc_label, axis=0)
                         beat_ann.append(sc_beat_ann)
+                        n_added += 1
+                        if verbose >= 1:
+                            print(f"{n_added} aug", end="\r")
 
                 start_idx += forward_len
 

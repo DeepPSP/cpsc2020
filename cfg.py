@@ -57,7 +57,7 @@ for qrs detectors:
     `xqrs` sometimes detects s peak (valley) as r peak,
     but according to Jeethan, `xqrs` has the best performance
 """
-# least distance of an valid R peak to be to two ends of ECG signals
+# least distance of an valid R peak to two ends of ECG signals
 PreprocCfg.rpeaks_dist2border = int(0.5 * PreprocCfg.fs)  # 0.5s
 
 
