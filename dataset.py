@@ -469,7 +469,7 @@ class CPSC2020(Dataset):
                 labels = np.append(labels, seg_label.copy(), axis=0)
                 beat_ann.append(seg_beat_ann.copy())
                 n_added += 1
-                if verbose >= 1:
+                if verbose >= 2:
                     print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 seg_ampl = np.max(new_seg) - np.min(new_seg)
@@ -518,7 +518,7 @@ class CPSC2020(Dataset):
                         labels = np.append(labels, sc_label, axis=0)
                         beat_ann.append(sc_beat_ann)
                         n_added += 1
-                        if verbose >= 1:
+                        if verbose >= 2:
                             print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 start_idx += forward_len
@@ -542,3 +542,5 @@ class CPSC2020(Dataset):
             save_ann_dict = seg_beat_ann.copy()
             save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
+            if verbose >= 2:
+                print(f"saving {i}/{len(seg_inds)}...")
