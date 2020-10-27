@@ -445,35 +445,8 @@ class CPSC2020(Dataset):
         n_added = 0
         for itv in premature_intervals:
             start_idx = itv[0]
+            n_original += 1
             while start_idx < itv[1]:
-                n_original += 1
-                end_idx = start_idx + self.siglen
-
-                # the segment of original signal, with no augmentation
-                new_seg = data[start_idx:end_idx]
-                seg_label = np.zeros((self.n_classes,))
-
-                seg_spb_inds = np.where(spb_mask[start_idx: end_idx]==1)[0]
-                seg_pvc_inds = np.where(pvc_mask[start_idx: end_idx]==1)[0]
-                seg_beat_ann = {
-                    "SPB_indices": seg_spb_inds,
-                    "PVC_indices": seg_pvc_inds,
-                }
-
-                if len(seg_spb_inds) > 0:
-                    seg_label[self.config.class_map["S"]] = 1
-                if len(seg_pvc_inds) > 0:
-                    seg_label[self.config.class_map["V"]] = 1
-                seg_label = seg_label.reshape((1,-1))
-
-                segments = np.append(segments, new_seg.reshape((1,-1)), axis=0)
-                labels = np.append(labels, seg_label.copy(), axis=0)
-                beat_ann.append(seg_beat_ann.copy())
-                n_added += 1
-                if verbose >= 2:
-                    print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
-
-                seg_ampl = np.max(new_seg) - np.min(new_seg)
                 # stretch and compress the signal
                 if self.config.stretch_compress != 0:
                     sign = sample([-1,1]+[0]*4, 1)[0]
@@ -481,26 +454,32 @@ class CPSC2020(Dataset):
                         sc_ratio = self.config.stretch_compress
                         sc_ratio = 1 + (uniform(sc_ratio/4, sc_ratio) * sign) / 100
                         sc_len = int(round(sc_ratio * self.siglen))
-                        aug_seg = data[start_idx: start_idx+sc_len]
+                        end_idx = start_idx + sc_len
+                        aug_seg = data[start_idx: end_idx]
                         aug_seg = SS.resample(x=aug_seg, num=self.siglen).reshape((1,-1))
-                        sc_spb_inds = np.where(spb_mask[start_idx: start_idx+sc_len]==1)[0]
-                        sc_pvc_inds = np.where(pvc_mask[start_idx: start_idx+sc_len]==1)[0]
-                        sc_beat_ann = {
-                            "SPB_indices": sc_spb_inds,
-                            "PVC_indices": sc_pvc_inds,
-                        }
-                        sc_label = np.zeros((self.n_classes,))
-                        if len(sc_spb_inds) > 0:
-                            sc_label[self.config.class_map["S"]] = 1
-                        if len(sc_pvc_inds) > 0:
-                            sc_label[self.config.class_map["V"]] = 1
-                        sc_label = sc_label.reshape((1,-1))
-                        segments = np.append(segments, aug_seg, axis=0)
-                        labels = np.append(labels, sc_label, axis=0)
-                        beat_ann.append(sc_beat_ann)
-                        n_added += 1
-                        if verbose >= 2:
-                            print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
+                    else:
+                        end_idx = start_idx + self.siglen
+                        # the segment of original signal, with no augmentation
+                        aug_seg = data[start_idx:end_idx]
+
+                    seg_label = np.zeros((self.n_classes,))
+                    seg_spb_inds = np.where(spb_mask[start_idx: end_idx]==1)[0]
+                    seg_pvc_inds = np.where(pvc_mask[start_idx: end_idx]==1)[0]
+                    seg_beat_ann = {
+                        "SPB_indices": seg_spb_inds,
+                        "PVC_indices": seg_pvc_inds,
+                    }
+                    if len(seg_spb_inds) > 0:
+                        seg_label[self.config.class_map["S"]] = 1
+                    if len(seg_pvc_inds) > 0:
+                        seg_label[self.config.class_map["V"]] = 1
+                    seg_label = seg_label.reshape((1,-1))
+                    segments = np.append(segments, aug_seg.reshape((1,-1)), axis=0)
+                    labels = np.append(labels, seg_label.copy(), axis=0)
+                    beat_ann.append(seg_beat_ann.copy())
+                    n_added += 1
+                    if verbose >= 2:
+                        print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 start_idx += forward_len
 
