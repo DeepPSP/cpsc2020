@@ -136,7 +136,7 @@ class CPSC2020(Dataset):
             for rec in self.reader.all_records:
                 self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
                 os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
-        filename = "crnn_segments.json"
+        filename = os.path.join(self.segments_dir, "crnn_segments.json")
         if os.path.isfile(filename):
             with open(filename, "r") as f:
                 self.__all_segments = json.load(f)
@@ -146,19 +146,21 @@ class CPSC2020(Dataset):
             rec: get_record_list_recursive3(self.segments_dirs.data[rec], seg_filename_pattern) \
                 for rec in self.reader.all_records
         })
+        if all([len(self.__all_segments[rec])>0 for rec in self.reader.all_records]):
+            with open(filename, "w") as f:
+                json.dump(self.__all_segments, f)
 
     @property
     def all_segments(self):
         return self.__all_segments
 
+
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
         """
         """
-        seg_data_fp = self._get_seg_data_path(self.segments[index])
-        seg_data = loadmat(seg_data_fp)["ecg"].squeeze()
+        seg_name = self.segments[index]
+        seg_data = self._load_seg_data(seg_name)
         seg_ampl = np.max(seg_data) - np.min(seg_data)
-        seg_ann_fp = self._get_seg_ann_path(self.segments[index])
-        ann = loadmat(seg_ann_fp)
         label = ann["label"]
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
@@ -193,6 +195,16 @@ class CPSC2020(Dataset):
 
     def _get_seg_data_path(self, seg:str) -> str:
         """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+
+        Returns:
+        --------
+        fp: str,
+            path of the data file of the segment
         """
         rec = seg.split("_")[0].replace("S", "A")
         fp = os.path.join(self.segments_dir, "data", rec, f"{seg}{self.reader.rec_ext}")
@@ -201,10 +213,77 @@ class CPSC2020(Dataset):
 
     def _get_seg_ann_path(self, seg:str) -> str:
         """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+
+        Returns:
+        --------
+        fp: str,
+            path of the annotation file of the segment
         """
         rec = seg.split("_")[0].replace("S", "A")
         fp = os.path.join(self.segments_dir, "ann", rec, f"{seg}{self.reader.rec_ext}")
         return fp
+
+
+    def _load_seg_data(self, seg:str) -> np.ndarray:
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+
+        Returns:
+        --------
+        seg_data: ndarray,
+            data of the segment, of shape (self.siglen,)
+        """
+        seg_data_fp = self._get_seg_data_path(seg)
+        seg_data = loadmat(seg_data_fp)["ecg"].squeeze()
+        return seg_data
+
+
+    def _load_seg_label(self, seg:str) -> np.ndarray:
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+
+        Returns:
+        --------
+        seg_label: ndarray,
+            label of the segment, of shape (self.n_classes,)
+        """
+        seg_ann_fp = self._get_seg_ann_path(seg)
+        seg_label = loadmat(seg_ann_fp)["label"].squeeze()
+        return seg_label
+
+
+    def _load_seg_beat_ann(self, seg:str) -> Dict[str, np.ndarray]:
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+
+        Returns:
+        --------
+        seg_beat_ann: dict,
+            "SPB_indices", "PVC_indices", each of ndarray values
+        """
+        seg_ann_fp = self._get_seg_ann_path(seg)
+        seg_beat_ann = loadmat(seg_ann_fp)
+        seg_beat_ann = {
+            k:v.flatten() for k,v in seg_beat_ann.items() if k in ["SPB_indices", "PVC_indices"]
+        }
+        return seg_beat_ann
 
 
     def disable_data_augmentation(self) -> NoReturn:
@@ -214,7 +293,7 @@ class CPSC2020(Dataset):
 
 
     def persistence(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
-        """ finished, NOT checked,
+        """ finished, checked,
 
         make the dataset persistent w.r.t. the ratios in `self.config`
 
@@ -353,7 +432,7 @@ class CPSC2020(Dataset):
 
 
     def _slice_data(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
-        """ finished, NOT checked,
+        """ finished, checked,
 
         slice all records into segments of length `self.config.input_len`, i.e. `self.siglen`,
         and perform data augmentations specified in `self.config`
@@ -375,7 +454,7 @@ class CPSC2020(Dataset):
                 print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
 
     def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False, verbose:int=0) -> NoReturn:
-        """ finished, NOT checked,
+        """ finished, checked,
 
         slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
         and perform data augmentations specified in `self.config`
@@ -429,7 +508,7 @@ class CPSC2020(Dataset):
             print(f"\nn_init_seg = {n_init_seg}")
             print(f"segments.shape = {segments.shape}")
             print(f"finish extracting non-premature segments, totally {len(non_premature)}")
-            print("start doing augmentations...")
+            print("start doing augmentation...")
 
         # do data augmentation for premature beats
         # first locate all possible premature segments
@@ -460,7 +539,7 @@ class CPSC2020(Dataset):
                     else:
                         end_idx = start_idx + self.siglen
                         # the segment of original signal, with no augmentation
-                        aug_seg = data[start_idx:end_idx]
+                        aug_seg = data[start_idx: end_idx]
 
                     seg_label = np.zeros((self.n_classes,))
                     seg_spb_inds = np.where(spb_mask[start_idx: end_idx]==1)[0]
@@ -503,4 +582,19 @@ class CPSC2020(Dataset):
             save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
             if verbose >= 2:
-                print(f"saving {i}/{len(seg_inds)}...", end="\r")
+                print(f"saving {i+1}/{len(seg_inds)}...", end="\r")
+
+
+    def plot_seg(self, seg:str, ticks_granularity:int=0, rpeak_inds:Optional[Union[Sequence[int],np.ndarray]]=None) -> NoReturn:
+        """
+        """
+        seg_data = self._load_seg_data(seg)
+        seg_beat_ann = self._load_seg_beat_ann(seg)
+        rec_name = seg.split("_")[0].replace("S", "A")
+        self.reader.plot(
+            rec=rec_name,
+            data=seg_data,
+            ann=seg_beat_ann,
+            ticks_granularity=ticks_granularity,
+            rpeak_inds=rpeak_inds,
+        )

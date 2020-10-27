@@ -139,7 +139,8 @@ class CPSC2020Reader(object):
        A08   Yes    126908              118,311
        A09   No     89972               89,693
        A10   No     83509               82,061
-    2. A04 has duplicate 'PVC_indices' (13534856,27147621,35141190 all appear twice):
+    2. (fixed by an official update)
+    A04 has duplicate 'PVC_indices' (13534856,27147621,35141190 all appear twice):
        before correction of `load_ann`:
        >>> from collections import Counter
        >>> db_dir = "/mnt/wenhao71/data/CPSC2020/TrainingSet/"
@@ -447,7 +448,7 @@ class CPSC2020Reader(object):
         return units
 
     
-    def plot(self, rec:Union[int,str], data:Optional[np.ndarray]=None, ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None, rpeak_inds:Optional[Union[Sequence[int],np.ndarray]]=None) -> NoReturn:
+    def plot(self, rec:Union[int,str], data:Optional[np.ndarray]=None, ann:Optional[Dict[str, np.ndarray]]=None, ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None, rpeak_inds:Optional[Union[Sequence[int],np.ndarray]]=None) -> NoReturn:
         """ finished, checked,
 
         Parameters:
@@ -459,6 +460,10 @@ class CPSC2020Reader(object):
             ecg signal to plot,
             if given, data of `rec` will not be used,
             this is useful when plotting filtered data
+        ann: dict, optional,
+            annotations for `data`,
+            "SPB_indices", "PVC_indices", each of ndarray values,
+            ignored if `data` is None
         ticks_granularity: int, default 0,
             the granularity to plot axis ticks, the higher the more,
             0 (no ticks) --> 1 (major ticks) --> 2 (major + minor ticks)
@@ -487,7 +492,8 @@ class CPSC2020Reader(object):
             elif units == "μV":
                 _data = data.copy()
 
-        ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
+        if ann is None or data is None:
+            ann = self.load_ann(rec, sampfrom=sampfrom, sampto=sampto)
         sf, st = (sampfrom or 0), (sampto or len(_data))
         spb_indices = ann["SPB_indices"]
         pvc_indices = ann["PVC_indices"]
