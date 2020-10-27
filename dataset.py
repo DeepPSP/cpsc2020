@@ -114,6 +114,7 @@ class CPSC2020(Dataset):
         if self.config.model_name.lower() == "crnn":
             self.segments_dirs = ED()
             self.__all_segments = ED()
+            self.segments_json = os.path.join(self.segments_dir, "crnn_segments.json")
             self._ls_segments()
 
             if self.training:
@@ -136,9 +137,8 @@ class CPSC2020(Dataset):
             for rec in self.reader.all_records:
                 self.segments_dirs[item][rec] = os.path.join(self.segments_dir, item, rec)
                 os.makedirs(self.segments_dirs[item][rec], exist_ok=True)
-        filename = os.path.join(self.segments_dir, "crnn_segments.json")
-        if os.path.isfile(filename):
-            with open(filename, "r") as f:
+        if os.path.isfile(self.segments_json):
+            with open(self.segments_json, "r") as f:
                 self.__all_segments = json.load(f)
             return
         seg_filename_pattern = f"S\d{{2}}_\d{{7}}{self.reader.rec_ext}"
@@ -147,7 +147,7 @@ class CPSC2020(Dataset):
                 for rec in self.reader.all_records
         })
         if all([len(self.__all_segments[rec])>0 for rec in self.reader.all_records]):
-            with open(filename, "w") as f:
+            with open(self.segments_json, "w") as f:
                 json.dump(self.__all_segments, f)
 
     @property
@@ -304,8 +304,8 @@ class CPSC2020(Dataset):
         verbose: int, default 0,
             print verbosity
         """
-        if force_recompute:
-            self.__all_segments = ED()
+        # if force_recompute:
+        #     self.__all_segments = ED({rec: [] for rec in self.reader.all_records})
         self._preprocess_data(
             self.allowed_preproc,
             force_recompute=force_recompute,
@@ -448,12 +448,16 @@ class CPSC2020(Dataset):
             self._slice_one_record(
                 rec=rec,
                 force_recompute=force_recompute,
+                update_segments_json=False
                 verbose=verbose,
             )
             if verbose >= 1:
                 print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
+        if force_recompute:
+            with open(self.segments_json, "w") as f:
+                json.dump(self.__all_segments, f)
 
-    def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False, verbose:int=0) -> NoReturn:
+    def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False, update_segments_json:bool=False, verbose:int=0) -> NoReturn:
         """ finished, checked,
 
         slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
@@ -466,6 +470,10 @@ class CPSC2020(Dataset):
             or the record name
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        update_segments_json: bool, default False,
+            if both `force_recompute` and `update_segments_json` are True,
+            the file `self.segments_json` will be updated,
+            useful when slicing not all records
         verbose: int, default 0,
             print verbosity
         """
@@ -475,8 +483,10 @@ class CPSC2020(Dataset):
         save_dirs.ann = self.segments_dirs.ann[rec_name]
         os.makedirs(save_dirs.data, exist_ok=True)
         os.makedirs(save_dirs.data, exist_ok=True)
-        if (not force_recompute) and len(self.all_segments[rec_name]) > 0:
+        if (not force_recompute) and len(self.__all_segments[rec_name]) > 0:
             return
+        elif force_recompute:
+            self.__all_segments[rec_name] = []
 
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
@@ -583,10 +593,23 @@ class CPSC2020(Dataset):
             savemat(save_fp.ann, save_ann_dict, format="5")
             if verbose >= 2:
                 print(f"saving {i+1}/{len(seg_inds)}...", end="\r")
+        if update_segments_json:
+            with open(self.segments_json, "w") as f:
+                json.dump(self.__all_segments, f)
 
 
     def plot_seg(self, seg:str, ticks_granularity:int=0, rpeak_inds:Optional[Union[Sequence[int],np.ndarray]]=None) -> NoReturn:
-        """
+        """ finished, checked,
+
+        Parameters:
+        -----------
+        seg: str,
+            name of the segment, of pattern like "S01_0000193"
+        ticks_granularity: int, default 0,
+            the granularity to plot axis ticks, the higher the more,
+            0 (no ticks) --> 1 (major ticks) --> 2 (major + minor ticks)
+        rpeak_inds: array_like, optional,
+            indices of R peaks,
         """
         seg_data = self._load_seg_data(seg)
         seg_beat_ann = self._load_seg_beat_ann(seg)
