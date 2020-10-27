@@ -258,11 +258,16 @@ class CPSC2020(Dataset):
         config = deepcopy(PreprocCfg)
         config.preproc = preproc
         for idx, rec in enumerate(self.reader.all_records):
-            self._preprocess_one_record(rec=rec, config=config)
+            self._preprocess_one_record(
+                rec=rec,
+                config=config,
+                force_recompute=force_recompute,
+                verbose=verbose,
+            )
             if verbose >= 1:
                 print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
 
-    def _preprocess_one_record(self, rec:Union[int,str], config:dict, force_recompute:bool=False) -> NoReturn:
+    def _preprocess_one_record(self, rec:Union[int,str], config:dict, force_recompute:bool=False, verbose:int=0) -> NoReturn:
         """ finished, checked,
 
         preprocesses the ecg data in advance for further use,
@@ -277,6 +282,8 @@ class CPSC2020(Dataset):
             configurations of preprocessing
         force_recompute: bool, default False,
             if True, recompute regardless of possible existing files
+        verbose: int, default 0,
+            print verbosity
         """
         # format save path
         save_fp = ED()
@@ -359,7 +366,8 @@ class CPSC2020(Dataset):
         for idx,rec in enumerate(self.reader.all_records):
             self._slice_one_record(
                 rec=rec,
-                force_recompute=force_recompute
+                force_recompute=force_recompute,
+                verbose=verbose,
             )
             if verbose >= 1:
                 print(f"{idx+1}/{len(self.reader.all_records)} records", end="\r")
