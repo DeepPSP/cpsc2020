@@ -401,7 +401,7 @@ class CPSC2020(Dataset):
 
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
-        border_dist = int(2 * self.config.fs)
+        border_dist = int(0.5 * self.config.fs)
         forward_len = self.siglen - self.config.overlap_len
 
         spb_mask = np.zeros((len(data),), dtype=int)
@@ -524,4 +524,4 @@ class CPSC2020(Dataset):
             save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
             if verbose >= 2:
-                print(f"saving {i}/{len(seg_inds)}...")
+                print(f"saving {i}/{len(seg_inds)}...", end="\r")
