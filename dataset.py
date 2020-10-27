@@ -297,9 +297,11 @@ class CPSC2020(Dataset):
         pps = parallel_preprocess_signal(
             self.reader.load_data(rec, keep_dim=False),
             fs=self.reader.fs,
-            config=config
+            config=config,
+            verbose=verbose,
         )
-        pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.rpeaks_dist2border) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.rpeaks_dist2border) )[0]]
+        # `rpeaks_dist2border` useless for `seq_lab_detect`, as already set internally
+        # pps['rpeaks'] = pps['rpeaks'][np.where( (pps['rpeaks']>=config.rpeaks_dist2border) & (pps['rpeaks']<len(pps['filtered_ecg'])-config.rpeaks_dist2border) )[0]]
         # save mat, keep in accordance with original mat files
         savemat(save_fp.data, {'ecg': np.atleast_2d(pps['filtered_ecg']).T}, format='5')
         savemat(save_fp.rpeaks, {'rpeaks': np.atleast_2d(pps['rpeaks']).T}, format='5')
@@ -433,7 +435,7 @@ class CPSC2020(Dataset):
         ))
 
         if verbose >= 1:
-            print(f"n_init_seg = {n_init_seg}")
+            print(f"\nn_init_seg = {n_init_seg}")
             print(f"segments.shape = {segments.shape}")
             print(f"finish extracting non-premature segments, totally {len(non_premature)}")
             print("start doing augmentations...")

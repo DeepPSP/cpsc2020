@@ -12,7 +12,7 @@ References:
 [1] https://github.com/PIA-Group/BioSPPy
 [2] to add
 """
-import os
+import os, time
 import multiprocessing as mp
 from copy import deepcopy
 from numbers import Real
@@ -123,7 +123,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     return retval
     
 
-def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy') -> Dict[str, np.ndarray]:
+def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy', verbose:int=0) -> Dict[str, np.ndarray]:
     """ finished, checked,
 
     Parameters:
@@ -147,6 +147,7 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
         - 'filtered_ecg': the array of the processed ecg signal
         - 'rpeaks': the array of indices of rpeaks; empty if 'rpeaks' in `config` is not set
     """
+    start_time = time.time()
     cfg = deepcopy(PreprocCfg)
     cfg.update(config or {})
 
@@ -197,8 +198,17 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
         tail_rpeaks = tail_result['rpeaks'][np.where(tail_result['rpeaks'] >= epoch_overlap_half)[0]]
         rpeaks = np.append(rpeaks, len(result)*epoch_forward + tail_rpeaks)
 
+    if verbose >= 1:
+        if cfg.rpeaks.lower() in DL_QRS_DETECTORS:
+            print(f"signal processing took {round(time.time()-start_time, 3)} seconds")
+        else:
+            print(f"signal processing and R peaks detection took {round(time.time()-start_time, 3)} seconds")
+        start_time = time.time()
+
     if cfg.rpeaks and cfg.rpeaks.lower() in DL_QRS_DETECTORS:
-        rpeaks = QRS_DETECTORS[cfg.rpeaks.lower()](sig=raw_sig, fs=fs).astype(int)
+        rpeaks = QRS_DETECTORS[cfg.rpeaks.lower()](sig=raw_sig, fs=fs, verbose=verbose).astype(int)
+        if verbose >= 1:
+            print(f"R peaks detection using {cfg.rpeaks} took {round(time.time()-start_time, 3)} seconds")
 
     if save_dir:
         # NOTE: this part is not tested
