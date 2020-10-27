@@ -448,7 +448,7 @@ class CPSC2020(Dataset):
             self._slice_one_record(
                 rec=rec,
                 force_recompute=force_recompute,
-                update_segments_json=False
+                update_segments_json=False,
                 verbose=verbose,
             )
             if verbose >= 1:
