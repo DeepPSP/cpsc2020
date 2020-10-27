@@ -206,7 +206,7 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     # should be 8 * (itv[0]+itv[1]) / 2
     rpeaks = (model_granularity//2) * np.array([itv[0]+itv[1] for itv in qrs_intervals if itv[1]-itv[0] >= _duration_thr])
 
-    if verbose >= 1:
+    if verbose >= 3:
         print(f"raw rpeak predictions = {rpeaks.tolist()}")
 
     _dist_thr = [dist_thr] if isinstance(dist_thr, int) else dist_thr

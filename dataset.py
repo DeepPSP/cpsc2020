@@ -18,7 +18,7 @@ References:
 [3] Yao, Qihang, et al. "Multi-class Arrhythmia detection from 12-lead varied-length ECG using Attention-based Time-Incremental Convolutional Neural Network." Information Fusion 53 (2020): 174-182.
 """
 import os, sys, re, json
-from random import shuffle, randint, uniform
+from random import shuffle, randint, uniform, sample
 from copy import deepcopy
 from functools import reduce
 from itertools import product, repeat
@@ -414,15 +414,6 @@ class CPSC2020(Dataset):
         segments = (data[:self.siglen*n_init_seg]).reshape((n_init_seg, self.siglen))
         labels = np.zeros((n_init_seg, self.n_classes))
         labels[..., self.config.class_map["N"]] = 1
-        # for idx in range(n_init_seg):
-        #     start_idx = idx * self.siglen
-        #     end_idx = start_idx + self.siglen
-        #     if spb_mask[start_idx:end_idx].any():
-        #         labels[idx, self.config.class_map["S"]] = 1
-        #         labels[idx, self.config.class_map["N"]] = 0
-        #     if pvc_mask[start_idx:end_idx].any():
-        #         labels[idx, self.config.class_map["V"]] = 1
-        #         labels[idx, self.config.class_map["N"]] = 0
         # leave only non premature segments
         non_premature = np.logical_or(spb_mask, pvc_mask)[:self.siglen*n_init_seg]
         non_premature = non_premature.reshape((n_init_seg, self.siglen)).sum(axis=1)
@@ -483,30 +474,10 @@ class CPSC2020(Dataset):
                     print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
                 seg_ampl = np.max(new_seg) - np.min(new_seg)
-                # add baseline wander
-                # moved to self.__getitem__
-                # if self.config.bw:
-                #     for ar, (gm, gs) in product(self.config.bw_ampl_ratio, self.config.bw_gaussian):
-                #         bw_ampl = ar * seg_ampl
-                #         g_ampl = gm * seg_ampl
-                #         bw = gen_baseline_wander(
-                #             siglen=self.siglen,
-                #             fs=self.config.fs,
-                #             bw_fs=self.config.bw_fs,
-                #             amplitude=bw_ampl,
-                #             amplitude_mean=gm,
-                #             amplitude_std=gs,
-                #         )
-                #         aug_seg = (new_seg + bw).reshape((1,-1))
-                #         segments = np.append(segments, aug_seg, axis=0)
-                #         labels = np.append(labels, seg_label.copy(), axis=0)
-                #         beat_ann.append(seg_beat_ann.copy())
-                #         n_added += 1
-                #         if verbose >= 1:
-                #             print(f"{n_added} aug, {start_idx}/{len(data)}", end="\r")
                 # stretch and compress the signal
                 if self.config.stretch_compress != 0:
-                    for sign in [-1, 1]:
+                    sign = sample([-1,1]+[0]*4, 1)[0]
+                    if sign != 0:
                         sc_ratio = self.config.stretch_compress
                         sc_ratio = 1 + (uniform(sc_ratio/4, sc_ratio) * sign) / 100
                         sc_len = int(round(sc_ratio * self.siglen))
