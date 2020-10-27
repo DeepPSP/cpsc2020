@@ -130,7 +130,7 @@ class CPSC2020(Dataset):
 
 
     def _ls_segments(self) -> NoReturn:
-        """
+        """ finished, checked,
         """
         for item in ["data", "ann"]:
             self.segments_dirs[item] = ED()
@@ -156,7 +156,7 @@ class CPSC2020(Dataset):
 
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
-        """
+        """ NOT finished, NOT checked,
         """
         seg_name = self.segments[index]
         seg_data = self._load_seg_data(seg_name)
