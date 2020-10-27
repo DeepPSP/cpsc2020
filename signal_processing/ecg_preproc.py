@@ -72,7 +72,7 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
         sampling frequency of `raw_sig`
     config: dict, optional,
         extra process configuration,
-        `PreprocCfg` will `update` this `config`
+        `PreprocCfg` will be updated by this `config`
 
     Returns:
     --------

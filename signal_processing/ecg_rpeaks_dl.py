@@ -164,7 +164,7 @@ def _seq_lab_net_pre_process(sig:np.ndarray, verbose:int=0) -> np.ndarray:
     return sig_processed
 
 
-def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=[200,1200], verbose:int=0) -> np.ndarray:
+def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:int=4*16, dist_thr:Union[int,Sequence[int]]=200, verbose:int=0) -> np.ndarray:
     """ finished, checked,
 
     convert the array of probability predictions into the array of indices of rpeaks
@@ -177,10 +177,12 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
         threshold of probability for predicting qrs complex
     duration_thr: int, default 4*16,
         minimum duration for a "true" qrs complex, units in ms
-    dist_thr: int or sequence of int, default [200, 1200],
-        0. minimum distance for two consecutive qrs complexes, units in ms;
-        1. maximum distance for checking missing qrs complexes, units in ms
-        if is int, then is 0.
+    dist_thr: int or sequence of int, default 200,
+        if is sequence of int,
+        (0-th element). minimum distance for two consecutive qrs complexes, units in ms;
+        (1st element).(optional) maximum distance for checking missing qrs complexes, units in ms,
+        e.g. [200, 1200]
+        if is int, then is the case of (0-th element).
     verbose: int, default 0,
         print verbosity
 
@@ -239,6 +241,8 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     # and this process will continue until a new QRS candidate is found 
     # or the threshold decreases to zero
     check = True
+    # TODO: parallel the following block
+    # this part is extremely slow in some cases (long duration and low SNR)
     dist_thr_inds = _dist_thr[1] / model_spacing
     while check:
         check = False
@@ -267,6 +271,12 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
                     print(f"found back an rpeak inside the {r}-th RR interval")
                 break
     return rpeaks
+
+
+def _find_back(rpeaks:np.ndarray, dist_thr:Real) -> np.ndarray:
+    """
+    """
+    raise NotImplementedError
 
 
 def _remove_spikes_naive(sig:np.ndarray) -> np.ndarray:
