@@ -23,7 +23,6 @@ which could be checked for example via:
 >>>         flat_segs.append(idx)
 >>>     print(f"{idx+1}/{len(raw_data)//ds.seglen}", end="\r")
 >>> ds.reader.plot(rec="A02", sampfrom=169*ds.seglen, sampto=186*ds.seglen)
-
 also for sliced segments via:
 >>> flat_segs = {rec:[] for rec in ds.reader.all_records}
 >>> valid_segs = {rec:[] for rec in ds.reader.all_records}
@@ -35,6 +34,16 @@ also for sliced segments via:
 >>>         else:
 >>>             valid_segs[rec].append(seg)
 >>>         print(f"{idx+1}/{len(ds.all_segments[rec])} @ {i+1}/{len(ds.reader.all_records)}", end="\r")
+UPDATE: using `ecg_denoise` as follows:
+>>> valid_segs = {rec:[] for rec in ds.all_segments.keys()}
+>>> invalid_segs = []
+>>> for i, (rec, l_seg) in enumerate(ds.all_segments.items()):
+>>>     for idx, seg in enumerate(l_seg):
+>>>         if ecg_denoise(ds._load_seg_data(seg), ds.reader.fs ,{"ampl_min":0.15}) == [[0,ds.seglen]]:
+>>>             valid_segs[rec].append(seg)
+>>>         else:
+>>>             invalid_segs.append(seg)
+>>>         print(f"{idx+1}/{len(l_seg)} @ {i+1}/{len(ds.all_segments)}", end="\r")
 
 References:
 -----------
@@ -660,7 +669,9 @@ class CPSC2020(Dataset):
             save_fp.data = os.path.join(self.segments_dirs.data[rec_name], f"{seg_name}{self.reader.rec_ext}")
             save_fp.ann = os.path.join(self.segments_dirs.ann[rec_name], f"{seg_name}{self.reader.rec_ext}")
             seg = segments[ind, ...]
-            if self._get_seg_ampl(seg) < 0.1:  # drop out flat segments
+            # if self._get_seg_ampl(seg) < 0.1:  # drop out flat segments
+            #     continue
+            if ecg_denoise(seg, self.reader.fs, config={"ampl_min":0.15}) != [[0, self.seglen]]:
                 continue
             savemat(save_fp.data, {"ecg": seg}, format="5")
             seg_label = labels[ind, ...]
