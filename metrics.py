@@ -1,7 +1,7 @@
 """
 """
 from numbers import Real
-from typing import Union, Optional, Any, List, Tuple
+from typing import Union, Optional, Any, List, Tuple, Sequence
 
 import numpy as np
 from easydict import EasyDict as ED
@@ -162,9 +162,12 @@ def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pre
 
 # -------------------------------------------------------
 # the following are borrowed from CINC2020
+# for classification of segments of ECGs
 
 def eval_score(classes:List[str], truth:Sequence, binary_pred:Sequence, scalar_pred:Sequence) -> Tuple[float]:
     """ finished, checked,
+    
+    for classification of segments of ECGs
 
     Parameters:
     -----------

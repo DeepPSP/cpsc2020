@@ -11,6 +11,31 @@ Augmentations:
     - Gaussian noise (signal, on the fly, done in baseline wander)
     - stretch and compress (signal, offline)
 
+Issues:
+-------
+1. flat segments are found in the original CPSC dataset, e.g. 170*4000 to 185*4000,
+which could be checked for example via:
+>>> raw_data = ds.reader.load_data("A02",keep_dim=False)
+>>> flat_segs = []
+>>> for idx in range(len(raw_data)//ds.seglen):
+>>>     seg_data = raw_data[idx*ds.seglen:(idx+1)*ds.seglen]
+>>>     if ds._get_seg_ampl(seg_data) < 0.1:
+>>>         flat_segs.append(idx)
+>>>     print(f"{idx+1}/{len(raw_data)//ds.seglen}", end="\r")
+>>> ds.reader.plot(rec="A02", sampfrom=169*ds.seglen, sampto=186*ds.seglen)
+
+also for sliced segments via:
+>>> flat_segs = {rec:[] for rec in ds.reader.all_records}
+>>> valid_segs = {rec:[] for rec in ds.reader.all_records}
+>>> for i, rec in enumerate(ds.reader.all_records):
+>>>     for idx, seg in enumerate(ds.all_segments[rec]):
+>>>         seg_data = ds._load_seg_data(seg)
+>>>         if ds._get_seg_ampl(seg_data) < 0.1:
+>>>             flat_segs[rec].append(seg)
+>>>         else:
+>>>             valid_segs[rec].append(seg)
+>>>         print(f"{idx+1}/{len(ds.all_segments[rec])} @ {i+1}/{len(ds.reader.all_records)}", end="\r")
+
 References:
 -----------
 [1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
@@ -40,6 +65,7 @@ from sklearn.preprocessing import StandardScaler
 from cfg import TrainCfg, ModelCfg, PreprocCfg
 from data_reader import CPSC2020Reader as CR
 from signal_processing.ecg_preproc import parallel_preprocess_signal
+from signal_processing.ecg_denoise import ecg_denoise
 from utils import (
     dict_to_str, mask_to_intervals, list_sum,
     gen_gaussian_noise, gen_sinusoidal_noise, gen_baseline_wander,
@@ -98,7 +124,7 @@ class CPSC2020(Dataset):
         )
         self.__data_aug = self.training
 
-        self.siglen = self.config.input_len  # alias, for simplicity
+        self.seglen = self.config.input_len  # alias, for simplicity
 
         # create directories if needed
         # preprocess_dir stores pre-processed signals
@@ -156,12 +182,13 @@ class CPSC2020(Dataset):
 
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
-        """ finished, NOT checked,
+        """ finished, checked,
         """
         seg_name = self.segments[index]
         seg_data = self._load_seg_data(seg_name)
         seg_label = self._load_seg_label(seg_name)
-        seg_ampl = np.max(seg_data) - np.min(seg_data)
+        # seg_ampl = np.max(seg_data) - np.min(seg_data)
+        seg_ampl = self._get_seg_ampl(seg_data)
         # spb_indices = ann["SPB_indices"]
         # pvc_indices = ann["PVC_indices"]
         if self.__data_aug:
@@ -171,7 +198,7 @@ class CPSC2020(Dataset):
                 bw_ampl = ar * seg_ampl
                 g_ampl = gm * seg_ampl
                 bw = gen_baseline_wander(
-                    siglen=self.siglen,
+                    siglen=self.seglen,
                     fs=self.config.fs,
                     bw_fs=self.config.bw_fs,
                     amplitude=bw_ampl,
@@ -183,7 +210,15 @@ class CPSC2020(Dataset):
                 sign = sample(self.config.flip, 1)[0]
                 seg_data *= sign
             if self.config.random_normalize:
-                pass
+                rn_mean = uniform(
+                    self.config.random_normalize_mean[0],
+                    self.config.random_normalize_mean[1],
+                )
+                rn_std = uniform(
+                    self.config.random_normalize_std[0],
+                    self.config.random_normalize_std[1],
+                )
+                seg_data = (seg_data-np.mean(seg_data)+rn_mean) / np.std(seg_data) * rn_std
             if self.config.label_smoothing > 0:
                 seg_label = (1 - self.config.label_smoothing) * seg_label \
                     + self.config.label_smoothing / self.n_classes
@@ -202,6 +237,31 @@ class CPSC2020(Dataset):
         """
         """
         return len(self.segments)
+
+
+    def _get_seg_ampl(self, seg_data:np.ndarray, window:int=80) -> float:
+        """ finished, checked,
+
+        get amplitude of a segment
+
+        Parameters:
+        -----------
+        seg_data: ndarray,
+            data of the segment
+        window: int, default 80 (corr. to 200ms),
+            window length of a window for computing amplitude, with units in number of sample points
+
+        Returns:
+        --------
+        ampl: float,
+            amplitude of `seg_data`
+        """
+        half_window = window // 2
+        ampl = 0
+        for idx in range(len(seg_data)//half_window-1):
+            s = seg_data[idx*half_window: idx*half_window+window]
+            ampl = max(ampl, np.max(s)-np.min(s))
+        return ampl
 
 
     def _get_seg_data_path(self, seg:str) -> str:
@@ -251,7 +311,7 @@ class CPSC2020(Dataset):
         Returns:
         --------
         seg_data: ndarray,
-            data of the segment, of shape (self.siglen,)
+            data of the segment, of shape (self.seglen,)
         """
         seg_data_fp = self._get_seg_data_path(seg)
         seg_data = loadmat(seg_data_fp)["ecg"].squeeze()
@@ -301,6 +361,11 @@ class CPSC2020(Dataset):
         """
         """
         self.__data_aug = False
+
+    def enable_data_augmentation(self) -> NoReturn:
+        """
+        """
+        self.__data_aug = True
 
 
     def persistence(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
@@ -445,7 +510,7 @@ class CPSC2020(Dataset):
     def _slice_data(self, force_recompute:bool=False, verbose:int=0) -> NoReturn:
         """ finished, checked,
 
-        slice all records into segments of length `self.config.input_len`, i.e. `self.siglen`,
+        slice all records into segments of length `self.config.input_len`, i.e. `self.seglen`,
         and perform data augmentations specified in `self.config`
         
         Parameters:
@@ -471,7 +536,7 @@ class CPSC2020(Dataset):
     def _slice_one_record(self, rec:Union[int,str], force_recompute:bool=False, update_segments_json:bool=False, verbose:int=0) -> NoReturn:
         """ finished, checked,
 
-        slice one record into segments of length `self.config.input_len`, i.e. `self.siglen`,
+        slice one record into segments of length `self.config.input_len`, i.e. `self.seglen`,
         and perform data augmentations specified in `self.config`
         
         Parameters:
@@ -502,7 +567,7 @@ class CPSC2020(Dataset):
         data = self.reader.load_data(rec, units="mV", keep_dim=False)
         ann = self.reader.load_ann(rec)
         border_dist = int(0.5 * self.config.fs)
-        forward_len = self.siglen - self.config.overlap_len
+        forward_len = self.seglen - self.config.overlap_len
 
         spb_mask = np.zeros((len(data),), dtype=int)
         pvc_mask = np.zeros((len(data),), dtype=int)
@@ -510,13 +575,13 @@ class CPSC2020(Dataset):
         pvc_mask[ann["PVC_indices"]] = 1
 
         # generate initial segments with no overlap for non premature beats
-        n_init_seg = len(data) // self.siglen
-        segments = (data[:self.siglen*n_init_seg]).reshape((n_init_seg, self.siglen))
+        n_init_seg = len(data) // self.seglen
+        segments = (data[:self.seglen*n_init_seg]).reshape((n_init_seg, self.seglen))
         labels = np.zeros((n_init_seg, self.n_classes))
         labels[..., self.config.class_map["N"]] = 1
         # leave only non premature segments
-        non_premature = np.logical_or(spb_mask, pvc_mask)[:self.siglen*n_init_seg]
-        non_premature = non_premature.reshape((n_init_seg, self.siglen)).sum(axis=1)
+        non_premature = np.logical_or(spb_mask, pvc_mask)[:self.seglen*n_init_seg]
+        non_premature = non_premature.reshape((n_init_seg, self.seglen)).sum(axis=1)
         non_premature = np.where(non_premature == 0)[0]
         segments = segments[non_premature, ...]
         labels = labels[non_premature, ...]
@@ -536,8 +601,8 @@ class CPSC2020(Dataset):
         # mask for segment start indices
         premature_mask = np.zeros((len(data),), dtype=int)
         for idx in np.concatenate((ann["SPB_indices"], ann["PVC_indices"])):
-            start_idx = max(0, idx-self.siglen+border_dist)
-            end_idx = max(start_idx, min(idx-border_dist, len(data)-self.siglen))
+            start_idx = max(0, idx-self.seglen+border_dist)
+            end_idx = max(start_idx, min(idx-border_dist, len(data)-self.seglen))
             premature_mask[start_idx: end_idx] = 1
         # intervals for allowed start of augmented segments
         premature_intervals = mask_to_intervals(premature_mask, 1)
@@ -553,12 +618,12 @@ class CPSC2020(Dataset):
                     if sign != 0:
                         sc_ratio = self.config.stretch_compress
                         sc_ratio = 1 + (uniform(sc_ratio/4, sc_ratio) * sign) / 100
-                        sc_len = int(round(sc_ratio * self.siglen))
+                        sc_len = int(round(sc_ratio * self.seglen))
                         end_idx = start_idx + sc_len
                         aug_seg = data[start_idx: end_idx]
-                        aug_seg = SS.resample(x=aug_seg, num=self.siglen).reshape((1,-1))
+                        aug_seg = SS.resample(x=aug_seg, num=self.seglen).reshape((1,-1))
                     else:
-                        end_idx = start_idx + self.siglen
+                        end_idx = start_idx + self.seglen
                         # the segment of original signal, with no augmentation
                         aug_seg = data[start_idx: end_idx]
 
@@ -592,16 +657,18 @@ class CPSC2020(Dataset):
         for i, ind in enumerate(seg_inds):
             save_fp = ED()
             seg_name = f"{rec_name.replace('A', 'S')}_{i:07d}"
-            self.__all_segments[rec_name].append(seg_name)
             save_fp.data = os.path.join(self.segments_dirs.data[rec_name], f"{seg_name}{self.reader.rec_ext}")
             save_fp.ann = os.path.join(self.segments_dirs.ann[rec_name], f"{seg_name}{self.reader.rec_ext}")
             seg = segments[ind, ...]
+            if self._get_seg_ampl(seg) < 0.1:  # drop out flat segments
+                continue
             savemat(save_fp.data, {"ecg": seg}, format="5")
             seg_label = labels[ind, ...]
             seg_beat_ann = beat_ann[ind]
             save_ann_dict = seg_beat_ann.copy()
             save_ann_dict.update({"label": seg_label})
             savemat(save_fp.ann, save_ann_dict, format="5")
+            self.__all_segments[rec_name].append(seg_name)
             if verbose >= 2:
                 print(f"saving {i+1}/{len(seg_inds)}...", end="\r")
         if update_segments_json:
