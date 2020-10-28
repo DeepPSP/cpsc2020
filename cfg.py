@@ -197,17 +197,20 @@ TrainCfg.baseline_wander = True  # randomly shifting the baseline
 TrainCfg.bw = TrainCfg.baseline_wander  # alias
 TrainCfg.bw_fs = np.array([0.33, 0.1, 0.05, 0.01])
 TrainCfg.bw_ampl_ratio = np.array([
+    [0.01, 0.02, 0.04, 0.5],  # low
     [0.02, 0.04, 0.07, 0.1],  # low
     [0.05, 0.1, 0.16, 0.25],  # medium
     [0.1, 0.15, 0.25, 0.3],  # high
     [0.25, 0.25, 0.3, 0.35],  # extremely high
 ])
 TrainCfg.bw_gaussian = np.array([  # mean and std, ratio
-    [0.0, 0.0],  # ensure one with no gaussian noise
+    [0.0, 0.0],
+    [0.0, 0.0],
+    [0.0, 0.0],  # ensure at least one with no gaussian noise
     [0.0, 0.003],
     [0.0, 0.01],
 ])
-TrainCfg.flip = True  # making the signal upside down
+TrainCfg.flip = [-1] + [1]*4  # making the signal upside down, with probability 1/(1+4)
 # TODO: explore and add more data augmentations
 
 # configs of training epochs, batch, etc.

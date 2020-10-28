@@ -156,35 +156,46 @@ class CPSC2020(Dataset):
 
 
     def __getitem__(self, index:int) -> Tuple[np.ndarray, np.ndarray]:
-        """ NOT finished, NOT checked,
+        """ finished, NOT checked,
         """
         seg_name = self.segments[index]
         seg_data = self._load_seg_data(seg_name)
+        seg_label = self._load_seg_label(seg_name)
         seg_ampl = np.max(seg_data) - np.min(seg_data)
-        label = ann["label"]
-        spb_indices = ann["SPB_indices"]
-        pvc_indices = ann["PVC_indices"]
-        if self.config.bw:
-            ar = self.config.bw_ampl_ratio[randint(0, self._n_bw_choices-1)]
-            gm, gs = self.config.bw_gaussian[randint(0, self._n_gn_choices-1)]
-            bw_ampl = ar * seg_ampl
-            g_ampl = gm * seg_ampl
-            bw = gen_baseline_wander(
-                siglen=self.siglen,
-                fs=self.config.fs,
-                bw_fs=self.config.bw_fs,
-                amplitude=bw_ampl,
-                amplitude_mean=gm,
-                amplitude_std=gs,
+        # spb_indices = ann["SPB_indices"]
+        # pvc_indices = ann["PVC_indices"]
+        if self.__data_aug:
+            if self.config.bw:
+                ar = self.config.bw_ampl_ratio[randint(0, self._n_bw_choices-1)]
+                gm, gs = self.config.bw_gaussian[randint(0, self._n_gn_choices-1)]
+                bw_ampl = ar * seg_ampl
+                g_ampl = gm * seg_ampl
+                bw = gen_baseline_wander(
+                    siglen=self.siglen,
+                    fs=self.config.fs,
+                    bw_fs=self.config.bw_fs,
+                    amplitude=bw_ampl,
+                    amplitude_mean=gm,
+                    amplitude_std=gs,
+                )
+                seg_data = seg_data + bw
+            if len(self.config.flip) > 0:
+                sign = sample(self.config.flip, 1)[0]
+                seg_data *= sign
+            if self.config.random_normalize:
+                pass
+            if self.config.label_smoothing > 0:
+                seg_label = (1 - self.config.label_smoothing) * seg_label \
+                    + self.config.label_smoothing / self.n_classes
+
+        if self.__DEBUG__:
+            self.reader.plot(
+                rec="",  # unnecessary indeed
+                data=seg_data,
+                ann=self._load_seg_beat_ann(seg_name),
+                ticks_granularity=2,
             )
-            seg_data = seg_data + bw
-        if self.config.flip:
-            pass
-        if self.config.random_normalize:
-            pass
-        if self.config.label_smoothing > 0:
-            pass
-        raise NotImplementedError
+        return seg_data, seg_label
 
 
     def __len__(self) -> int:
@@ -615,7 +626,7 @@ class CPSC2020(Dataset):
         seg_beat_ann = self._load_seg_beat_ann(seg)
         rec_name = seg.split("_")[0].replace("S", "A")
         self.reader.plot(
-            rec=rec_name,
+            rec=rec_name,  # unnecessary indeed
             data=seg_data,
             ann=seg_beat_ann,
             ticks_granularity=ticks_granularity,
