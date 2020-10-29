@@ -635,13 +635,17 @@ class CPSC2020(Dataset):
                         end_idx = start_idx + self.seglen
                         # the segment of original signal, with no augmentation
                         aug_seg = data[start_idx: end_idx]
+                        sc_ratio = 1
 
                     seg_label = np.zeros((self.n_classes,))
                     seg_spb_inds = np.where(spb_mask[start_idx: end_idx]==1)[0]
                     seg_pvc_inds = np.where(pvc_mask[start_idx: end_idx]==1)[0]
+                    seg_spb_inds = np.round(seg_spb_inds * sc_ratio).astype(int)
+                    seg_pvc_inds = np.round(seg_pvc_inds * sc_ratio).astype(int)
                     seg_beat_ann = {
                         "SPB_indices": seg_spb_inds,
                         "PVC_indices": seg_pvc_inds,
+                        "interval": np.array([start_idx, end_idx]),
                     }
                     if len(seg_spb_inds) > 0:
                         seg_label[self.config.class_map["S"]] = 1
