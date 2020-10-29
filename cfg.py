@@ -162,8 +162,15 @@ ModelCfg.cnn.multi_scopic.block.kw_activation = \
     deepcopy(ModelCfg.cnn.multi_scopic.kw_activation)
 
 # rnn part
+# abuse of notation
 ModelCfg.rnn = ED()
 ModelCfg.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
+ModelCfg.rnn.linear.out_channels = [
+    256, 64,
+]
+ModelCfg.rnn.linear.bias = True
+ModelCfg.rnn.linear.dropouts = 0.2
+ModelCfg.rnn.linear.activation = 'mish'
 
 # ModelCfg.rnn.lstm = deepcopy(lstm)
 # ModelCfg.rnn.attention = deepcopy(attention)
