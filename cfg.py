@@ -192,14 +192,19 @@ TrainCfg.normalize_data = True
 TrainCfg.label_smoothing = 0.1
 TrainCfg.random_mask = int(TrainCfg.fs * 0.0)  # 1.0s, 0 for no masking
 TrainCfg.stretch_compress = 5  # stretch or compress in time axis, units in percentage (0 - inf)
-TrainCfg.random_normalize = False  # (re-)normalize to random mean and std
-TrainCfg.random_normalize_mean = [-0.1, 0.1]
-TrainCfg.random_normalize_std = [0.9, 1.1]
+TrainCfg.random_normalize = True  # (re-)normalize to random mean and std
+# valid segments has
+# median of mean appr. 0, mean of mean 0.038
+# median of std 0.13, mean of std 0.18
+TrainCfg.random_normalize_mean = [-0.05, 0.1]
+TrainCfg.random_normalize_std = [0.08, 0.32]
 TrainCfg.baseline_wander = True  # randomly shifting the baseline
 TrainCfg.bw = TrainCfg.baseline_wander  # alias
 TrainCfg.bw_fs = np.array([0.33, 0.1, 0.05, 0.01])
 TrainCfg.bw_ampl_ratio = np.array([
-    [0.01, 0.02, 0.04, 0.5],  # low
+    [0.01, 0.01, 0.02, 0.03],  # low
+    [0.01, 0.02, 0.04, 0.05],  # low
+    [0.1, 0.06, 0.04, 0.02],  # low
     [0.02, 0.04, 0.07, 0.1],  # low
     [0.05, 0.1, 0.16, 0.25],  # medium
     [0.1, 0.15, 0.25, 0.3],  # high
