@@ -25,7 +25,8 @@ import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from easydict import EasyDict as ED
 
-from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
+# from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
+from model import ECG_CRNN_CPSC2020
 from torch_ecg.torch_ecg.models.nets import (
     BCEWithLogitsWithClassWeightLoss,
     default_collate_fn as collate_fn,
@@ -446,7 +447,8 @@ if __name__ == "__main__":
     model_config.rnn.name = config.rnn_name
 
     if config.model_name.lower() == "crnn":
-        model = ECG_CRNN(
+        # model = ECG_CRNN(
+        model = ECG_CRNN_CPSC2020(
             classes=classes,
             n_leads=config.n_leads,
             input_len=config.input_len,
