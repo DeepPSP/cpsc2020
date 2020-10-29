@@ -146,7 +146,7 @@ class CPSC2020(Dataset):
         self.rpeaks_dir = os.path.join(config.db_dir, "rpeaks")
         os.makedirs(self.rpeaks_dir, exist_ok=True)
 
-        if self.config.model_name.lower() == "crnn":
+        if self.config.model_name.lower() == "crnn":  # for classification
             self.segments_dirs = ED()
             self.__all_segments = ED()
             self.segments_json = os.path.join(self.segments_dir, "crnn_segments.json")
@@ -156,6 +156,10 @@ class CPSC2020(Dataset):
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.train])
             else:
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.test])
+        # elif self.config.model_name.lower() == "seq_lab":  # sequence labelling
+        #     pass
+        # elif self.config.model_name.lower() == "od":  # object detection
+        #     pass
         else:
             raise NotImplementedError(f"data generator for model \042{self.config.model_name}\042 not implemented")
 
@@ -176,6 +180,7 @@ class CPSC2020(Dataset):
             with open(self.segments_json, "r") as f:
                 self.__all_segments = json.load(f)
             return
+        print(f"please allow the reader a few minutes to collect the segments from {self.segments_dir}...")
         seg_filename_pattern = f"S\d{{2}}_\d{{7}}{self.reader.rec_ext}"
         self.__all_segments = ED({
             rec: get_record_list_recursive3(self.segments_dirs.data[rec], seg_filename_pattern) \
@@ -239,6 +244,9 @@ class CPSC2020(Dataset):
                 ann=self._load_seg_beat_ann(seg_name),
                 ticks_granularity=2,
             )
+        
+        seg_data = seg_data.reshape((self.config.n_leads, self.seglen))
+
         return seg_data, seg_label
 
 
