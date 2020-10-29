@@ -1,12 +1,13 @@
 """
 """
 from copy import deepcopy
-from typing import Optional, Sequence, NoReturn
+from typing import Union, Optional, Sequence, Tuple, NoReturn
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import Tensor
+from easydict import EasyDict as ED
 
 from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
 from cfg import ModelCfg
@@ -90,3 +91,8 @@ class ECG_CRNN_CPSC2020(ECG_CRNN):
                 pred.at[row_idx, 'bin_pred'] = \
                     np.array(self.classes)[np.where(bin_pred==1)[0]].tolist()
         return pred, bin_pred
+
+    def inference_CINC2020(self):
+        """
+        """
+        raise NotImplementedError("method for CINC2020 should not be used in CPSC2020")
