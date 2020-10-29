@@ -69,11 +69,14 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
     print(f"training configurations are as follows:\n{dict_to_str(config)}")
 
     train_dataset = CPSC2020(config=config, training=True)
+    train_dataset.__DEBUG__ = False
 
     if debug:
         val_train_dataset = CPSC2020(config=config, training=True)
         val_train_dataset.disable_data_augmentation()
+        val_train_dataset.__DEBUG__ = False
     val_dataset = CPSC2020(config=config, training=False)
+    val_dataset.__DEBUG__ = False
 
     n_train = len(train_dataset)
     n_val = len(val_dataset)

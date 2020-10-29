@@ -101,7 +101,7 @@ class CPSC2020(Dataset):
     and of overlap length `TrainCfg.overlap_len` around premature beats
     2. do augmentations for premature segments
     """
-    __DEBUG__ = True
+    __DEBUG__ = False
     __name__ = "CPSC2020"
 
     def __init__(self, config:ED, training:bool=True) -> NoReturn:
