@@ -395,12 +395,12 @@ def get_args(**kwargs):
         dest='batch_size')
     parser.add_argument(
         '-c', '--cnn-name',
-        type=str, default='resnet',
+        type=str, default='multi_scopic',
         help='choice of cnn feature extractor',
         dest='cnn_name')
     parser.add_argument(
         '-r', '--rnn-name',
-        type=str, default='lstm',
+        type=str, default='linear',
         help='choice of rnn structures',
         dest='rnn_name')
     parser.add_argument(
