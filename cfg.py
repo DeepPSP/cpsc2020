@@ -165,6 +165,7 @@ ModelCfg.cnn.multi_scopic.block.kw_activation = \
 # abuse of notation
 ModelCfg.rnn = ED()
 ModelCfg.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
+ModelCfg.rnn.linear = ED()
 ModelCfg.rnn.linear.out_channels = [
     256, 64,
 ]
