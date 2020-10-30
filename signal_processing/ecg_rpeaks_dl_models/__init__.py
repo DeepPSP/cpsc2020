@@ -24,38 +24,59 @@ __all__ = [
 ]
 
 
-def load_model(name:str) -> Union[Model, Tuple[Model,...], nn.Module, Tuple[nn.Module,...]]:
+def load_model(name:str, **kwargs) -> Union[Model, Tuple[Model,...], nn.Module, Tuple[nn.Module,...]]:
     """ finished, checked,
 
     Parameters:
     -----------
     name: str,
         name of the model
+
+    Returns:
+    --------
+    model, or sequence of models, either keras or pytorch
     """
     if name.lower() == "keras_ecg_seq_lab_net":
-        cnn_model, crnn_model = _load_keras_ecg_seq_lab_net()
-        return cnn_model, crnn_model
+        models = _load_keras_ecg_seq_lab_net(**kwargs)
+        return models
     elif name.lower() == "pytorch_ecg_seq_lab_net":
         raise NotImplementedError
     else:
         raise NotImplementedError
 
 
-def _load_keras_ecg_seq_lab_net() -> Tuple[Model,Model]:
+def _load_keras_ecg_seq_lab_net(which:str="both", **kwargs) -> Union[Tuple[Model,Model],Model]:
     """ finished, checked,
 
     load the CNN model and CRNN model from the entry 0416 of CPSC2019
+
+    Parameters:
+    -----------
+    which: str, default "both",
+        choice of model(s) to load,
+        can be one of "both", "cnn", "crnn", case insensitive
+
+    Returns:
+    --------
+    cnn_model, crnn_model (both or one): Model
     """
-    cnn_config_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.json")
-    cnn_h5_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.h5")
-    cnn_model = model_from_json(open(cnn_config_path).read())
-    cnn_model.load_weights(cnn_h5_path)
-
-    crnn_config_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CRNN.json")
-    crnn_h5_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CRNN.h5")
-    crnn_model = model_from_json(open(crnn_config_path).read())
-    crnn_model.load_weights(crnn_h5_path)
-
+    _which = which.lower()
+    if _which in ["both", "cnn"]:
+        cnn_config_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.json")
+        cnn_h5_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CNN.h5")
+        cnn_model = model_from_json(open(cnn_config_path).read())
+        cnn_model.load_weights(cnn_h5_path)
+        cnn_model.trainable = False
+        if _which == "cnn":
+            return cnn_model
+    if _which in ["both", "cnn"]:
+        crnn_config_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CRNN.json")
+        crnn_h5_path = os.path.join(_BASE_DIR, "CPSC2019_0416", "CRNN.h5")
+        crnn_model = model_from_json(open(crnn_config_path).read())
+        crnn_model.load_weights(crnn_h5_path)
+        crnn_model.trainable = False
+        if _which == "crnn":
+            return crnn_model
     return cnn_model, crnn_model
 
 
