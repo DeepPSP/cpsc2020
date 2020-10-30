@@ -245,6 +245,11 @@ TrainCfg.lr_gamma = 0.1
 
 TrainCfg.lr_scheduler = None  # 'plateau', 'burn_in', 'step', None
 
+# configs of loss function
+TrainCfg.loss = 'BCEWithLogitsLoss'
+# TrainCfg.loss = 'BCEWithLogitsWithClassWeightLoss'
+TrainCfg.eval_every = 20
+
 
 
 PlotCfg = ED()
