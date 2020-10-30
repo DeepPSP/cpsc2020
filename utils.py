@@ -33,6 +33,7 @@ __all__ = [
     "compute_local_average",
     "gen_gaussian_noise", "gen_sinusoidal_noise", "gen_baseline_wander",
     "get_record_list_recursive3",
+    "init_logger",
 ]
 
 
@@ -817,6 +818,65 @@ def get_record_list_recursive3(db_dir:str, rec_patterns:Union[str,Dict[str,str]]
             res[k] = [os.path.splitext(item)[0].replace(db_dir, "") for item in res[k]]
             res[k] = sorted(res[k])
     return res
+
+
+def init_logger(log_dir:str, log_file:Optional[str]=None, mode:str='a', verbose:int=0) -> logging.Logger:
+    """ finished, checked,
+
+    Parameters:
+    -----------
+    log_dir: str,
+        directory of the log file
+    log_file: str, optional,
+        name of the log file
+    mode: str, default 'a',
+        mode of writing the log file, can be one of 'a', 'w'
+    verbose: int, default 0,
+        log verbosity
+
+    Returns:
+    --------
+    logger: Logger
+    """
+    if log_dir is None:
+        log_dir = '~/temp/log/'
+    if log_file is None:
+        log_file = f'log_{get_date_str()}.txt'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_file = os.path.join(log_dir, log_file)
+    print(f'log file path: {log_file}')
+
+    logger = logging.getLogger('ECG-CRNN')
+
+    c_handler = logging.StreamHandler(sys.stdout)
+    f_handler = logging.FileHandler(log_file)
+
+    if verbose >= 2:
+        print("levels of c_handler and f_handler are set DEBUG")
+        c_handler.setLevel(logging.DEBUG)
+        f_handler.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+    elif verbose >= 1:
+        print("level of c_handler is set INFO, level of f_handler is set DEBUG")
+        c_handler.setLevel(logging.INFO)
+        f_handler.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+    else:
+        print("levels of c_handler and f_handler are set WARNING")
+        c_handler.setLevel(logging.WARNING)
+        f_handler.setLevel(logging.WARNING)
+        logger.setLevel(logging.WARNING)
+
+    c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    c_handler.setFormatter(c_format)
+    f_handler.setFormatter(f_format)
+
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+
+    return logger
 
 
 CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats

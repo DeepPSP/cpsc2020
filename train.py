@@ -33,7 +33,7 @@ from torch_ecg.torch_ecg.models.nets import (
 )
 from utils import get_date_str, dict_to_str, str2bool
 from cfg import ModelCfg, TrainCfg
-from dataset import CPSC2020
+# from dataset import CPSC2020
 from dataset_simplified import CPSC2020 as CPSC2020_SIMPLIFIED
 from metrics import eval_score, CPSC2020_loss, CPSC2020_score
 
@@ -429,6 +429,7 @@ def get_args(**kwargs):
 DAS = True  # JD DAS platform
 
 if __name__ == "__main__":
+    from utils import init_logger
     config = get_args(**TrainCfg)
     # os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu
     if not DAS:
