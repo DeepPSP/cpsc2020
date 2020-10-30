@@ -34,6 +34,7 @@ from torch_ecg.torch_ecg.models.nets import (
 from utils import get_date_str, dict_to_str, str2bool
 from cfg import ModelCfg, TrainCfg
 from dataset import CPSC2020
+from dataset_simplified import CPSC2020 as CPSC2020_SIMPLIFIED
 from metrics import eval_score, CPSC2020_loss, CPSC2020_score
 
 if ModelCfg.torch_dtype.lower() == 'double':
@@ -68,14 +69,15 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
     """
     print(f"training configurations are as follows:\n{dict_to_str(config)}")
 
-    train_dataset = CPSC2020(config=config, training=True)
+    ds = CPSC2020_SIMPLIFIED
+    train_dataset = ds(config=config, training=True)
     train_dataset.__DEBUG__ = False
 
     if debug:
-        val_train_dataset = CPSC2020(config=config, training=True)
+        val_train_dataset = ds(config=config, training=True)
         val_train_dataset.disable_data_augmentation()
         val_train_dataset.__DEBUG__ = False
-    val_dataset = CPSC2020(config=config, training=False)
+    val_dataset = ds(config=config, training=False)
     val_dataset.__DEBUG__ = False
 
     n_train = len(train_dataset)
