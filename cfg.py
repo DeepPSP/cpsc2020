@@ -198,7 +198,30 @@ ModelCfg.seq_lab.classes = [c for c in BaseCfg.classes if c != "N"]
 ModelCfg.seq_lab.class_map = {c:v for c,v in BaseCfg.class_map.items() if c != "N"}
 
 ModelCfg.seq_lab.cnn = ModelCfg.crnn.cnn.copy()
-# TODO: add more configs on seq_lab model
+
+ModelCfg.seq_lab.rnn = ED()
+# ModelCfg.seq_lab.rnn.name = 'lstm'  # 'none'
+ModelCfg.seq_lab.rnn.name = 'none'  # 'lstm'
+# ModelCfg.seq_lab.rnn.lstm = ED()
+# ModelCfg.seq_lab.rnn.lstm.hidden_sizes = [256, 256]
+# ModelCfg.seq_lab.rnn.lstm.bias = True
+# ModelCfg.seq_lab.rnn.lstm.dropout = 0
+# ModelCfg.seq_lab.rnn.lstm.bidirectional = True
+ModelCfg.seq_lab.attn = ED()
+ModelCfg.seq_lab.attn.name = 'se'  # 'gc'
+ModelCfg.seq_lab.attn.se = ED()
+ModelCfg.seq_lab.attn.se.reduction = 8  # not including the last linear layer
+ModelCfg.seq_lab.attn.se.activation = "relu"
+ModelCfg.seq_lab.attn.se.kw_activation = ED(inplace=True)
+ModelCfg.seq_lab.attn.se.bias = True
+ModelCfg.seq_lab.attn.se.kernel_initializer = 'he_normal'
+
+ModelCfg.seq_lab.clf = ED()
+ModelCfg.seq_lab.clf.out_channels = [256, 64]  # not including the last linear layer
+ModelCfg.seq_lab.clf.activation = "mish"
+ModelCfg.seq_lab.clf.bias = True
+ModelCfg.seq_lab.clf.kernel_initializer = 'he_normal'
+ModelCfg.seq_lab.clf.dropouts = [0.2, 0.2, 0.0]
 
 
 

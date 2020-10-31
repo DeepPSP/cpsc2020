@@ -383,7 +383,7 @@ class CPSC2020(Dataset):
 
 
     def _load_seg_seq_lab(self, seg:str, reduction:int=8) -> np.ndarray:
-        """ finished, NOT checked,
+        """ finished, checked,
 
         Parameters:
         -----------
