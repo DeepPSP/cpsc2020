@@ -26,7 +26,7 @@ from tensorboardX import SummaryWriter
 from easydict import EasyDict as ED
 
 # from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
-from model import ECG_CRNN_CPSC2020
+from model import ECG_CRNN_CPSC2020, ECG_SEQ_LAB_NET_CPSC2020
 from torch_ecg.torch_ecg.models.nets import (
     BCEWithLogitsWithClassWeightLoss,
     default_collate_fn as collate_fn,
@@ -396,6 +396,11 @@ def get_args(**kwargs):
         help='the batch size for training',
         dest='batch_size')
     parser.add_argument(
+        '-m', '--model-name',
+        type=str, default="crnn",
+        help='name of the model to train',
+        dest='model_name')
+    parser.add_argument(
         '-c', '--cnn-name',
         type=str, default='multi_scopic',
         help='choice of cnn feature extractor',
@@ -438,6 +443,7 @@ if __name__ == "__main__":
         device = torch.device('cuda')
     logger = init_logger(log_dir=config.log_dir)
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
+    logger.info(f"Model name = {config.model_name}")
     logger.info(f'Using device {device}')
     logger.info(f"Using torch of version {torch.__version__}")
     logger.info(f'with configuration\n{dict_to_str(config)}')
@@ -446,13 +452,19 @@ if __name__ == "__main__":
     print(f"Using torch of version {torch.__version__}")
     print(f'with configuration\n{dict_to_str(config)}')
 
-    classes = config.classes
+    # classes = config.classes
+    model_name = config.model_name.lower()
+    classes = deepcopy(ModelCfg[model_name].classes)
+    class_map = deepcopy(ModelCfg[model_name].class_map)
 
-    model_config = deepcopy(ModelCfg)
+    if model_name == "crnn":
+        model_config = deepcopy(ModelCfg.crnn)
+    elif model_name == "seq_lab":
+        model_config = deepcopy(ModelCfg.seq_lab)
     model_config.cnn.name = config.cnn_name
     model_config.rnn.name = config.rnn_name
 
-    if config.model_name.lower() == "crnn":
+    if model_name == "crnn":
         # model = ECG_CRNN(
         model = ECG_CRNN_CPSC2020(
             classes=classes,
@@ -460,8 +472,15 @@ if __name__ == "__main__":
             input_len=config.input_len,
             config=model_config,
         )
+    elif model_name == "seq_lab":
+        model = ECG_SEQ_LAB_NET_CPSC2020(
+            classes=classes,
+            n_leads=config.n_leads,
+            input_len=config.input_len,
+            config=model_config,
+        )
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"Model {model_name} not supported yet!")
 
     if not DAS and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
