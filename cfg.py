@@ -88,14 +88,19 @@ ModelCfg = ED()
 ModelCfg.fs = BaseCfg.fs
 ModelCfg.n_leads = 1
 ModelCfg.torch_dtype = BaseCfg.torch_dtype
-ModelCfg.classes = deepcopy(BaseCfg.classes)
-ModelCfg.class_map = deepcopy(BaseCfg.class_map)
 
-ModelCfg.cnn = ED()
-ModelCfg.cnn.name = 'multi_scopic'  # resnet, resnet_gc, vgg, cpsc2018, etc.
-ModelCfg.cnn.multi_scopic = ED()
-ModelCfg.cnn.multi_scopic.groups = 1
-ModelCfg.cnn.multi_scopic.scopes = [
+ModelCfg.crnn = ED()
+ModelCfg.crnn.fs = BaseCfg.fs
+ModelCfg.crnn.n_leads = 1
+ModelCfg.crnn.torch_dtype = BaseCfg.torch_dtype
+ModelCfg.crnn.classes = deepcopy(BaseCfg.classes)
+ModelCfg.crnn.class_map = deepcopy(BaseCfg.class_map)
+
+ModelCfg.crnn.cnn = ED()
+ModelCfg.crnn.cnn.name = 'multi_scopic'  # resnet, resnet_gc, vgg, cpsc2018, etc.
+ModelCfg.crnn.cnn.multi_scopic = ED()
+ModelCfg.crnn.cnn.multi_scopic.groups = 1
+ModelCfg.crnn.cnn.multi_scopic.scopes = [
     [
         [1,],
         [1,1,],
@@ -116,15 +121,15 @@ ModelCfg.cnn.multi_scopic.scopes = [
 # as sampling frequencies of CPSC2019 and CINC2020 are 500Hz
 # while CPSC2020 is 400 Hz
 # should the filter_lengths be adjusted?
-ModelCfg.cnn.multi_scopic.filter_lengths = [
+ModelCfg.crnn.cnn.multi_scopic.filter_lengths = [
     [11, 7, 5,],
     [11, 7, 5,],
     [11, 7, 5,],
 ]
-ModelCfg.cnn.multi_scopic.subsample_lengths = \
-    list(repeat(2, len(ModelCfg.cnn.multi_scopic.scopes)))
+ModelCfg.crnn.cnn.multi_scopic.subsample_lengths = \
+    list(repeat(2, len(ModelCfg.cnn.crnn.multi_scopic.scopes)))
 _base_num_filters = 8
-ModelCfg.cnn.multi_scopic.num_filters = [
+ModelCfg.crnn.cnn.multi_scopic.num_filters = [
     [
         _base_num_filters*4,
         _base_num_filters*8,
@@ -141,45 +146,56 @@ ModelCfg.cnn.multi_scopic.num_filters = [
         _base_num_filters*16,
     ],
 ]
-ModelCfg.cnn.multi_scopic.dropouts = [
+ModelCfg.crnn.cnn.multi_scopic.dropouts = [
     [0, 0.2, 0],
     [0, 0.2, 0],
     [0, 0.2, 0],
 ]
-ModelCfg.cnn.multi_scopic.bias = True
-ModelCfg.cnn.multi_scopic.kernel_initializer = "he_normal"
-ModelCfg.cnn.multi_scopic.kw_initializer = {}
-ModelCfg.cnn.multi_scopic.activation = "relu"
-ModelCfg.cnn.multi_scopic.kw_activation = {"inplace": True}
-ModelCfg.cnn.multi_scopic.block = ED()
-ModelCfg.cnn.multi_scopic.block.subsample_mode = 'max'  # or 'conv', 'avg', 'nearest', 'linear', 'bilinear'
-ModelCfg.cnn.multi_scopic.block.bias = ModelCfg.cnn.multi_scopic.bias
-ModelCfg.cnn.multi_scopic.block.kernel_initializer = ModelCfg.cnn.multi_scopic.kernel_initializer
-ModelCfg.cnn.multi_scopic.block.kw_initializer = \
+ModelCfg.crnn.cnn.multi_scopic.bias = True
+ModelCfg.crnn.cnn.multi_scopic.kernel_initializer = "he_normal"
+ModelCfg.crnn.cnn.multi_scopic.kw_initializer = {}
+ModelCfg.crnn.cnn.multi_scopic.activation = "relu"
+ModelCfg.crnn.cnn.multi_scopic.kw_activation = {"inplace": True}
+ModelCfg.crnn.cnn.multi_scopic.block = ED()
+ModelCfg.crnn.cnn.multi_scopic.block.subsample_mode = 'max'  # or 'conv', 'avg', 'nearest', 'linear', 'bilinear'
+ModelCfg.crnn.cnn.multi_scopic.block.bias = ModelCfg.cnn.multi_scopic.bias
+ModelCfg.crnn.cnn.multi_scopic.block.kernel_initializer = ModelCfg.cnn.multi_scopic.kernel_initializer
+ModelCfg.crnn.cnn.multi_scopic.block.kw_initializer = \
     deepcopy(ModelCfg.cnn.multi_scopic.kw_initializer)
-ModelCfg.cnn.multi_scopic.block.activation = ModelCfg.cnn.multi_scopic.activation
-ModelCfg.cnn.multi_scopic.block.kw_activation = \
+ModelCfg.crnn.cnn.multi_scopic.block.activation = ModelCfg.cnn.multi_scopic.activation
+ModelCfg.crnn.cnn.multi_scopic.block.kw_activation = \
     deepcopy(ModelCfg.cnn.multi_scopic.kw_activation)
 
 # rnn part
 # abuse of notation
-ModelCfg.rnn = ED()
-ModelCfg.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
-ModelCfg.rnn.linear = ED()
-ModelCfg.rnn.linear.out_channels = [
+ModelCfg.crnn.rnn = ED()
+ModelCfg.crnn.rnn.name = 'linear'  # 'none', 'lstm', 'attention'
+ModelCfg.crnn.rnn.linear = ED()
+ModelCfg.crnn.rnn.linear.out_channels = [
     256, 64,
 ]
-ModelCfg.rnn.linear.bias = True
-ModelCfg.rnn.linear.dropouts = 0.2
-ModelCfg.rnn.linear.activation = 'mish'
+ModelCfg.crnn.rnn.linear.bias = True
+ModelCfg.crnn.rnn.linear.dropouts = 0.2
+ModelCfg.crnn.rnn.linear.activation = 'mish'
 
-# ModelCfg.rnn.lstm = deepcopy(lstm)
-# ModelCfg.rnn.attention = deepcopy(attention)
-# ModelCfg.rnn.linear = deepcopy(linear)
+# ModelCfg.crnn.rnn.lstm = deepcopy(lstm)
+# ModelCfg.crnn.rnn.attention = deepcopy(attention)
+# ModelCfg.crnn.rnn.linear = deepcopy(linear)
 
 # global pooling
 # currently is fixed using `AdaptiveMaxPool1d`
-ModelCfg.global_pool = 'max'  # 'avg', 'attentive'
+ModelCfg.crnn.global_pool = 'max'  # 'avg', 'attentive'
+
+
+ModelCfg.seq_lab = ED()
+ModelCfg.seq_lab.fs = BaseCfg.fs
+ModelCfg.seq_lab.n_leads = 1
+ModelCfg.seq_lab.torch_dtype = BaseCfg.torch_dtype
+ModelCfg.seq_lab.classes = [c for c in BaseCfg.classes if c != "N"]
+ModelCfg.seq_lab.class_map = {c:v for c,v in BaseCfg.class_map.items() if c != "N"}
+
+ModelCfg.seq_lab.cnn = ModelCfg.crnn.cnn.copy()
+# TODO: add more configs on seq_lab model
 
 
 
@@ -191,9 +207,8 @@ TrainCfg.log_dir = os.path.join(_BASE_DIR, 'log')
 TrainCfg.checkpoints = os.path.join(_BASE_DIR, "checkpoints")
 TrainCfg.input_len = int(10 * TrainCfg.fs)  # 10 s
 TrainCfg.overlap_len = int(6 * TrainCfg.fs)  # 6 s
-TrainCfg.model_name = "crnn"  # "seq_lab", "unet"
-TrainCfg.classes = deepcopy(BaseCfg.classes)
-TrainCfg.class_map = deepcopy(BaseCfg.class_map)
+TrainCfg.bias_thr = BaseCfg.bias_thr
+
 TrainCfg.test_rec_num = 1
 
 TrainCfg.normalize_data = True
@@ -230,6 +245,8 @@ TrainCfg.bw_gaussian = np.array([  # mean and std, ratio
 TrainCfg.flip = [-1] + [1]*4  # making the signal upside down, with probability 1/(1+4)
 # TODO: explore and add more data augmentations
 
+TrainCfg.seq_lab_reduction = 2**3  # TODO: automatic adjust via model config
+
 # configs of training epochs, batch, etc.
 TrainCfg.n_epochs = 300
 TrainCfg.batch_size = 128
@@ -244,6 +261,11 @@ TrainCfg.lr_step_size = 50
 TrainCfg.lr_gamma = 0.1
 
 TrainCfg.lr_scheduler = None  # 'plateau', 'burn_in', 'step', None
+
+# model selection
+TrainCfg.model_name = "crnn"  # "seq_lab", "unet"
+TrainCfg.classes = deepcopy(ModelCfg[TrainCfg.model_name].classes)
+TrainCfg.class_map = deepcopy(ModelCfg[TrainCfg.model_name].class_map)
 
 # configs of loss function
 TrainCfg.loss = 'BCEWithLogitsLoss'
