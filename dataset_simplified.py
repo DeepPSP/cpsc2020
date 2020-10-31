@@ -94,7 +94,8 @@ class CPSC2020(Dataset):
         self.segments_dir = os.path.join(config.db_dir, "segments")
         os.makedirs(self.segments_dir, exist_ok=True)
 
-        if self.config.model_name.lower() == "crnn":  # for classification
+        if self.config.model_name.lower() in ["crnn", "seq_lab"]:
+            # for classification, or for sequence labeling
             self.segments_dirs = ED()
             self.__all_segments = ED()
             self.segments_json = os.path.join(self.segments_dir, "crnn_segments.json")
@@ -104,8 +105,6 @@ class CPSC2020(Dataset):
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.train])
             else:
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.test])
-        # elif self.config.model_name.lower() == "seq_lab":  # sequence labelling
-        #     pass
         # elif self.config.model_name.lower() == "od":  # object detection
         #     pass
         else:

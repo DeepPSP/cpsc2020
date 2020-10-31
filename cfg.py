@@ -163,7 +163,7 @@ ModelCfg.crnn.cnn.multi_scopic.block.bias = \
 ModelCfg.crnn.cnn.multi_scopic.block.kernel_initializer = \
     ModelCfg.crnn.cnn.multi_scopic.kernel_initializer
 ModelCfg.crnn.cnn.multi_scopic.block.kw_initializer = \
-    deepcopy(ModelCfg.cnn.multi_scopic.kw_initializer)
+    deepcopy(ModelCfg.crnn.cnn.multi_scopic.kw_initializer)
 ModelCfg.crnn.cnn.multi_scopic.block.activation = \
     ModelCfg.crnn.cnn.multi_scopic.activation
 ModelCfg.crnn.cnn.multi_scopic.block.kw_activation = \
