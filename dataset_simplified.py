@@ -37,6 +37,9 @@ from utils import (
 
 if ModelCfg.torch_dtype.lower() == 'double':
     torch.set_default_tensor_type(torch.DoubleTensor)
+    _DTYPE = np.float32
+else:
+    _DTYPE = np.float64
 
 
 __all__ = [
