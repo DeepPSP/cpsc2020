@@ -149,7 +149,7 @@ class CPSC2020(Dataset):
         seg_data = self._load_seg_data(seg_name)
         if self.config.model_name.lower() == "crnn":
             seg_label = self._load_seg_label(seg_name)
-        else:
+        elif self.config.model_name.lower() == "seq_lab":
             seg_label = self._load_seg_seq_lab(
                 seg=seg_name,
                 reduction=self.config.seq_lab_reduction,
