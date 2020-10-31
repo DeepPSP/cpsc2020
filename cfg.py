@@ -127,7 +127,7 @@ ModelCfg.crnn.cnn.multi_scopic.filter_lengths = [
     [11, 7, 5,],
 ]
 ModelCfg.crnn.cnn.multi_scopic.subsample_lengths = \
-    list(repeat(2, len(ModelCfg.cnn.crnn.multi_scopic.scopes)))
+    list(repeat(2, len(ModelCfg.crnn.cnn.multi_scopic.scopes)))
 _base_num_filters = 8
 ModelCfg.crnn.cnn.multi_scopic.num_filters = [
     [
@@ -158,13 +158,16 @@ ModelCfg.crnn.cnn.multi_scopic.activation = "relu"
 ModelCfg.crnn.cnn.multi_scopic.kw_activation = {"inplace": True}
 ModelCfg.crnn.cnn.multi_scopic.block = ED()
 ModelCfg.crnn.cnn.multi_scopic.block.subsample_mode = 'max'  # or 'conv', 'avg', 'nearest', 'linear', 'bilinear'
-ModelCfg.crnn.cnn.multi_scopic.block.bias = ModelCfg.cnn.multi_scopic.bias
-ModelCfg.crnn.cnn.multi_scopic.block.kernel_initializer = ModelCfg.cnn.multi_scopic.kernel_initializer
+ModelCfg.crnn.cnn.multi_scopic.block.bias = \
+    ModelCfg.crnn.cnn.multi_scopic.bias
+ModelCfg.crnn.cnn.multi_scopic.block.kernel_initializer = \
+    ModelCfg.crnn.cnn.multi_scopic.kernel_initializer
 ModelCfg.crnn.cnn.multi_scopic.block.kw_initializer = \
     deepcopy(ModelCfg.cnn.multi_scopic.kw_initializer)
-ModelCfg.crnn.cnn.multi_scopic.block.activation = ModelCfg.cnn.multi_scopic.activation
+ModelCfg.crnn.cnn.multi_scopic.block.activation = \
+    ModelCfg.crnn.cnn.multi_scopic.activation
 ModelCfg.crnn.cnn.multi_scopic.block.kw_activation = \
-    deepcopy(ModelCfg.cnn.multi_scopic.kw_activation)
+    deepcopy(ModelCfg.crnn.cnn.multi_scopic.kw_activation)
 
 # rnn part
 # abuse of notation
