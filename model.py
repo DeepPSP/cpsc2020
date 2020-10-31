@@ -1,7 +1,8 @@
 """
 """
 from copy import deepcopy
-from typing import Union, Optional, Sequence, Tuple, NoReturn
+from functools import reduce
+from typing import Union, Optional, Sequence, Tuple, List, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from easydict import EasyDict as ED
 from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
 from torch_ecg.torch_ecg.models.ecg_seq_lab_net import ECG_SEQ_LAB_NET
 from cfg import ModelCfg
+from utils import mask_to_intervals
 
 
 __all__ = [
@@ -127,9 +129,14 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         model_config = deepcopy(ModelCfg.seq_lab)
         model_config.update(config or {})
         super().__init__(classes, n_leads, input_len, model_config)
+        self.reduction = reduce(
+            function=lambda a,b: a*b,
+            sequence=self.config.cnn.multi_scopic.subsample_lengths,
+            initial=1,
+        )
 
     @torch.no_grad()
-    def inference(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5, return_mask:bool=True) -> Tuple[Union[np.ndarray, pd.DataFrame], np.ndarray]:
+    def inference(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
         """ NOT finished, NOT checked,
 
         auxiliary function to `forward`, for CPSC2020,
@@ -145,8 +152,10 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         --------
         pred: ndarray or DataFrame,
             scalar predictions, (and binary predictions if `class_names` is True)
-        bin_pred: ndarray,
-            the array (with values 0, 1 for each class) of binary prediction
+        SPB_indices: list,
+            list of predicted indices of SPB
+        PVC_indices: list,
+            list of predicted indices of PVC
         """
         if isinstance(input, np.ndarray):
             if torch.cuda.is_available():
@@ -157,7 +166,7 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
             _input = input
         pred = self.forward(_input)
         if self.n_classes == 2:
-            pred = self.sigmoid(pred)
+            pred = self.sigmoid(pred)  # (batch_size, seq_len, 2)
             bin_pred = (pred>=bin_pred_thr).int()
             pred = pred.cpu().detach().numpy()
             bin_pred = bin_pred.cpu().detach().numpy()
@@ -165,13 +174,21 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
             aux = (pred == np.max(pred, axis=2, keepdims=True)).astype(int)
             bin_pred = aux * bin_pred
         elif self.n_classes == 3:
-            pred = self.softmax(pred)
+            pred = self.softmax(pred)  # (batch_size, seq_len, 3)
             pred = pred.cpu().detach().numpy()
             bin_pred = np.argmax(pred, axis=2)
-        return pred, bin_pred
+        SPB_intervals = [
+            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("S")]
+        ]
+        SPB_indices = [self.reduction*(itv[0]+itv[1])//2 for itv in SPB_intervals]
+        PVC_intervals = [
+            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
+        ]
+        PVC_indices = [self.reduction*(itv[0]+itv[1])//2 for itv in PVC_intervals]
+        return pred, SPB_indices, PVC_indices
 
-    def inference_CPSC2020(self, input:Union[np.ndarray,Tensor], class_names:bool=False, bin_pred_thr:float=0.5) -> Tuple[Union[np.ndarray, pd.DataFrame], np.ndarray]:
+    def inference_CPSC2020(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
         """
         alias for `self.inference`
         """
-        return self.inference(input, class_names, bin_pred_thr)
+        return self.inference(input, bin_pred_thr)

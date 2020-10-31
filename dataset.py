@@ -713,7 +713,8 @@ class CPSC2020(Dataset):
                     if verbose >= 2:
                         print(f"{n_added} aug seg generated, start_idx at {start_idx}/{len(data)}", end="\r")
 
-                start_idx += forward_len
+                # start_idx += forward_len  # should be randomly forwarded
+                start_idx += randint(forward_len//4, forward_len)
 
         if verbose >= 1:
             print(f"\ngenerate {n_added} premature segments out from {n_original} in total via data augmentation")

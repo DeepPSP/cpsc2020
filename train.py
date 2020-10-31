@@ -31,7 +31,7 @@ from torch_ecg.torch_ecg.models.nets import (
     BCEWithLogitsWithClassWeightLoss,
     default_collate_fn as collate_fn,
 )
-from utils import get_date_str, dict_to_str, str2bool
+from utils import get_date_str, dict_to_str, str2bool, mask_to_intervals
 from cfg import ModelCfg, TrainCfg
 # from dataset import CPSC2020
 from dataset_simplified import CPSC2020 as CPSC2020_SIMPLIFIED
@@ -119,8 +119,8 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
 
     writer = SummaryWriter(
         log_dir=config.log_dir,
-        filename_suffix=f"OPT_{model.__name__}_{config.cnn_name}_{config.train_optimizer}_LR_{lr}_BS_{batch_size}",
-        comment=f"OPT_{model.__name__}_{config.cnn_name}_{config.train_optimizer}_LR_{lr}_BS_{batch_size}",
+        filename_suffix=f"OPT_{config.model_name}_{config.cnn_name}_{config.train_optimizer}_LR_{lr}_BS_{batch_size}",
+        comment=f"OPT_{config.model_name}_{config.cnn_name}_{config.train_optimizer}_LR_{lr}_BS_{batch_size}",
     )
     
     # max_itr = n_epochs * n_train
@@ -225,53 +225,60 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
 
             # eval for each epoch using `evaluate`
             if debug:
-                eval_train_res = evaluate(model, val_train_loader, config, device, debug)
-                writer.add_scalar('train/auroc', eval_train_res[0], global_step)
-                writer.add_scalar('train/auprc', eval_train_res[1], global_step)
-                writer.add_scalar('train/accuracy', eval_train_res[2], global_step)
-                writer.add_scalar('train/f_measure', eval_train_res[3], global_step)
-                writer.add_scalar('train/f_beta_measure', eval_train_res[4], global_step)
-                writer.add_scalar('train/g_beta_measure', eval_train_res[5], global_step)
+                if config.model_name == "crnn":
+                    eval_train_res = evaluate(model, val_train_loader, config, device, debug)
+                    writer.add_scalar('train/auroc', eval_train_res[0], global_step)
+                    writer.add_scalar('train/auprc', eval_train_res[1], global_step)
+                    writer.add_scalar('train/accuracy', eval_train_res[2], global_step)
+                    writer.add_scalar('train/f_measure', eval_train_res[3], global_step)
+                    writer.add_scalar('train/f_beta_measure', eval_train_res[4], global_step)
+                    writer.add_scalar('train/g_beta_measure', eval_train_res[5], global_step)
+                elif config.model_name == "seq_lab":
+                    pass
+            
+            if config.model_name == "crnn":
+                eval_res = evaluate(model, val_loader, config, device, debug)
+                model.train()
+                writer.add_scalar('test/auroc', eval_res[0], global_step)
+                writer.add_scalar('test/auprc', eval_res[1], global_step)
+                writer.add_scalar('test/accuracy', eval_res[2], global_step)
+                writer.add_scalar('test/f_measure', eval_res[3], global_step)
+                writer.add_scalar('test/f_beta_measure', eval_res[4], global_step)
+                writer.add_scalar('test/g_beta_measure', eval_res[5], global_step)
 
-            eval_res = evaluate(model, val_loader, config, device, debug)
-            model.train()
-            writer.add_scalar('test/auroc', eval_res[0], global_step)
-            writer.add_scalar('test/auprc', eval_res[1], global_step)
-            writer.add_scalar('test/accuracy', eval_res[2], global_step)
-            writer.add_scalar('test/f_measure', eval_res[3], global_step)
-            writer.add_scalar('test/f_beta_measure', eval_res[4], global_step)
-            writer.add_scalar('test/g_beta_measure', eval_res[5], global_step)
+                if config.lr_scheduler is None:
+                    pass
+                elif config.lr_scheduler.lower() == 'plateau':
+                    scheduler.step(metrics=eval_res[6])
+                elif config.lr_scheduler.lower() == 'step':
+                    scheduler.step()
 
-            if config.lr_scheduler is None:
+                if debug:
+                    eval_train_msg = f"""
+                    train/auroc:             {eval_train_res[0]}
+                    train/auprc:             {eval_train_res[1]}
+                    train/accuracy:          {eval_train_res[2]}
+                    train/f_measure:         {eval_train_res[3]}
+                    train/f_beta_measure:    {eval_train_res[4]}
+                    train/g_beta_measure:    {eval_train_res[5]}
+                """
+                else:
+                    eval_train_msg = ""
+                msg = f"""
+                    Train epoch_{epoch + 1}:
+                    --------------------
+                    train/epoch_loss:        {epoch_loss}{eval_train_msg}
+                    test/auroc:              {eval_res[0]}
+                    test/auprc:              {eval_res[1]}
+                    test/accuracy:           {eval_res[2]}
+                    test/f_measure:          {eval_res[3]}
+                    test/f_beta_measure:     {eval_res[4]}
+                    test/g_beta_measure:     {eval_res[5]}
+                    ---------------------------------
+                """
+            elif config.model_name == "seq_lab":
                 pass
-            elif config.lr_scheduler.lower() == 'plateau':
-                scheduler.step(metrics=eval_res[6])
-            elif config.lr_scheduler.lower() == 'step':
-                scheduler.step()
 
-            if debug:
-                eval_train_msg = f"""
-                train/auroc:             {eval_train_res[0]}
-                train/auprc:             {eval_train_res[1]}
-                train/accuracy:          {eval_train_res[2]}
-                train/f_measure:         {eval_train_res[3]}
-                train/f_beta_measure:    {eval_train_res[4]}
-                train/g_beta_measure:    {eval_train_res[5]}
-            """
-            else:
-                eval_train_msg = ""
-            msg = f"""
-                Train epoch_{epoch + 1}:
-                --------------------
-                train/epoch_loss:        {epoch_loss}{eval_train_msg}
-                test/auroc:              {eval_res[0]}
-                test/auprc:              {eval_res[1]}
-                test/accuracy:           {eval_res[2]}
-                test/f_measure:          {eval_res[3]}
-                test/f_beta_measure:     {eval_res[4]}
-                test/g_beta_measure:     {eval_res[5]}
-                ---------------------------------
-            """
             print(msg)  # in case no logger
             if logger:
                 logger.info(msg)
@@ -301,7 +308,7 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
 
 
 @torch.no_grad()
-def evaluate(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.device, debug:bool=False) -> Tuple[float]:
+def evaluate_crnn(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.device, debug:bool=False) -> Tuple[float]:
     """ finished, checked,
 
     Parameters:
@@ -372,6 +379,76 @@ def evaluate(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.
             binary_pred=all_bin_preds,
         )
     eval_res = auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure
+
+    model.train()
+
+    return eval_res
+
+
+@torch.no_grad()
+def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.device, debug:bool=False) -> Tuple[float]:
+    """ NOT finished, NOT checked,
+
+    Parameters:
+    -----------
+    model: Module,
+        the model to evaluate
+    data_loader: DataLoader,
+        the data loader for loading data for evaluation
+    config: dict,
+        evaluation configurations
+    device: torch.device,
+        device for evaluation
+    debug: bool, default False
+
+    Returns:
+    --------
+    eval_res: tuple of float,
+        evaluation results, including
+    """
+    model.eval()
+    # data_loader.dataset.disable_data_augmentation()
+
+    all_scalar_preds = []
+    all_spb_preds = []
+    all_pvc_preds = []
+    all_spb_labels = []
+    all_pvc_labels = []
+
+    for signals, labels in data_loader:
+        signals = signals.to(device=device, dtype=_DTYPE)
+        labels = labels.numpy()  # (batch_size, seq_len, 2 or 3)
+        spb_labels = [
+            mask_to_intervals(seq, 1) for seq in labels[..., config.classes.index("S")]
+        ]
+        spb_labels = [model.reduction * (itv[0]+itv[1])//2 for itv in spb_labels]
+        all_spb_labels.append(spb_labels)
+        pvc_labels = [
+            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
+        ]
+        pvc_labels = [model.reduction * (itv[0]+itv[1])//2 for itv in pvc_labels]
+        all_pvc_labels.append(pvc_labels)
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        preds, spb_preds, pvc_preds = model.inference(signals)
+        all_scalar_preds.append(preds)
+        all_spb_preds.append(spb_preds)
+        all_pvc_preds.append(pvc_preds)
+
+    all_scalar_preds = np.concatenate(all_scalar_preds, axis=0)
+    all_spb_preds = np.concatenate(all_spb_preds, axis=0)
+    all_pvc_preds = np.concatenate(all_pvc_preds, axis=0)
+    all_spb_labels = np.concatenate(all_spb_labels, axis=0)
+    all_pvc_labels = np.concatenate(all_pvc_labels, axis=0)
+
+    eval_res = CPSC2020_score(
+        spb_true=all_spb_labels,
+        pvc_true=all_pvc_labels,
+        spb_pred=all_spb_preds,
+        pvc_pred=all_pvc_preds,
+        verbose=2
+    )
 
     model.train()
 
@@ -461,6 +538,7 @@ if __name__ == "__main__":
         model_config = deepcopy(ModelCfg.crnn)
     elif model_name == "seq_lab":
         model_config = deepcopy(ModelCfg.seq_lab)
+    model_config.model_name = model_name
     model_config.cnn.name = config.cnn_name
     model_config.rnn.name = config.rnn_name
 

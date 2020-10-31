@@ -34,7 +34,7 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     Returns:
     --------
     total_loss: int,
-        the total loss of all ectopic beat types (SBP, PVC)
+        the total loss of all ectopic beat types (SPB, PVC)
     """
     classes = ['S', 'V']
 
@@ -80,37 +80,37 @@ def CPSC2020_loss(y_true:np.ndarray, y_pred:np.ndarray, y_indices:np.ndarray, dt
     return total_loss
 
 
-def CPSC2020_score(sbp_true:List[np.ndarray], pvc_true:List[np.ndarray], sbp_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Union[Tuple[int],dict]:
+def CPSC2020_score(spb_true:List[np.ndarray], pvc_true:List[np.ndarray], spb_pred:List[np.ndarray], pvc_pred:List[np.ndarray], verbose:int=0) -> Union[Tuple[int],dict]:
     """ finished, checked,
 
     Score Function for all (test) records
 
     Parameters:
     -----------
-    sbp_true, pvc_true, sbp_pred, pvc_pred: list of ndarray,
+    spb_true, pvc_true, spb_pred, pvc_pred: list of ndarray,
     verbose: int
 
     Returns:
     --------
     retval: tuple or dict,
-        tuple of (negative) scores for each ectopic beat type (SBP, PVC), or
+        tuple of (negative) scores for each ectopic beat type (SPB, PVC), or
         dict of more scoring details, including
         - total_loss: sum of loss of each ectopic beat type (PVC and SPB)
         - true_positive: number of true positives of each ectopic beat type
         - false_positive: number of false positives of each ectopic beat type
         - false_negative: number of false negatives of each ectopic beat type
     """
-    s_score = np.zeros([len(sbp_true), ], dtype=int)
-    v_score = np.zeros([len(sbp_true), ], dtype=int)
+    s_score = np.zeros([len(spb_true), ], dtype=int)
+    v_score = np.zeros([len(spb_true), ], dtype=int)
     ## Scoring ##
-    for i, (s_ref, v_ref, s_pos, v_pos) in enumerate(zip(sbp_true, pvc_true, sbp_pred, pvc_pred)):
+    for i, (s_ref, v_ref, s_pos, v_pos) in enumerate(zip(spb_true, pvc_true, spb_pred, pvc_pred)):
         s_tp = 0
         s_fp = 0
         s_fn = 0
         v_tp = 0
         v_fp = 0
         v_fn = 0
-        # SBP
+        # SPB
         if s_ref.size == 0:
             s_fp = len(s_pos)
         else:
