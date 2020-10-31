@@ -540,13 +540,21 @@ class CPSC2020Reader(object):
                 patches["PVC"] = mpatches.Patch(color=self.palette["pvc"], label="PVC")
             for t in seg_spb:
                 ax.axvspan(
+                    max(secs[0], t-BaseCfg.bias_thr/self.fs), min(secs[-1], t+BaseCfg.bias_thr/self.fs),
+                    color=self.palette["spb"], alpha=0.3
+                )
+                ax.axvspan(
                     max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
-                    color=self.palette["spb"], alpha=0.5
+                    color=self.palette["spb"], alpha=0.9
                 )
             for t in seg_pvc:
                 ax.axvspan(
+                    max(secs[0], t-BaseCfg.bias_thr/self.fs), min(secs[-1], t+BaseCfg.bias_thr/self.fs),
+                    color=self.palette["pvc"], alpha=0.3
+                )
+                ax.axvspan(
                     max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
-                    color=self.palette["pvc"], alpha=0.5
+                    color=self.palette["pvc"], alpha=0.9
                 )
             if len(patches) > 0:
                 ax.legend(
