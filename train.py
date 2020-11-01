@@ -229,7 +229,9 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
             # eval for each epoch using `evaluate`
             if debug:
                 if config.model_name == "crnn":
-                    eval_train_res = evaluate(model, val_train_loader, config, device, debug)
+                    eval_train_res = evaluate_crnn(
+                        model, val_train_loader, config, device, debug
+                    )
                     writer.add_scalar('train/auroc', eval_train_res[0], global_step)
                     writer.add_scalar('train/auprc', eval_train_res[1], global_step)
                     writer.add_scalar('train/accuracy', eval_train_res[2], global_step)
@@ -237,10 +239,23 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                     writer.add_scalar('train/f_beta_measure', eval_train_res[4], global_step)
                     writer.add_scalar('train/g_beta_measure', eval_train_res[5], global_step)
                 elif config.model_name == "seq_lab":
-                    pass
+                    eval_train_res = evaluate_seq_lab(
+                        model, val_train_loader, config, device, debug
+                    )
+                    writer.add_scalar('train/total_loss', eval_train_res.total_loss, global_step)
+                    writer.add_scalar('train/spb_loss', eval_train_res.spb_loss, global_step)
+                    writer.add_scalar('train/pvc_loss', eval_train_res.pvc_loss, global_step)
+                    writer.add_scalar('train/spb_tp', eval_train_res.spb_tp, global_step)
+                    writer.add_scalar('train/pvc_tp', eval_train_res.pvc_tp, global_step)
+                    writer.add_scalar('train/spb_fp', eval_train_res.spb_fp, global_step)
+                    writer.add_scalar('train/pvc_fp', eval_train_res.pvc_fp, global_step)
+                    writer.add_scalar('train/spb_fn', eval_train_res.spb_fn, global_step)
+                    writer.add_scalar('train/pvc_fn', eval_train_res.pvc_fn, global_step)
             
             if config.model_name == "crnn":
-                eval_res = evaluate(model, val_loader, config, device, debug)
+                eval_res = evaluate_crnn(
+                    model, val_loader, config, device, debug
+                )
                 model.train()
                 writer.add_scalar('test/auroc', eval_res[0], global_step)
                 writer.add_scalar('test/auprc', eval_res[1], global_step)
@@ -280,7 +295,56 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                     ---------------------------------
                 """
             elif config.model_name == "seq_lab":
-                pass
+                eval_res = evaluate_seq_lab(
+                    model, val_loader, config, device, debug
+                )
+                model.train()
+                writer.add_scalar('test/total_loss', eval_res.total_loss, global_step)
+                writer.add_scalar('test/spb_loss', eval_res.spb_loss, global_step)
+                writer.add_scalar('test/pvc_loss', eval_res.pvc_loss, global_step)
+                writer.add_scalar('test/spb_tp', eval_res.spb_tp, global_step)
+                writer.add_scalar('test/pvc_tp', eval_res.pvc_tp, global_step)
+                writer.add_scalar('test/spb_fp', eval_res.spb_fp, global_step)
+                writer.add_scalar('test/pvc_fp', eval_res.pvc_fp, global_step)
+                writer.add_scalar('test/spb_fn', eval_res.spb_fn, global_step)
+                writer.add_scalar('test/pvc_fn', eval_res.pvc_fn, global_step)
+
+                if config.lr_scheduler is None:
+                    pass
+                elif config.lr_scheduler.lower() == 'plateau':
+                    scheduler.step(metrics=eval_res[6])
+                elif config.lr_scheduler.lower() == 'step':
+                    scheduler.step()
+
+                if debug:
+                    eval_train_msg = f"""
+                    train/total_loss:        {eval_train_res.total_loss}
+                    train/spb_loss:          {eval_train_res.spb_loss}
+                    train/pvc_loss:          {eval_train_res.pvc_loss}
+                    train/spb_tp:            {eval_train_res.spb_tp}
+                    train/pvc_tp:            {eval_train_res.pvc_tp}
+                    train/spb_fp:            {eval_train_res.spb_fp}
+                    train/pvc_fp:            {eval_train_res.pvc_fp}
+                    train/spb_fn:            {eval_train_res.spb_fn}
+                    train/pvc_fn:            {eval_train_res.pvc_fn}
+                """
+                else:
+                    eval_train_msg = ""
+                msg = f"""
+                    Train epoch_{epoch + 1}:
+                    --------------------
+                    train/epoch_loss:        {epoch_loss}{eval_train_msg}
+                    test/total_loss:         {eval_res.total_loss}
+                    test/spb_loss:           {eval_res.spb_loss}
+                    test/pvc_loss:           {eval_res.pvc_loss}
+                    test/spb_tp:             {eval_res.spb_tp}
+                    test/pvc_tp:             {eval_res.pvc_tp}
+                    test/spb_fp:             {eval_res.spb_fp}
+                    test/pvc_fp:             {eval_res.pvc_fp}
+                    test/spb_fn:             {eval_res.spb_fn}
+                    test/pvc_fn:             {eval_res.pvc_fn}
+                    ---------------------------------
+                """
 
             print(msg)  # in case no logger
             if logger:
