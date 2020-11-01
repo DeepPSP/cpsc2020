@@ -627,6 +627,8 @@ if __name__ == "__main__":
         model_config = deepcopy(ModelCfg.crnn)
     elif model_name == "seq_lab":
         model_config = deepcopy(ModelCfg.seq_lab)
+        config.classes = deepcopy(model_config[config.model_name].classes)
+        config.class_map = deepcopy(model_config[config.model_name].class_map)
     model_config.model_name = model_name
     model_config.cnn.name = config.cnn_name
     model_config.rnn.name = config.rnn_name
