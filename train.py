@@ -356,7 +356,10 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                     logger.info('Created checkpoint directory')
             except OSError:
                 pass
-            save_suffix = f'epochloss_{epoch_loss:.5f}_fb_{eval_res[4]:.2f}_gb_{eval_res[5]:.2f}'
+            if config.model_name == "crnn":
+                save_suffix = f'epochloss_{epoch_loss:.5f}_fb_{eval_res[4]:.2f}_gb_{eval_res[5]:.2f}'
+            elif config.model_name == "seq_lab":
+                save_suffix = f'epochloss_{epoch_loss:.5f}_challenge_loss_{eval_res.total_loss}'
             save_filename = f'{save_prefix}{epoch + 1}_{get_date_str()}_{save_suffix}.pth'
             save_path = os.path.join(config.checkpoints, save_filename)
             torch.save(model.state_dict(), save_path)
