@@ -136,7 +136,7 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         )
 
     @torch.no_grad()
-    def inference(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
+    def inference(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5, rpeak_inds:Optional[List[np.ndarray]]=None) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
         """ NOT finished, NOT checked,
 
         auxiliary function to `forward`, for CPSC2020,
@@ -147,6 +147,8 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
             input tensor, of shape (batch_size, channels, seq_len)
         bin_pred_thr: float, default 0.5,
             the threshold for making binary predictions from scalar predictions
+        rpeak_inds: list of ndarray, optional,
+            indices of rpeaks for each batch data
 
         Returns:
         --------
@@ -157,6 +159,7 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         PVC_indices: list,
             list of predicted indices of PVC
         """
+        batch_size, channels, seq_len = input.shape
         if isinstance(input, np.ndarray):
             if torch.cuda.is_available():
                 _input = torch.from_numpy(input).to(torch.device("cuda"))
@@ -177,18 +180,30 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
             pred = self.softmax(pred)  # (batch_size, seq_len, 3)
             pred = pred.cpu().detach().numpy()
             bin_pred = np.argmax(pred, axis=2)
+        
+        if rpeak_inds is not None:
+            assert len(rpeak_inds) == batch_size
+            rpeak_mask = np.zeros((batch_size, seq_len//self.reduction), dtype=int)
+            for i in range(batch_size):
+                batch_rpeak_inds = (rpeak_inds[i]/self.reduction).astype(int)
+                rpeak_mask[i, batch_rpeak_inds] = 1
+        else:
+            rpeak_mask = np.ones((batch_size, seq_len//self.reduction), dtype=int)
+
         SPB_intervals = [
-            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("S")]
+            mask_to_intervals(seq*rpeak_mask[idx], 1) \
+                for idx, seq in enumerate(bin_pred[..., self.classes.index("S")])
         ]
         SPB_indices = [
             [self.reduction * (itv[0]+itv[1])//2 for itv in l_itv] if len(l_itv) > 0 else [] \
                 for l_itv in SPB_intervals
         ]
         PVC_intervals = [
-            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
+            mask_to_intervals(seq*rpeak_mask[idx], 1) \
+                for idx, seq in enumerate(bin_pred[..., self.classes.index("V")])
         ]
         PVC_indices = [
-            [self.reduction * (itv[0]+itv[1])//2 for itv in l_itv]  if len(l_itv) > 0 else []\
+            [self.reduction * (itv[0]+itv[1])//2 for itv in l_itv]  if len(l_itv) > 0 else [] \
                 for l_itv in PVC_intervals
         ]
         return pred, SPB_indices, PVC_indices
