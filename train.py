@@ -31,7 +31,10 @@ from torch_ecg.torch_ecg.models.nets import (
     BCEWithLogitsWithClassWeightLoss,
     default_collate_fn as collate_fn,
 )
-from utils import get_date_str, dict_to_str, str2bool, mask_to_intervals
+from utils import (
+    get_date_str, dict_to_str, str2bool,
+    mask_to_intervals, list_sum,
+)
 from cfg import ModelCfg, TrainCfg
 # from dataset import CPSC2020
 from dataset_simplified import CPSC2020 as CPSC2020_SIMPLIFIED
@@ -421,12 +424,18 @@ def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, devic
         spb_labels = [
             mask_to_intervals(seq, 1) for seq in labels[..., config.classes.index("S")]
         ]
-        spb_labels = [model.reduction * (itv[0]+itv[1])//2 for itv in spb_labels]
+        spb_labels = [
+            model.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else [] \
+                for itv in spb_labels
+        ]
         all_spb_labels.append(spb_labels)
         pvc_labels = [
             mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
         ]
-        pvc_labels = [model.reduction * (itv[0]+itv[1])//2 for itv in pvc_labels]
+        pvc_labels = [
+            model.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else [] \
+                for itv in pvc_labels
+        ]
         all_pvc_labels.append(pvc_labels)
 
         if torch.cuda.is_available():
@@ -437,17 +446,33 @@ def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, devic
         all_pvc_preds.append(pvc_preds)
 
     all_scalar_preds = np.concatenate(all_scalar_preds, axis=0)
-    all_spb_preds = np.concatenate(all_spb_preds, axis=0)
-    all_pvc_preds = np.concatenate(all_pvc_preds, axis=0)
-    all_spb_labels = np.concatenate(all_spb_labels, axis=0)
-    all_pvc_labels = np.concatenate(all_pvc_labels, axis=0)
+    # all_spb_preds = np.concatenate(all_spb_preds, axis=0)
+    # all_pvc_preds = np.concatenate(all_pvc_preds, axis=0)
+    # all_spb_labels = np.concatenate(all_spb_labels, axis=0)
+    # all_pvc_labels = np.concatenate(all_pvc_labels, axis=0)
+    all_spb_preds = [np.array(item) for item in list_sum(all_spb_preds)]
+    all_pvc_preds = [np.array(item) for item in list_sum(all_pvc_preds)]
+    all_spb_labels = [np.array(item) for item in list_sum(all_spb_labels)]
+    all_pvc_labels = [np.array(item) for item in list_sum(all_pvc_labels)]
 
-    eval_res = CPSC2020_score(
+    eval_res_tmp = ED(CPSC2020_score(
         spb_true=all_spb_labels,
         pvc_true=all_pvc_labels,
         spb_pred=all_spb_preds,
         pvc_pred=all_pvc_preds,
         verbose=2
+    ))
+
+    eval_res = ED(
+        total_loss=eval_res_tmp.total_loss,
+        spb_loss=eval_res_tmp.class_loss.S,
+        pvc_loss=eval_res_tmp.class_loss.V,
+        spb_tp=eval_res_tmp.true_positive.S,
+        pvc_tp=eval_res_tmp.true_positive.V,
+        spb_fp=eval_res_tmp.false_positive.S,
+        pvc_fp=eval_res_tmp.false_positive.V,
+        spb_fn=eval_res_tmp.false_negative.S,
+        pvc_fn=eval_res_tmp.false_negative.V,
     )
 
     model.train()

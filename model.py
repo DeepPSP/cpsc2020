@@ -180,11 +180,17 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         SPB_intervals = [
             mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("S")]
         ]
-        SPB_indices = [self.reduction*(itv[0]+itv[1])//2 for itv in SPB_intervals]
+        SPB_indices = [
+            self.reduction * (itv[0]+itv[1])//2 if len(itv) > 0 else [] \
+                for itv in SPB_intervals
+        ]
         PVC_intervals = [
             mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
         ]
-        PVC_indices = [self.reduction*(itv[0]+itv[1])//2 for itv in PVC_intervals]
+        PVC_indices = [
+            self.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else []\
+                for itv in PVC_intervals
+        ]
         return pred, SPB_indices, PVC_indices
 
     def inference_CPSC2020(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
