@@ -157,7 +157,11 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
     epoch_forward = epoch_len - epoch_overlap
 
     if len(raw_sig) <= 3 * epoch_len:  # too short, no need for parallel computing
-        return preprocess_signal(raw_sig, fs, cfg)
+        retval = preprocess_signal(raw_sig, fs, cfg)
+        if cfg.rpeaks and cfg.rpeaks.lower() in DL_QRS_DETECTORS:
+            rpeaks = QRS_DETECTORS[cfg.rpeaks.lower()](sig=raw_sig, fs=fs, verbose=verbose).astype(int)
+        retval.rpeaks = rpeaks
+        return retval
     
     l_epoch = [
         raw_sig[idx*epoch_forward: idx*epoch_forward + epoch_len] \

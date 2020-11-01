@@ -56,7 +56,7 @@ def CPSC2020_challenge(ECG, fs):
     msg = "   CPSC2020_challenge starts ...  "
     print("*"*((80-len(msg))//2) + msg + "*"*((80-len(msg))//2))
     print("*"*80)
-    start = time.time()
+    start_time = time.time()
     timer = time.time()
 
     FS = 400
@@ -72,7 +72,7 @@ def CPSC2020_challenge(ECG, fs):
     rpeaks = [r for r in rpeaks if any([itv[0]<=r<=itv[1] for itv in valid_intervals])]
     rpeaks = np.array(rpeaks, dtype=int)
 
-    print(f"signal preprocessing used {timer-time.time():.3f} seconds")
+    print(f"signal preprocessing used {time.time()-timer:.3f} seconds")
     timer = time.time()
 
     # classify and sequence labeling models
@@ -132,8 +132,9 @@ def CPSC2020_challenge(ECG, fs):
                 V_pos_rsmp = np.append(V_pos_rsmp, seg_pvc)
 
         print(f"{b_idx+1}/{n_batches} batches", end="\r")
-    print(f"\nprediction used {timer-time.time():.3f} seconds")
-    print(f"\ntotal time cost is {start-time.time():.3f} seconds")
+
+    print(f"\nprediction used {time.time()-timer:.3f} seconds")
+    print(f"\ntotal time cost is {time.time()-start_time:.3f} seconds")
 
     S_pos_rsmp = S_pos_rsmp[np.where(S_pos_rsmp<len(filtered_ecg))[0]]
     V_pos_rsmp = V_pos_rsmp[np.where(V_pos_rsmp<len(filtered_ecg))[0]]
