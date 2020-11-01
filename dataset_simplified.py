@@ -106,6 +106,7 @@ class CPSC2020(Dataset):
 
             if self.training:
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.train])
+                shuffle(self.segments)
             else:
                 self.segments = list_sum([self.__all_segments[rec] for rec in split_res.test])
         # elif self.config.model_name.lower() == "od":  # object detection
