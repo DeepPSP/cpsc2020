@@ -101,17 +101,17 @@ ModelCfg.crnn.cnn.name = 'multi_scopic'  # resnet, resnet_gc, vgg, cpsc2018, etc
 ModelCfg.crnn.cnn.multi_scopic = ED()
 ModelCfg.crnn.cnn.multi_scopic.groups = 1
 ModelCfg.crnn.cnn.multi_scopic.scopes = [
-    [
+    [ # branch 0
         [1,],
         [1,1,],
         [1,1,1,],
     ],
-    [
+    [ # branch 1
         [2,],
         [2,4,],
         [8,8,8,],
     ],
-    [
+    [ # branch 2
         [4,],
         [4,8,],
         [16,32,64,],
@@ -122,34 +122,34 @@ ModelCfg.crnn.cnn.multi_scopic.scopes = [
 # while CPSC2020 is 400 Hz
 # should the filter_lengths be adjusted?
 ModelCfg.crnn.cnn.multi_scopic.filter_lengths = [
-    [11, 7, 5,],
-    [11, 7, 5,],
-    [11, 7, 5,],
+    [11, 7, 5,],  # branch 0
+    [11, 7, 5,],  # branch 1
+    [11, 7, 5,],  # branch 2
 ]
 ModelCfg.crnn.cnn.multi_scopic.subsample_lengths = \
     list(repeat(2, len(ModelCfg.crnn.cnn.multi_scopic.scopes)))
 _base_num_filters = 8
 ModelCfg.crnn.cnn.multi_scopic.num_filters = [
-    [
+    [ # branch 0
         _base_num_filters*4,
         _base_num_filters*8,
         _base_num_filters*16,
     ],
-    [
+    [ # branch 1
         _base_num_filters*4,
         _base_num_filters*8,
         _base_num_filters*16,
     ],
-    [
+    [ # branch 2
         _base_num_filters*4,
         _base_num_filters*8,
         _base_num_filters*16,
     ],
 ]
 ModelCfg.crnn.cnn.multi_scopic.dropouts = [
-    [0, 0.2, 0],
-    [0, 0.2, 0],
-    [0, 0.2, 0],
+    [0, 0.2, 0],  # branch 0
+    [0, 0.2, 0],  # branch 1
+    [0, 0.2, 0],  # branch 2
 ]
 ModelCfg.crnn.cnn.multi_scopic.bias = True
 ModelCfg.crnn.cnn.multi_scopic.kernel_initializer = "he_normal"
