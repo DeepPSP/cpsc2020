@@ -526,7 +526,7 @@ def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, devic
         pvc_true=all_pvc_labels,
         spb_pred=all_spb_preds,
         pvc_pred=all_pvc_preds,
-        verbose=2
+        verbose=1
     ))
 
     eval_res = ED(
