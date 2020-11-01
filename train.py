@@ -485,20 +485,22 @@ def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, devic
     for signals, labels in data_loader:
         signals = signals.to(device=device, dtype=_DTYPE)
         labels = labels.numpy()  # (batch_size, seq_len, 2 or 3)
-        spb_labels = [
+        spb_intervals = [
             mask_to_intervals(seq, 1) for seq in labels[..., config.classes.index("S")]
         ]
+        # print(spb_intervals)
         spb_labels = [
-            model.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else [] \
-                for itv in spb_labels
+            [model.reduction * (itv[0]+itv[1])//2 for itv in l_itv]  if len(l_itv) > 0 else [] \
+                for l_itv in spb_intervals
         ]
+        # print(spb_labels)
         all_spb_labels.append(spb_labels)
-        pvc_labels = [
-            mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
+        pvc_intervals = [
+            mask_to_intervals(seq, 1) for seq in labels[..., config.classes.index("V")]
         ]
         pvc_labels = [
-            model.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else [] \
-                for itv in pvc_labels
+            [model.reduction * (itv[0]+itv[1])//2 for itv in l_itv]  if len(l_itv) > 0 else [] \
+                for l_itv in pvc_intervals
         ]
         all_pvc_labels.append(pvc_labels)
 
@@ -607,16 +609,6 @@ if __name__ == "__main__":
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else:
         device = torch.device('cuda')
-    logger = init_logger(log_dir=train_config.log_dir)
-    logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
-    logger.info(f"Model name = {train_config.model_name}")
-    logger.info(f'Using device {device}')
-    logger.info(f"Using torch of version {torch.__version__}")
-    logger.info(f'with configuration\n{dict_to_str(train_config)}')
-    print(f"\n{'*'*20}   Start Training   {'*'*20}\n")
-    print(f'Using device {device}')
-    print(f"Using torch of version {torch.__version__}")
-    print(f'with configuration\n{dict_to_str(train_config)}')
 
     # classes = train_config.classes
     model_name = train_config.model_name.lower()
@@ -654,6 +646,17 @@ if __name__ == "__main__":
     if not DAS and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
     model.to(device=device)
+
+    logger = init_logger(log_dir=train_config.log_dir)
+    logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
+    logger.info(f"Model name = {train_config.model_name}")
+    logger.info(f'Using device {device}')
+    logger.info(f"Using torch of version {torch.__version__}")
+    logger.info(f'with configuration\n{dict_to_str(train_config)}')
+    print(f"\n{'*'*20}   Start Training   {'*'*20}\n")
+    print(f'Using device {device}')
+    print(f"Using torch of version {torch.__version__}")
+    print(f'with configuration\n{dict_to_str(train_config)}')
 
     try:
         train(

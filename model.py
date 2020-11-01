@@ -181,15 +181,15 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
             mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("S")]
         ]
         SPB_indices = [
-            self.reduction * (itv[0]+itv[1])//2 if len(itv) > 0 else [] \
-                for itv in SPB_intervals
+            [self.reduction * (itv[0]+itv[1])//2 for itv in l_itv] if len(l_itv) > 0 else [] \
+                for l_itv in SPB_intervals
         ]
         PVC_intervals = [
             mask_to_intervals(seq, 1) for seq in bin_pred[..., self.classes.index("V")]
         ]
         PVC_indices = [
-            self.reduction * (itv[0]+itv[1])//2  if len(itv) > 0 else []\
-                for itv in PVC_intervals
+            [self.reduction * (itv[0]+itv[1])//2 for itv in l_itv]  if len(l_itv) > 0 else []\
+                for l_itv in PVC_intervals
         ]
         return pred, SPB_indices, PVC_indices
 
