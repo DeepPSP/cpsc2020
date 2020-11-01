@@ -601,25 +601,25 @@ DAS = True  # JD DAS platform
 
 if __name__ == "__main__":
     from utils import init_logger
-    config = get_args(**TrainCfg)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu
+    train_config = get_args(**TrainCfg)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = train_config.gpu
     if not DAS:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else:
         device = torch.device('cuda')
-    logger = init_logger(log_dir=config.log_dir)
+    logger = init_logger(log_dir=train_config.log_dir)
     logger.info(f"\n{'*'*20}   Start Training   {'*'*20}\n")
-    logger.info(f"Model name = {config.model_name}")
+    logger.info(f"Model name = {train_config.model_name}")
     logger.info(f'Using device {device}')
     logger.info(f"Using torch of version {torch.__version__}")
-    logger.info(f'with configuration\n{dict_to_str(config)}')
+    logger.info(f'with configuration\n{dict_to_str(train_config)}')
     print(f"\n{'*'*20}   Start Training   {'*'*20}\n")
     print(f'Using device {device}')
     print(f"Using torch of version {torch.__version__}")
-    print(f'with configuration\n{dict_to_str(config)}')
+    print(f'with configuration\n{dict_to_str(train_config)}')
 
-    # classes = config.classes
-    model_name = config.model_name.lower()
+    # classes = train_config.classes
+    model_name = train_config.model_name.lower()
     classes = deepcopy(ModelCfg[model_name].classes)
     class_map = deepcopy(ModelCfg[model_name].class_map)
 
@@ -627,25 +627,25 @@ if __name__ == "__main__":
         model_config = deepcopy(ModelCfg.crnn)
     elif model_name == "seq_lab":
         model_config = deepcopy(ModelCfg.seq_lab)
-        config.classes = deepcopy(model_config[config.model_name].classes)
-        config.class_map = deepcopy(model_config[config.model_name].class_map)
+        train_config.classes = deepcopy(model_config.classes)
+        train_config.class_map = deepcopy(model_config.class_map)
     model_config.model_name = model_name
-    model_config.cnn.name = config.cnn_name
-    model_config.rnn.name = config.rnn_name
+    model_config.cnn.name = train_config.cnn_name
+    model_config.rnn.name = train_config.rnn_name
 
     if model_name == "crnn":
         # model = ECG_CRNN(
         model = ECG_CRNN_CPSC2020(
             classes=classes,
-            n_leads=config.n_leads,
-            input_len=config.input_len,
+            n_leads=train_config.n_leads,
+            input_len=train_config.input_len,
             config=model_config,
         )
     elif model_name == "seq_lab":
         model = ECG_SEQ_LAB_NET_CPSC2020(
             classes=classes,
-            n_leads=config.n_leads,
-            input_len=config.input_len,
+            n_leads=train_config.n_leads,
+            input_len=train_config.input_len,
             config=model_config,
         )
     else:
@@ -658,13 +658,13 @@ if __name__ == "__main__":
     try:
         train(
             model=model,
-            config=config,
+            config=train_config,
             device=device,
             logger=logger,
-            debug=config.debug,
+            debug=train_config.debug,
         )
     except KeyboardInterrupt:
-        torch.save(model.state_dict(), os.path.join(config.checkpoints, 'INTERRUPTED.pth'))
+        torch.save(model.state_dict(), os.path.join(train_config.checkpoints, 'INTERRUPTED.pth'))
         logger.info('Saved interrupt')
         try:
             sys.exit(0)
