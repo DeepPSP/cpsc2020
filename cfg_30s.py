@@ -1,4 +1,7 @@
 """
+NOTE:
+
+pipeline under this config file is NOT tested!
 """
 import os
 from itertools import repeat
