@@ -242,6 +242,7 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
     # or the threshold decreases to zero
     check = True
     # TODO: parallel the following block
+    # CAUTION !!! 
     # this part is extremely slow in some cases (long duration and low SNR)
     dist_thr_inds = _dist_thr[1] / model_spacing
     while check:
@@ -271,12 +272,6 @@ def _seq_lab_net_post_process(prob:np.ndarray, prob_thr:float=0.5, duration_thr:
                     print(f"found back an rpeak inside the {r}-th RR interval")
                 break
     return rpeaks
-
-
-def _find_back(rpeaks:np.ndarray, dist_thr:Real) -> np.ndarray:
-    """
-    """
-    raise NotImplementedError
 
 
 def _remove_spikes_naive(sig:np.ndarray) -> np.ndarray:

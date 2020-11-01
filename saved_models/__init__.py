@@ -13,6 +13,11 @@ from cfg import ModelCfg
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+__all__ = [
+    "load_model",
+]
+
+
 def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
     """ finished, checked,
 
