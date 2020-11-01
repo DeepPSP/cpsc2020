@@ -43,6 +43,7 @@ def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
             map_location=device
         )
         crnn_model.load_state_dict(crnn_state_dict)
+        crnn_model.eval()
         if _which == "crnn":
             return crnn_model
     if _which in ["both", "seq_lab"]:
@@ -58,6 +59,7 @@ def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
             map_location=device
         )
         seq_lab_model.load_state_dict(seq_lab_state_dict)
+        seq_lab_model.eval()
         if _which == "seq_lab":
             return seq_lab_model
     return crnn_model, seq_lab_model
