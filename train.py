@@ -312,7 +312,7 @@ def train(model:nn.Module, device:torch.device, config:dict, log_step:int=20, lo
                 if config.lr_scheduler is None:
                     pass
                 elif config.lr_scheduler.lower() == 'plateau':
-                    scheduler.step(metrics=eval_res[6])
+                    scheduler.step(metrics=eval_res.total_loss)
                 elif config.lr_scheduler.lower() == 'step':
                     scheduler.step()
 
