@@ -142,7 +142,7 @@ def CPSC2020_score(spb_true:List[np.ndarray], pvc_true:List[np.ndarray], spb_pre
         if verbose >= 3:
             print(f"for the {i}-th record")
             print(f"s_tp = {s_tp}, s_fp = {s_fp}, s_fn = {s_fn}")
-            print(f"v_tp = {v_tp}, v_fp = {v_fp}, s_fn = {v_fn}")
+            print(f"v_tp = {v_tp}, v_fp = {v_fp}, v_fn = {v_fn}")
             print(f"s_score[{i}] = {s_score[i]}, v_score[{i}] = {v_score[i]}")
 
         true_positive.S += s_tp
