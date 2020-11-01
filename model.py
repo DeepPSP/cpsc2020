@@ -130,9 +130,9 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         model_config.update(config or {})
         super().__init__(classes, n_leads, input_len, model_config)
         self.reduction = reduce(
-            function=lambda a,b: a*b,
-            sequence=self.config.cnn.multi_scopic.subsample_lengths,
-            initial=1,
+            lambda a,b: a*b,
+            self.config.cnn.multi_scopic.subsample_lengths,
+            1,
         )
 
     @torch.no_grad()
