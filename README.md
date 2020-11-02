@@ -24,3 +24,7 @@ TODO:
 [4] use SNR to deal with (eliminate?) too noisy segments?
 
 [5] etc....
+
+# NOTE
+
+further updates will be done in [torch_ecg](https://github.com/wenh06/torch_ecg/tree/master/torch_ecg/train/train_crnn_cpsc2020), instead of this repository
