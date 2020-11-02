@@ -7,7 +7,7 @@ import logging
 import argparse
 from copy import deepcopy
 from collections import deque
-from typing import Union, Optional, Tuple, Sequence, NoReturn
+from typing import Union, Optional, Tuple, Dict, Sequence, NoReturn
 from numbers import Real, Number
 
 import numpy as np
@@ -456,8 +456,8 @@ def evaluate_crnn(model:nn.Module, data_loader:DataLoader, config:dict, device:t
 
 
 @torch.no_grad()
-def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.device, debug:bool=False) -> Tuple[float]:
-    """ NOT finished, NOT checked,
+def evaluate_seq_lab(model:nn.Module, data_loader:DataLoader, config:dict, device:torch.device, debug:bool=False) -> Dict[str, int]:
+    """ finished, checked,
 
     Parameters:
     -----------

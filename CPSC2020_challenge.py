@@ -50,7 +50,7 @@ def CPSC2020_challenge(ECG, fs):
     """
 
     #   ====== arrhythmias detection =======
-    # finished, NOT checked,
+    # finished, checked,
 
     print("\n" + "*"*80)
     msg = "   CPSC2020_challenge starts ...  "

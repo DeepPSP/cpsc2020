@@ -137,7 +137,7 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
 
     @torch.no_grad()
     def inference(self, input:Union[np.ndarray,Tensor], bin_pred_thr:float=0.5, rpeak_inds:Optional[List[np.ndarray]]=None) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray]]:
-        """ NOT finished, NOT checked,
+        """ finished, checked,
 
         auxiliary function to `forward`, for CPSC2020,
 
