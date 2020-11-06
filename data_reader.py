@@ -11,6 +11,7 @@ from typing import Union, Optional, Any, List, Tuple, Dict, Sequence, NoReturn
 from numbers import Real
 
 import numpy as np
+np.set_printoptions(precision=5, suppress=True)
 import pandas as pd
 from scipy.io import loadmat, savemat
 import multiprocessing as mp
@@ -305,10 +306,10 @@ class CPSC2020Reader(object):
             filename of the annotation file
         """
         if isinstance(rec, int):
-            assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
+            assert rec in range(1, self.nb_records+1), f"rec should be in range(1,{self.nb_records+1})"
             ann_name = self.all_annotations[rec-1]
         elif isinstance(rec, str):
-            assert rec in self.all_annotations+self.all_records, "rec should be one of {} or one of {}".format(self.all_records, self.all_annotations)
+            assert rec in self.all_annotations+self.all_records, f"rec should be one of {self.all_records} or one of {self.all_annotations}"
             ann_name = rec.replace("A", "R")
         return ann_name
 
@@ -328,10 +329,10 @@ class CPSC2020Reader(object):
             filename of the record
         """
         if isinstance(rec, int):
-            assert rec in range(1, self.nb_records+1), "rec should be in range(1,{})".format(self.nb_records+1)
+            assert rec in range(1, self.nb_records+1), f"rec should be in range(1,{self.nb_records+1})"
             rec_name = self.all_records[rec-1]
         elif isinstance(rec, str):
-            assert rec in self.all_records, "rec should be one of {}".format(self.all_records)
+            assert rec in self.all_records, f"rec should be one of {self.all_records}"
             rec_name = rec
         return rec_name
 
