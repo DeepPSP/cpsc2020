@@ -30,7 +30,7 @@ __all__ = [
 CNN_MODEL, CRNN_MODEL = load_model("keras_ecg_seq_lab_net")
 
 
-def seq_lab_net_detect(sig:np.ndarray, fs:Real, correction:bool=True, **kwargs) -> np.ndarray:
+def seq_lab_net_detect(sig:np.ndarray, fs:Real, correction:bool=False, **kwargs) -> np.ndarray:
     """ finished, checked,
 
     use model of entry 0416 of CPSC2019,
@@ -44,7 +44,7 @@ def seq_lab_net_detect(sig:np.ndarray, fs:Real, correction:bool=True, **kwargs) 
         the (raw) ECG signal of arbitrary length, with units in mV
     fs: real number,
         sampling frequency of `sig`
-    correction: bool, default True,
+    correction: bool, default False,
         if True, correct rpeaks to local maximum in a small nbh
         of rpeaks detected by DL model using `BSE.correct_rpeaks`
     kwargs: dict,
