@@ -54,4 +54,6 @@ not fully listed
 
 # NOTE
 
-further updates will be done in [torch_ecg](https://github.com/wenh06/torch_ecg/tree/master/torch_ecg/train/train_crnn_cpsc2020), instead of this repository
+[1] further updates will be done in [torch_ecg](https://github.com/wenh06/torch_ecg/tree/master/torch_ecg/train/train_crnn_cpsc2020), instead of this repository
+
+[2] if you find [this function](https://github.com/wenh06/cpsc2020/blob/master/signal_processing/ecg_rpeaks_dl.py#L33) useful, please cite Reference [3]
