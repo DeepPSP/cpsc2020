@@ -76,6 +76,7 @@ class ECG_CRNN_CPSC2020(ECG_CRNN):
         else:
             device = torch.device("cpu")
         self.to(device)
+        self.eval()
         if isinstance(input, np.ndarray):
             _input = torch.from_numpy(input).to(device)
         else:
@@ -166,6 +167,7 @@ class ECG_SEQ_LAB_NET_CPSC2020(ECG_SEQ_LAB_NET):
         else:
             device = torch.device("cpu")
         self.to(device)
+        self.eval()
         batch_size, channels, seq_len = input.shape
         if isinstance(input, np.ndarray):
             _input = torch.from_numpy(input).to(device)
