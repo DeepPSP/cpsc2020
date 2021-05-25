@@ -5,7 +5,7 @@ Searching for Premature Ventricular Contraction and Supraventricular Premature B
 ## Update on 2020/12/31
 
 Tests are done on a 60s segment (median-filtered and bandpassed, `sample1_fs250.mat` in [this folder](sample_data/)) of a subject with frequent PVC.
-* r peak detections are done using [this function](https://github.com/wenh06/cpsc2020/blob/master/signal_processing/ecg_rpeaks_dl.py#L33).
+* r peak detections are done using [this function](https://github.com/DeepPSP/cpsc2020/blob/master/signal_processing/ecg_rpeaks_dl.py#L33).
 * PVC beats are labeled using red vertical lines.
 * missed PVC beats are labeled using yellow boxes.
 ![pred_ml](images/pred_ml.png)
@@ -37,7 +37,7 @@ not fully listed
 
 [3] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
 
-[4] [torch_ecg](https://github.com/wenh06/torch_ecg)
+[4] [torch_ecg](https://github.com/DeepPSP/torch_ecg)
 
 
 ## TODO
@@ -54,6 +54,6 @@ not fully listed
 
 # NOTE
 
-[1] further updates will be done in [torch_ecg](https://github.com/wenh06/torch_ecg/tree/master/torch_ecg/train/train_crnn_cpsc2020), instead of this repository
+[1] further updates will be done in [torch_ecg](https://github.com/DeepPSP/torch_ecg/tree/master/torch_ecg/train/train_crnn_cpsc2020), instead of this repository
 
-[2] if you find [this function](https://github.com/wenh06/cpsc2020/blob/master/signal_processing/ecg_rpeaks_dl.py#L33) useful, please cite Reference [3]
+[2] if you find [this function](https://github.com/DeepPSP/cpsc2020/blob/master/signal_processing/ecg_rpeaks_dl.py#L33) useful, please cite Reference [3]
