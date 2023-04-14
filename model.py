@@ -1,7 +1,9 @@
 """
 """
+import sys
 from copy import deepcopy
 from functools import reduce
+from pathlib import Path
 from typing import Union, Optional, Sequence, Tuple, List, NoReturn
 
 import numpy as np
@@ -10,10 +12,13 @@ import torch
 from torch import Tensor
 from easydict import EasyDict as ED
 
-from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
-from torch_ecg.torch_ecg.models.ecg_seq_lab_net import ECG_SEQ_LAB_NET
 from cfg import ModelCfg
 from utils import mask_to_intervals
+
+sys.path.append(str(Path(__file__).resolve().parent / "torch_ecg"))
+
+from torch_ecg.models.ecg_crnn import ECG_CRNN
+from torch_ecg.models.ecg_seq_lab_net import ECG_SEQ_LAB_NET
 
 
 __all__ = [
@@ -46,7 +51,7 @@ class ECG_CRNN_CPSC2020(ECG_CRNN):
         """
         model_config = deepcopy(ModelCfg.crnn)
         model_config.update(config or {})
-        super().__init__(classes, n_leads, input_len, model_config)
+        super().__init__(classes, n_leads, model_config)
 
     @torch.no_grad()
     def inference(self, input:Union[np.ndarray,Tensor], class_names:bool=False, bin_pred_thr:float=0.5) -> Tuple[Union[np.ndarray, pd.DataFrame], np.ndarray]:

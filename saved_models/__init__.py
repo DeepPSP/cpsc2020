@@ -47,6 +47,8 @@ def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
             os.path.join(_BASE_DIR, "crnn_10s.pth"),
             map_location=device
         )
+        crnn_state_dict["clf.lin_0.weight"] = crnn_state_dict.pop("clf.weight")
+        crnn_state_dict["clf.lin_0.bias"] = crnn_state_dict.pop("clf.bias")
         crnn_model.load_state_dict(crnn_state_dict)
         crnn_model.eval()
         if _which == "crnn":

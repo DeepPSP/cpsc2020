@@ -180,6 +180,8 @@ ModelCfg.crnn.rnn.linear.out_channels = [
 ModelCfg.crnn.rnn.linear.bias = True
 ModelCfg.crnn.rnn.linear.dropouts = 0.2
 ModelCfg.crnn.rnn.linear.activation = 'mish'
+ModelCfg.crnn.attn = ED()
+ModelCfg.crnn.attn.name = "none"
 
 # ModelCfg.crnn.rnn.lstm = deepcopy(lstm)
 # ModelCfg.crnn.rnn.attention = deepcopy(attention)

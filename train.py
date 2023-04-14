@@ -7,6 +7,7 @@ import logging
 import argparse
 from copy import deepcopy
 from collections import deque
+from pathlib import Path
 from typing import Union, Optional, Tuple, Dict, Sequence, NoReturn
 from numbers import Real, Number
 
@@ -25,9 +26,11 @@ import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from easydict import EasyDict as ED
 
+sys.path.append(str(Path(__file__).resolve().parent / "torch_ecg"))
+
 # from torch_ecg.torch_ecg.models.ecg_crnn import ECG_CRNN
 from model import ECG_CRNN_CPSC2020, ECG_SEQ_LAB_NET_CPSC2020
-from torch_ecg.torch_ecg.models.nets import (
+from torch_ecg.models.nets import (
     BCEWithLogitsWithClassWeightLoss,
     default_collate_fn as collate_fn,
 )
