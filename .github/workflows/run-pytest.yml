@@ -20,7 +20,11 @@ jobs:
         python-version: ["3.6"]
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        # submodules by default are not checked out
+        submodules: recursive
     - name: Clear unnecessary system components
       run: |
         echo "Free space:"
