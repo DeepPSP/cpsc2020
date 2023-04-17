@@ -13,6 +13,6 @@ wfdb
 torch==1.13.0
 torchsummary
 tensorboardX
-pywt
+PyWavelets
 xgboost==1.1.1
 tqdm
