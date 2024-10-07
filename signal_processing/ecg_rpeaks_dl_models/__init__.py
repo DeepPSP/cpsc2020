@@ -5,16 +5,17 @@ References:
 [1] Cai, Wenjie, and Danqin Hu. "QRS complex detection using novel deep learning neural networks." IEEE Access (2020).
 [2] to add more
 """
+
 import os
-from typing import Union, Optional, Tuple
+from typing import Optional, Tuple, Union
 
 try:
-    from keras.models import model_from_json, Model
+    from keras.models import Model, model_from_json
 except:
     from tensorflow.keras.models import model_from_json, Model
+
 import torch
 from torch import nn
-
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -24,8 +25,8 @@ __all__ = [
 ]
 
 
-def load_model(name:str, **kwargs) -> Union[Model, Tuple[Model,...], nn.Module, Tuple[nn.Module,...]]:
-    """ finished, checked,
+def load_model(name: str, **kwargs) -> Union[Model, Tuple[Model, ...], nn.Module, Tuple[nn.Module, ...]]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -45,8 +46,8 @@ def load_model(name:str, **kwargs) -> Union[Model, Tuple[Model,...], nn.Module, 
         raise NotImplementedError
 
 
-def _load_keras_ecg_seq_lab_net(which:str="both", **kwargs) -> Union[Tuple[Model,Model],Model]:
-    """ finished, checked,
+def _load_keras_ecg_seq_lab_net(which: str = "both", **kwargs) -> Union[Tuple[Model, Model], Model]:
+    """finished, checked,
 
     load the CNN model and CRNN model from the entry 0416 of CPSC2019
 
@@ -81,6 +82,5 @@ def _load_keras_ecg_seq_lab_net(which:str="both", **kwargs) -> Union[Tuple[Model
 
 
 def _load_pytorch_ecg_seq_lab_net():
-    """
-    """
+    """ """
     raise NotImplementedError

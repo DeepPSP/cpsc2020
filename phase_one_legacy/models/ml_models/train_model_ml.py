@@ -24,49 +24,51 @@ TODO:
        or mainly on RR intervals, with auxiliary detector based on wave (f-wave) delineation,
        so that SPB is not confused with AF.
 """
-import os, sys
+
+import os
+import sys
+
 # for DAS training ModuleNotFoundError:
 _PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PARENT_DIR)
 import argparse
-import joblib, pickle
-import time, datetime
+import datetime
 import multiprocessing as mp
-from functools import partial
+import pickle
+import time
 from copy import deepcopy
-from typing import Union, Optional, Any, List, Tuple, NoReturn
+from functools import partial
+from typing import Any, List, NoReturn, Optional, Tuple, Union
 
+import joblib
 import numpy as np
+
 try:
     from tqdm.auto import tqdm
 except ModuleNotFoundError:
     from tqdm import tqdm
+
 import xgboost as xgb
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.utils.class_weight import compute_class_weight
-from sklearn.model_selection import GridSearchCV
+from easydict import EasyDict as ED
+from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier, RandomForestClassifier
+
 # from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.metrics import (
-    make_scorer,
-    accuracy_score, fbeta_score, jaccard_score,
-    plot_confusion_matrix,
-)
-from xgboost import XGBClassifier
-from sklearn.ensemble import (
-    RandomForestClassifier, GradientBoostingClassifier, BaggingClassifier
-)
-from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, fbeta_score, jaccard_score, make_scorer, plot_confusion_matrix
+from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from easydict import EasyDict as ED
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.svm import SVC
+from sklearn.utils.class_weight import compute_class_weight
+from xgboost import XGBClassifier
 
+import utils
 from cfg import TrainCfg
+
 # from signal_processing.ecg_preproc import parallel_preprocess_signal
 # from signal_processing.ecg_features import compute_ecg_features
 from dataset import CPSC2020Reader
 from metrics import CPSC2020_loss, CPSC2020_score
-import utils
-
 
 __all__ = [
     "ECGPrematureDetector",
@@ -91,9 +93,17 @@ _ALL_CLF = list(TrainCfg.ml_param_grid.keys())
 
 
 class ECGPrematureDetector(object):
-    """
-    """
-    def __init__(self, model:Any, db_dir:str, working_dir:Optional[str]=None, config:Optional[ED]=None, verbose:int=1, **kwargs):
+    """ """
+
+    def __init__(
+        self,
+        model: Any,
+        db_dir: str,
+        working_dir: Optional[str] = None,
+        config: Optional[ED] = None,
+        verbose: int = 1,
+        **kwargs,
+    ):
         """
 
         NOTE: the official scoring (-loss) functions is
@@ -115,9 +125,7 @@ class ECGPrematureDetector(object):
         self.db_dir = db_dir
         self.working_dir = working_dir or os.getcwd()
         self.verbose = max(TrainCfg.verbose, verbose)
-        self.data_gen = CPSC2020Reader(
-            db_dir=db_dir, working_dir=working_dir, verbose=verbose
-        )
+        self.data_gen = CPSC2020Reader(db_dir=db_dir, working_dir=working_dir, verbose=verbose)
 
         self.gpu = kwargs.get("gpu", False)
 
@@ -144,16 +152,14 @@ class ECGPrematureDetector(object):
             self.feature_scaler = None
         self.fit_params = ED()
 
-
-    def train_test_split(self, test_rec_num:Optional[int]=None, int_labels:bool=True) -> NoReturn:
-        """ finished, checked,
+    def train_test_split(self, test_rec_num: Optional[int] = None, int_labels: bool = True) -> NoReturn:
+        """finished, checked,
 
         Parameters:
         -----------
         to write
         """
-        self.x_train, self.y_train, self.y_indices_train, \
-        self.x_test, self.y_test, self.y_indices_test = \
+        self.x_train, self.y_train, self.y_indices_train, self.x_test, self.y_test, self.y_indices_test = (
             self.data_gen.train_test_split_data(
                 test_rec_num=(test_rec_num or self.config.test_rec_num),
                 features=self.config.features,
@@ -161,6 +167,7 @@ class ECGPrematureDetector(object):
                 augment=self.config.augment_rpeaks,
                 int_labels=int_labels,
             )
+        )
         if self.feature_scaler:
             self.feature_scaler.fit(self.x_train)
             self.x_train = self.feature_scaler.transform(self.x_train)
@@ -177,7 +184,7 @@ class ECGPrematureDetector(object):
             print(f"feature_scaler.variance = {self.feature_scaler.var_}")
 
         if int_labels:
-            class_weight = {self.config.class_map[k]: v for k,v in self.config.class_weight.items()}
+            class_weight = {self.config.class_map[k]: v for k, v in self.config.class_weight.items()}
         else:
             class_weight = self.config.class_weight
 
@@ -186,9 +193,8 @@ class ECGPrematureDetector(object):
             test=utils.class_weight_to_sample_weight(self.y_test, class_weight),
         )
 
-
-    def train(self, config:Optional[ED]=None):
-        """ NOT finished
+    def train(self, config: Optional[ED] = None):
+        """NOT finished
 
         Parameters:
         -----------
@@ -197,26 +203,37 @@ class ECGPrematureDetector(object):
             for flexibility of different experiments,
             if set, `self.config` will be updated by this `config`
         """
-        if not all([len(self.x_train), len(self.y_train), len(self.y_indices_train), len(self.x_test), len(self.y_test), len(self.y_indices_test)]):
+        if not all(
+            [
+                len(self.x_train),
+                len(self.y_train),
+                len(self.y_indices_train),
+                len(self.x_test),
+                len(self.y_test),
+                len(self.y_indices_test),
+            ]
+        ):
             raise ValueError("do train test split first!")
 
-        self.fit_params = ED({
-            "XGBClassifier": {
-                "sample_weight": self.sample_weight.train,
-                "eval_set": [(self.x_test, self.y_test)],
-                "sample_weight_eval_set": [self.sample_weight.test],
-            },
-            "SVC": {},
-            "RandomForestClassifier": {},
-            "GradientBoostingClassifier": {},
-            "KNeighborsClassifier": {},
-            "MLPClassifier": {},
-        })
+        self.fit_params = ED(
+            {
+                "XGBClassifier": {
+                    "sample_weight": self.sample_weight.train,
+                    "eval_set": [(self.x_test, self.y_test)],
+                    "sample_weight_eval_set": [self.sample_weight.test],
+                },
+                "SVC": {},
+                "RandomForestClassifier": {},
+                "GradientBoostingClassifier": {},
+                "KNeighborsClassifier": {},
+                "MLPClassifier": {},
+            }
+        )
 
         cfg = deepcopy(self.config)
         cfg.update(config)
 
-        for k,v in cfg.ml_fit_params.items():
+        for k, v in cfg.ml_fit_params.items():
             v.update(self.fit_params[k])
 
         # if type(self.model).__name__ == "XGBClassifier":
@@ -235,10 +252,7 @@ class ECGPrematureDetector(object):
             cv=cfg.cv,
         )
 
-        grid_result = grid.fit(
-            self.x_train, self.y_train,
-            **cfg.ml_fit_params[self.model_name]
-        )
+        grid_result = grid.fit(self.x_train, self.y_train, **cfg.ml_fit_params[self.model_name])
 
         retval = ED(
             model=grid_result.best_estimator_,
@@ -249,18 +263,17 @@ class ECGPrematureDetector(object):
         save_dict = deepcopy(retval)
         save_dict["feature_scaler"] = self.feature_scaler
 
-        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
-        save_path = cfg.model_path['ml'].format(
+        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else "no-scaler"
+        save_path = cfg.model_path["ml"].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
             params=type(grid).__name__,
             scaler=scaler_name,
             eval=f'best_score_{save_dict["best_score"]}',
-            ext='pkl',
+            ext="pkl",
         )
 
         return retval
-
 
     # def _train_sklearn_clf(self, config:dict):
     #     """ NOT finished,
@@ -272,9 +285,8 @@ class ECGPrematureDetector(object):
     #     """
     #     raise NotImplementedError
 
-
-    def _cv_xgb(self, params:dict):
-        """ not finished,
+    def _cv_xgb(self, params: dict):
+        """not finished,
 
         Parameters:
         -----------
@@ -288,9 +300,8 @@ class ECGPrematureDetector(object):
         )
         return cv_results
 
-
-    def train_das_gpu_xgb(self, config:Optional[ED]=None, **kwargs) -> NoReturn:
-        """ finished, under improvement
+    def train_das_gpu_xgb(self, config: Optional[ED] = None, **kwargs) -> NoReturn:
+        """finished, under improvement
 
         Parameters:
         -----------
@@ -304,8 +315,8 @@ class ECGPrematureDetector(object):
         dtest = xgb.DMatrix(self.x_test, label=self.y_test, weight=self.sample_weight.test)
 
         params = {
-            'learning_rate': kwargs.get('learning_rate', 0.1),
-            'tree_method': 'gpu_hist',
+            "learning_rate": kwargs.get("learning_rate", 0.1),
+            "tree_method": "gpu_hist",
         }
         params.update(cfg.xgb_native_train_params)
 
@@ -317,7 +328,8 @@ class ECGPrematureDetector(object):
 
         start = time.time()
         booster = xgb.train(
-            params, dtrain,
+            params,
+            dtrain,
             evals=[(dtest, "Test")],
             evals_result=evals_result,
             **config.xgb_native_train_kw,
@@ -325,27 +337,36 @@ class ECGPrematureDetector(object):
         print(f"XGB training on DAS GPU costs {(time.time()-start)/60:.2f} minutes")
         print(f"evals_result = {utils.dict_to_str(evals_result)}")
 
-        save_path_params = '_'.join(
-            [str(k)+'-'+str(v) for k,v in params.items() \
-                if k not in ['objective', 'num_class', 'verbosity', 'eval_metric',]]
+        save_path_params = "_".join(
+            [
+                str(k) + "-" + str(v)
+                for k, v in params.items()
+                if k
+                not in [
+                    "objective",
+                    "num_class",
+                    "verbosity",
+                    "eval_metric",
+                ]
+            ]
         )
-        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else 'no-scaler'
+        scaler_name = type(self.feature_scaler).__name__ if self.feature_scaler else "no-scaler"
         eval_name = f'Test_merror_{np.min(evals_result["Test"]["merror"]):.4f}'
-        save_path = cfg.model_path['ml'].format(
+        save_path = cfg.model_path["ml"].format(
             model_name=self.model_name,
             time=utils.get_date_str(),
             params=save_path_params,
             scaler=scaler_name,
             eval=eval_name,
-            ext='pkl',
+            ext="pkl",
         )
         # booster.save_model(save_path)
         save_dict = {
-            'feature_scaler': self.feature_scaler,
-            'model': booster,
+            "feature_scaler": self.feature_scaler,
+            "model": booster,
         }
 
-        with open(save_path, 'wb') as f:
+        with open(save_path, "wb") as f:
             pickle.dump(save_dict, f)
 
 
@@ -357,42 +378,53 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument(
-        '-m', '--model',
-        type=str, default='xgbc',
+        "-m",
+        "--model",
+        type=str,
+        default="xgbc",
         help='name of the model, separated by ","',
-        dest='models',
+        dest="models",
     )
     ap.add_argument(
-        "-d", "--db-dir",
+        "-d",
+        "--db-dir",
         # type=str, required=True,
-        type=str, default="/mnt/wenhao71/data/CPSC2020/TrainingSet/",
+        type=str,
+        default="/mnt/wenhao71/data/CPSC2020/TrainingSet/",
         help="directory where the database is stored",
         dest="db_dir",
     )
     ap.add_argument(
-        "-w", "--working-dir",
-        type=str, default=None,
+        "-w",
+        "--working-dir",
+        type=str,
+        default=None,
         help="working directory",
         dest="working_dir",
     )
     ap.add_argument(
-        '-g', '--gpu',
+        "-g",
+        "--gpu",
         type=utils.str2bool,
         default=True,
-        help='use gpu (only for xgboost) or not',
-        dest='gpu',
+        help="use gpu (only for xgboost) or not",
+        dest="gpu",
     )
     ap.add_argument(
-        '-l', '--lr',
-        type=float, default=0.1,
-        help='learning rate of xgb booster',
-        dest='lr',
+        "-l",
+        "--lr",
+        type=float,
+        default=0.1,
+        help="learning rate of xgb booster",
+        dest="lr",
     )
     ap.add_argument(
-        '-v', '--verbose',
-        type=int, default=0,
-        help='set verbosity',
-        dest='verbose',
+        "-v",
+        "--verbose",
+        type=int,
+        default=0,
+        help="set verbosity",
+        dest="verbose",
     )
     kw = vars(ap.parse_args())
 
@@ -412,14 +444,15 @@ if __name__ == "__main__":
 
     for m in models:
         trainer = ECGPrematureDetector(
-            model=m, **kw
+            model=m,
+            **kw,
             # db_dir=db_dir,
             # working_dir=working_dir,
             # config=config,
             # verbose=verbose,
             # gpu=gpu,
         )  # NOT finished
-        trainer.train_test_split(test_rec_num=config.test_rec_num,int_labels=True)
+        trainer.train_test_split(test_rec_num=config.test_rec_num, int_labels=True)
         if DAS:
             trainer.train_das_gpu_xgb(config, learning_rate=lr)
         else:

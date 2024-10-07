@@ -12,17 +12,20 @@ References:
 [1] https://github.com/PIA-Group/BioSPPy
 [2] to add
 """
-import os, time
+
 import multiprocessing as mp
+import os
+import time
 from copy import deepcopy
 from numbers import Real
-from typing import Union, Optional, Any, List, Dict
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from easydict import EasyDict as ED
+from scipy.io import savemat
 from scipy.ndimage.filters import median_filter
 from scipy.signal.signaltools import resample
-from scipy.io import savemat
+
 # from scipy.signal import medfilt
 # https://github.com/scipy/scipy/issues/9680
 try:
@@ -31,12 +34,18 @@ except:
     from references.biosppy.biosppy.signals.tools import filter_signal
 
 from cfg import PreprocCfg
+
 from .ecg_rpeaks import (
-    xqrs_detect, gqrs_detect, pantompkins,
-    hamilton_detect, ssf_detect, christov_detect, engzee_detect, gamboa_detect,
+    christov_detect,
+    engzee_detect,
+    gamboa_detect,
+    gqrs_detect,
+    hamilton_detect,
+    pantompkins,
+    ssf_detect,
+    xqrs_detect,
 )
 from .ecg_rpeaks_dl import seq_lab_net_detect
-
 
 __all__ = [
     "preprocess_signal",
@@ -61,8 +70,8 @@ DL_QRS_DETECTORS = [
 ]
 
 
-def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> Dict[str, np.ndarray]:
-    """ finished, checked,
+def preprocess_signal(raw_sig: np.ndarray, fs: Real, config: Optional[ED] = None) -> Dict[str, np.ndarray]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -92,26 +101,26 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     cfg.update(config or {})
 
     if fs != cfg.fs:
-        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg)*cfg.fs/fs)))
+        filtered_ecg = resample(filtered_ecg, int(round(len(filtered_ecg) * cfg.fs / fs)))
 
     # remove baseline
-    if 'baseline' in cfg.preproc:
+    if "baseline" in cfg.preproc:
         window1 = 2 * (cfg.baseline_window1 // 2) + 1  # window size must be odd
         window2 = 2 * (cfg.baseline_window2 // 2) + 1
-        baseline = median_filter(filtered_ecg, size=window1, mode='nearest')
-        baseline = median_filter(baseline, size=window2, mode='nearest')
+        baseline = median_filter(filtered_ecg, size=window1, mode="nearest")
+        baseline = median_filter(baseline, size=window2, mode="nearest")
         filtered_ecg = filtered_ecg - baseline
-    
+
     # filter signal
-    if 'bandpass' in cfg.preproc:
+    if "bandpass" in cfg.preproc:
         filtered_ecg = filter_signal(
             signal=filtered_ecg,
-            ftype='FIR',
-            band='bandpass',
+            ftype="FIR",
+            band="bandpass",
             order=int(0.3 * fs),
             sampling_rate=fs,
             frequency=cfg.filter_band,
-        )['signal']
+        )["signal"]
 
     if cfg.rpeaks and cfg.rpeaks.lower() not in DL_QRS_DETECTORS:
         # dl detectors not for parallel computing using `mp`
@@ -120,16 +129,25 @@ def preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None) -> 
     else:
         rpeaks = np.array([], dtype=int)
 
-    retval = ED({
-        "filtered_ecg": filtered_ecg,
-        "rpeaks": rpeaks,
-    })
-    
-    return retval
-    
+    retval = ED(
+        {
+            "filtered_ecg": filtered_ecg,
+            "rpeaks": rpeaks,
+        }
+    )
 
-def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=None, save_dir:Optional[str]=None, save_fmt:str='npy', verbose:int=0) -> Dict[str, np.ndarray]:
-    """ finished, checked,
+    return retval
+
+
+def parallel_preprocess_signal(
+    raw_sig: np.ndarray,
+    fs: Real,
+    config: Optional[ED] = None,
+    save_dir: Optional[str] = None,
+    save_fmt: str = "npy",
+    verbose: int = 0,
+) -> Dict[str, np.ndarray]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -172,10 +190,10 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
             rpeaks = QRS_DETECTORS[cfg.rpeaks.lower()](sig=raw_sig, fs=fs, verbose=verbose).astype(int)
             retval.rpeaks = rpeaks
         return retval
-    
+
     l_epoch = [
-        raw_sig[idx*epoch_forward: idx*epoch_forward + epoch_len] \
-            for idx in range((len(raw_sig)-epoch_overlap)//epoch_forward)
+        raw_sig[idx * epoch_forward : idx * epoch_forward + epoch_len]
+        for idx in range((len(raw_sig) - epoch_overlap) // epoch_forward)
     ]
 
     if cfg.parallel_keep_tail:
@@ -184,10 +202,10 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
             # append to the last epoch
             l_epoch[-1] = np.append(l_epoch[-1], raw_sig[tail_start_idx:])
         else:  # long enough
-            tail_epoch = raw_sig[tail_start_idx-epoch_overlap:]
+            tail_epoch = raw_sig[tail_start_idx - epoch_overlap :]
             l_epoch.append(tail_epoch)
 
-    cpu_num = max(1, mp.cpu_count()-3)
+    cpu_num = max(1, mp.cpu_count() - 3)
     with mp.Pool(processes=cpu_num) as pool:
         result = pool.starmap(
             func=preprocess_signal,
@@ -197,20 +215,20 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
     if cfg.parallel_keep_tail:
         tail_result = result[-1]
         result = result[:-1]
-    
-    filtered_ecg = result[0]['filtered_ecg'][:epoch_len-epoch_overlap_half]
-    rpeaks = result[0]['rpeaks'][np.where(result[0]['rpeaks']<epoch_len-epoch_overlap_half)[0]]
+
+    filtered_ecg = result[0]["filtered_ecg"][: epoch_len - epoch_overlap_half]
+    rpeaks = result[0]["rpeaks"][np.where(result[0]["rpeaks"] < epoch_len - epoch_overlap_half)[0]]
     for idx, e in enumerate(result[1:]):
-        filtered_ecg = np.append(
-            filtered_ecg, e['filtered_ecg'][epoch_overlap_half: -epoch_overlap_half]
-        )
-        epoch_rpeaks = e['rpeaks'][np.where( (e['rpeaks'] >= epoch_overlap_half) & (e['rpeaks'] < epoch_len-epoch_overlap_half) )[0]]
-        rpeaks = np.append(rpeaks, (idx+1)*epoch_forward + epoch_rpeaks)
+        filtered_ecg = np.append(filtered_ecg, e["filtered_ecg"][epoch_overlap_half:-epoch_overlap_half])
+        epoch_rpeaks = e["rpeaks"][
+            np.where((e["rpeaks"] >= epoch_overlap_half) & (e["rpeaks"] < epoch_len - epoch_overlap_half))[0]
+        ]
+        rpeaks = np.append(rpeaks, (idx + 1) * epoch_forward + epoch_rpeaks)
 
     if cfg.parallel_keep_tail:
-        filtered_ecg = np.append(filtered_ecg, tail_result['filtered_ecg'][epoch_overlap_half:])
-        tail_rpeaks = tail_result['rpeaks'][np.where(tail_result['rpeaks'] >= epoch_overlap_half)[0]]
-        rpeaks = np.append(rpeaks, len(result)*epoch_forward + tail_rpeaks)
+        filtered_ecg = np.append(filtered_ecg, tail_result["filtered_ecg"][epoch_overlap_half:])
+        tail_rpeaks = tail_result["rpeaks"][np.where(tail_result["rpeaks"] >= epoch_overlap_half)[0]]
+        rpeaks = np.append(rpeaks, len(result) * epoch_forward + tail_rpeaks)
 
     if verbose >= 1:
         if cfg.rpeaks.lower() in DL_QRS_DETECTORS:
@@ -227,20 +245,23 @@ def parallel_preprocess_signal(raw_sig:np.ndarray, fs:Real, config:Optional[ED]=
     if save_dir:
         # NOTE: this part is not tested
         os.makedirs(save_dir, exist_ok=True)
-        if save_fmt.lower() == 'npy':
+        if save_fmt.lower() == "npy":
             np.save(os.path.join(save_dir, "filtered_ecg.npy"), filtered_ecg)
             np.save(os.path.join(save_dir, "rpeaks.npy"), rpeaks)
-        elif save_fmt.lower() == 'mat':
+        elif save_fmt.lower() == "mat":
             # save into 2 files, keep in accordance
-            savemat(os.path.join(save_dir, "filtered_ecg.mat"), {"filtered_ecg": filtered_ecg}, format='5')
-            savemat(os.path.join(save_dir, "rpeaks.mat"), {"rpeaks": rpeaks}, format='5')
+            savemat(os.path.join(save_dir, "filtered_ecg.mat"), {"filtered_ecg": filtered_ecg}, format="5")
+            savemat(os.path.join(save_dir, "rpeaks.mat"), {"rpeaks": rpeaks}, format="5")
 
-    retval = ED({
-        "filtered_ecg": filtered_ecg,
-        "rpeaks": rpeaks,
-    })
+    retval = ED(
+        {
+            "filtered_ecg": filtered_ecg,
+            "rpeaks": rpeaks,
+        }
+    )
 
     return retval
+
 
 """
 to check correctness of the function `parallel_preprocess_signal`,

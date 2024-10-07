@@ -1,25 +1,27 @@
 """
 """
+
+import argparse
+import logging
+import math
 import os
 import random
-import argparse
-import math
 from copy import deepcopy
 from functools import reduce
-import logging
-from typing import Union, Optional, Any, List, Tuple, Dict, Sequence, NoReturn
 from numbers import Real
+from typing import Any, Dict, List, NoReturn, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
 np.set_printoptions(precision=5, suppress=True)
-import pandas as pd
-from scipy.io import loadmat, savemat
 import multiprocessing as mp
+
+import pandas as pd
 from easydict import EasyDict as ED
+from scipy.io import loadmat, savemat
 
-from utils import CPSC_STATS, get_optimal_covering
 from cfg import BaseCfg, PlotCfg
-
+from utils import CPSC_STATS, get_optimal_covering
 
 __all__ = [
     "CPSC2020Reader",
@@ -171,10 +173,11 @@ class CPSC2020Reader(object):
     [1] http://www.icbeb.org/CPSC2020.html
     [2] https://github.com/PIA-Group/BioSPPy
     """
+
     __name__ = "CPSC2020Reader"
 
-    def __init__(self, db_dir:str, working_dir:Optional[str]=None, verbose:int=1, **kwargs):
-        """ finished, to be improved,
+    def __init__(self, db_dir: str, working_dir: Optional[str] = None, verbose: int = 1, **kwargs):
+        """finished, to be improved,
 
         Parameters:
         -----------
@@ -189,38 +192,54 @@ class CPSC2020Reader(object):
         self.verbose = verbose
 
         self.fs = 400
-        self.spacing = 1000/self.fs
-        self.rec_ext = '.mat'
-        self.ann_ext = '.mat'
+        self.spacing = 1000 / self.fs
+        self.rec_ext = ".mat"
+        self.ann_ext = ".mat"
 
         self.nb_records = 10
-        self.all_records = ["A{0:02d}".format(i) for i in range(1,1+self.nb_records)]
-        self.all_annotations = ["R{0:02d}".format(i) for i in range(1,1+self.nb_records)]
+        self.all_records = ["A{0:02d}".format(i) for i in range(1, 1 + self.nb_records)]
+        self.all_annotations = ["R{0:02d}".format(i) for i in range(1, 1 + self.nb_records)]
         self.all_references = self.all_annotations
         self.rec_dir = os.path.join(self.db_dir, "data")
         self.ann_dir = os.path.join(self.db_dir, "ref")
         self.data_dir = self.rec_dir
         self.ref_dir = self.ann_dir
 
-        self.subgroups = ED({
-            "N":  ["A01", "A03", "A05", "A06",],
-            "V":  ["A02", "A08"],
-            "S":  ["A09", "A10"],
-            "VS": ["A04", "A07"],
-        })
+        self.subgroups = ED(
+            {
+                "N": [
+                    "A01",
+                    "A03",
+                    "A05",
+                    "A06",
+                ],
+                "V": ["A02", "A08"],
+                "S": ["A09", "A10"],
+                "VS": ["A04", "A07"],
+            }
+        )
 
         self.df_stats = CPSC_STATS
 
-        self.palette = {"spb": "yellow", "pvc": "red",}
+        self.palette = {
+            "spb": "yellow",
+            "pvc": "red",
+        }
 
         # a dict mapping the string annotations ('N', 'S', 'V') to digits (0, 1, 2)
         self.class_map = kwargs.get("class_map", BaseCfg.class_map)
 
         # TODO: add logger
-    
 
-    def load_data(self, rec:Union[int,str], units:str='mV', sampfrom:Optional[int]=None, sampto:Optional[int]=None, keep_dim:bool=True) -> np.ndarray:
-        """ finished, checked,
+    def load_data(
+        self,
+        rec: Union[int, str],
+        units: str = "mV",
+        sampfrom: Optional[int] = None,
+        sampto: Optional[int] = None,
+        keep_dim: bool = True,
+    ) -> np.ndarray:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -235,7 +254,7 @@ class CPSC2020Reader(object):
             end index of the data to be loaded
         keep_dim: bool, default True,
             whether or not to flatten the data of shape (n,1)
-        
+
         Returns:
         --------
         data: ndarray,
@@ -243,8 +262,8 @@ class CPSC2020Reader(object):
         """
         rec_name = self._get_rec_name(rec)
         rec_fp = os.path.join(self.data_dir, f"{rec_name}{self.rec_ext}")
-        data = loadmat(rec_fp)['ecg']
-        if units.lower() in ['uv', 'μv']:
+        data = loadmat(rec_fp)["ecg"]
+        if units.lower() in ["uv", "μv"]:
             data = (1000 * data).astype(int)
         sf, st = (sampfrom or 0), (sampto or len(data))
         data = data[sf:st]
@@ -252,9 +271,10 @@ class CPSC2020Reader(object):
             data = data.flatten()
         return data
 
-
-    def load_ann(self, rec:Union[int,str], sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> Dict[str, np.ndarray]:
-        """ finished, checked,
+    def load_ann(
+        self, rec: Union[int, str], sampfrom: Optional[int] = None, sampto: Optional[int] = None
+    ) -> Dict[str, np.ndarray]:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -265,7 +285,7 @@ class CPSC2020Reader(object):
             start index of the data to be loaded
         sampto: int, optional,
             end index of the data to be loaded
-        
+
         Returns:
         --------
         ann: dict,
@@ -274,25 +294,24 @@ class CPSC2020Reader(object):
         """
         ann_name = self._get_ann_name(rec)
         ann_fp = os.path.join(self.ann_dir, ann_name + self.ann_ext)
-        ann = loadmat(ann_fp)['ref']
+        ann = loadmat(ann_fp)["ref"]
         sf, st = (sampfrom or 0), (sampto or np.inf)
-        spb_indices = ann['S_ref'][0,0].flatten().astype(int)
+        spb_indices = ann["S_ref"][0, 0].flatten().astype(int)
         # drop duplicates
         spb_indices = np.array(sorted(list(set(spb_indices))), dtype=int)
-        spb_indices = spb_indices[np.where( (spb_indices>=sf) & (spb_indices<st) )[0]]
-        pvc_indices = ann['V_ref'][0,0].flatten().astype(int)
+        spb_indices = spb_indices[np.where((spb_indices >= sf) & (spb_indices < st))[0]]
+        pvc_indices = ann["V_ref"][0, 0].flatten().astype(int)
         # drop duplicates
         pvc_indices = np.array(sorted(list(set(pvc_indices))), dtype=int)
-        pvc_indices = pvc_indices[np.where( (pvc_indices>=sf) & (pvc_indices<st) )[0]]
+        pvc_indices = pvc_indices[np.where((pvc_indices >= sf) & (pvc_indices < st))[0]]
         ann = {
             "SPB_indices": spb_indices,
             "PVC_indices": pvc_indices,
         }
         return ann
 
-
-    def _get_ann_name(self, rec:Union[int,str]) -> str:
-        """ finished, checked,
+    def _get_ann_name(self, rec: Union[int, str]) -> str:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -306,16 +325,17 @@ class CPSC2020Reader(object):
             filename of the annotation file
         """
         if isinstance(rec, int):
-            assert rec in range(1, self.nb_records+1), f"rec should be in range(1,{self.nb_records+1})"
-            ann_name = self.all_annotations[rec-1]
+            assert rec in range(1, self.nb_records + 1), f"rec should be in range(1,{self.nb_records+1})"
+            ann_name = self.all_annotations[rec - 1]
         elif isinstance(rec, str):
-            assert rec in self.all_annotations+self.all_records, f"rec should be one of {self.all_records} or one of {self.all_annotations}"
+            assert (
+                rec in self.all_annotations + self.all_records
+            ), f"rec should be one of {self.all_records} or one of {self.all_annotations}"
             ann_name = rec.replace("A", "R")
         return ann_name
 
-
-    def _get_rec_name(self, rec:Union[int,str]) -> str:
-        """ finished, checked,
+    def _get_rec_name(self, rec: Union[int, str]) -> str:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -329,16 +349,15 @@ class CPSC2020Reader(object):
             filename of the record
         """
         if isinstance(rec, int):
-            assert rec in range(1, self.nb_records+1), f"rec should be in range(1,{self.nb_records+1})"
-            rec_name = self.all_records[rec-1]
+            assert rec in range(1, self.nb_records + 1), f"rec should be in range(1,{self.nb_records+1})"
+            rec_name = self.all_records[rec - 1]
         elif isinstance(rec, str):
             assert rec in self.all_records, f"rec should be one of {self.all_records}"
             rec_name = rec
         return rec_name
 
-    
-    def train_test_split_rec(self, test_rec_num:int=2) -> Dict[str, List[str]]:
-        """ finished, checked,
+    def train_test_split_rec(self, test_rec_num: int = 2) -> Dict[str, List[str]]:
+        """finished, checked,
 
         split the records into train set and test set
 
@@ -365,17 +384,25 @@ class CPSC2020Reader(object):
         else:
             raise ValueError("test data ratio too high")
         train_records = [r for r in self.all_records if r not in test_records]
-        
-        split_res = ED({
-            "train": train_records,
-            "test": test_records,
-        })
-        
+
+        split_res = ED(
+            {
+                "train": train_records,
+                "test": test_records,
+            }
+        )
+
         return split_res
 
-
-    def locate_premature_beats(self, rec:Union[int,str], premature_type:Optional[str]=None, window:int=10000, sampfrom:Optional[int]=None, sampto:Optional[int]=None) -> List[List[int]]:
-        """ finished, checked,
+    def locate_premature_beats(
+        self,
+        rec: Union[int, str],
+        premature_type: Optional[str] = None,
+        window: int = 10000,
+        sampfrom: Optional[int] = None,
+        sampto: Optional[int] = None,
+    ) -> List[List[int]]:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -403,7 +430,7 @@ class CPSC2020Reader(object):
             premature_inds = np.append(ann["SPB_indices"], ann["PVC_indices"])
             premature_inds = np.sort(premature_inds)
         try:  # premature_inds empty?
-            sf, st = (sampfrom or 0), (sampto or premature_inds[-1]+1)
+            sf, st = (sampfrom or 0), (sampto or premature_inds[-1] + 1)
         except:
             premature_intervals = []
             return premature_intervals
@@ -412,15 +439,14 @@ class CPSC2020Reader(object):
         premature_intervals, _ = get_optimal_covering(
             total_interval=tot_interval,
             to_cover=premature_inds,
-            min_len=window*self.fs//1000,
-            split_threshold=window*self.fs//1000,
+            min_len=window * self.fs // 1000,
+            split_threshold=window * self.fs // 1000,
             traceback=False,
         )
         return premature_intervals
 
-
-    def _auto_infer_units(self, sig:np.ndarray, sig_type:str="ECG") -> str:
-        """ finished, checked,
+    def _auto_infer_units(self, sig: np.ndarray, sig_type: str = "ECG") -> str:
+        """finished, checked,
 
         automatically infer the units of `sig`,
         under the assumption that `sig` not being raw signal, with baseline removed
@@ -441,16 +467,24 @@ class CPSC2020Reader(object):
             _MAX_mV = 20  # 20mV, seldom an ECG device has range larger than this value
             max_val = np.max(np.abs(sig))
             if max_val > _MAX_mV:
-                units = 'μV'
+                units = "μV"
             else:
-                units = 'mV'
+                units = "mV"
         else:
             raise NotImplementedError(f"not implemented for {sig_type}")
         return units
 
-    
-    def plot(self, rec:Union[int,str], data:Optional[np.ndarray]=None, ann:Optional[Dict[str, np.ndarray]]=None, ticks_granularity:int=0, sampfrom:Optional[int]=None, sampto:Optional[int]=None, rpeak_inds:Optional[Union[Sequence[int],np.ndarray]]=None) -> NoReturn:
-        """ finished, checked,
+    def plot(
+        self,
+        rec: Union[int, str],
+        data: Optional[np.ndarray] = None,
+        ann: Optional[Dict[str, np.ndarray]] = None,
+        ticks_granularity: int = 0,
+        sampfrom: Optional[int] = None,
+        sampto: Optional[int] = None,
+        rpeak_inds: Optional[Union[Sequence[int], np.ndarray]] = None,
+    ) -> NoReturn:
+        """finished, checked,
 
         Parameters:
         -----------
@@ -476,16 +510,14 @@ class CPSC2020Reader(object):
             indices of R peaks,
             if `data` is None, then indices should be the absolute indices in the record
         """
-        if 'plt' not in dir():
+        if "plt" not in dir():
             import matplotlib.pyplot as plt
         import matplotlib.patches as mpatches
 
         patches = {}
 
         if data is None:
-            _data = self.load_data(
-                rec, units="μV", sampfrom=sampfrom, sampto=sampto, keep_dim=False
-            )
+            _data = self.load_data(rec, units="μV", sampfrom=sampfrom, sampto=sampto, keep_dim=False)
         else:
             units = self._auto_infer_units(data)
             if units == "mV":
@@ -506,115 +538,124 @@ class CPSC2020Reader(object):
                 rpeak_secs = np.array(rpeak_inds) / self.fs
             else:
                 rpeak_secs = np.array(rpeak_inds)
-                rpeak_secs = rpeak_secs[np.where( (rpeak_secs>=sf) & (rpeak_secs<st))[0]]
+                rpeak_secs = rpeak_secs[np.where((rpeak_secs >= sf) & (rpeak_secs < st))[0]]
                 rpeak_secs = (rpeak_secs - sf) / self.fs
 
         line_len = self.fs * 25  # 25 seconds
-        nb_lines = math.ceil(len(_data)/line_len)
+        nb_lines = math.ceil(len(_data) / line_len)
 
         for idx in range(nb_lines):
-            seg = _data[idx*line_len: (idx+1)*line_len]
-            secs = (np.arange(len(seg)) + idx*line_len) / self.fs
+            seg = _data[idx * line_len : (idx + 1) * line_len]
+            secs = (np.arange(len(seg)) + idx * line_len) / self.fs
             fig_sz_w = int(round(4.8 * len(seg) / self.fs))
             y_range = np.max(np.abs(seg)) + 100
             fig_sz_h = 6 * y_range / 1500
             fig, ax = plt.subplots(figsize=(fig_sz_w, fig_sz_h))
-            ax.plot(secs, seg, c='black')
-            ax.axhline(y=0, linestyle='-', linewidth='1.0', color='red')
+            ax.plot(secs, seg, c="black")
+            ax.axhline(y=0, linestyle="-", linewidth="1.0", color="red")
             if ticks_granularity >= 1:
                 ax.xaxis.set_major_locator(plt.MultipleLocator(0.2))
                 ax.yaxis.set_major_locator(plt.MultipleLocator(500))
-                ax.grid(which='major', linestyle='-', linewidth='0.5', color='red')
+                ax.grid(which="major", linestyle="-", linewidth="0.5", color="red")
             if ticks_granularity >= 2:
                 ax.xaxis.set_minor_locator(plt.MultipleLocator(0.04))
                 ax.yaxis.set_minor_locator(plt.MultipleLocator(100))
-                ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
-            seg_spb = np.where( (spb_indices>=idx*line_len) & (spb_indices<(idx+1)*line_len) )[0]
+                ax.grid(which="minor", linestyle=":", linewidth="0.5", color="black")
+            seg_spb = np.where((spb_indices >= idx * line_len) & (spb_indices < (idx + 1) * line_len))[0]
             # print(f"spb_indices = {spb_indices}, seg_spb = {seg_spb}")
             if len(seg_spb) > 0:
                 seg_spb = spb_indices[seg_spb] / self.fs
                 patches["SPB"] = mpatches.Patch(color=self.palette["spb"], label="SPB")
-            seg_pvc = np.where( (pvc_indices>=idx*line_len) & (pvc_indices<(idx+1)*line_len) )[0]
+            seg_pvc = np.where((pvc_indices >= idx * line_len) & (pvc_indices < (idx + 1) * line_len))[0]
             # print(f"pvc_indices = {pvc_indices}, seg_pvc = {seg_pvc}")
             if len(seg_pvc) > 0:
                 seg_pvc = pvc_indices[seg_pvc] / self.fs
                 patches["PVC"] = mpatches.Patch(color=self.palette["pvc"], label="PVC")
             for t in seg_spb:
                 ax.axvspan(
-                    max(secs[0], t-BaseCfg.bias_thr/self.fs), min(secs[-1], t+BaseCfg.bias_thr/self.fs),
-                    color=self.palette["spb"], alpha=0.3
+                    max(secs[0], t - BaseCfg.bias_thr / self.fs),
+                    min(secs[-1], t + BaseCfg.bias_thr / self.fs),
+                    color=self.palette["spb"],
+                    alpha=0.3,
                 )
                 ax.axvspan(
-                    max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
-                    color=self.palette["spb"], alpha=0.9
+                    max(secs[0], t - PlotCfg.winL), min(secs[-1], t + PlotCfg.winR), color=self.palette["spb"], alpha=0.9
                 )
             for t in seg_pvc:
                 ax.axvspan(
-                    max(secs[0], t-BaseCfg.bias_thr/self.fs), min(secs[-1], t+BaseCfg.bias_thr/self.fs),
-                    color=self.palette["pvc"], alpha=0.3
+                    max(secs[0], t - BaseCfg.bias_thr / self.fs),
+                    min(secs[-1], t + BaseCfg.bias_thr / self.fs),
+                    color=self.palette["pvc"],
+                    alpha=0.3,
                 )
                 ax.axvspan(
-                    max(secs[0], t-PlotCfg.winL), min(secs[-1], t+PlotCfg.winR),
-                    color=self.palette["pvc"], alpha=0.9
+                    max(secs[0], t - PlotCfg.winL), min(secs[-1], t + PlotCfg.winR), color=self.palette["pvc"], alpha=0.9
                 )
             if len(patches) > 0:
-                ax.legend(
-                    handles=[v for _,v in patches.items()],
-                    loc="lower left",
-                    prop={"size": 16}
-                )
+                ax.legend(handles=[v for _, v in patches.items()], loc="lower left", prop={"size": 16})
             if rpeak_inds is not None:
-                seg_rpeak_secs = \
-                    rpeak_secs[np.where( (rpeak_secs>=secs[0]) & (rpeak_secs<secs[-1]))[0]]
+                seg_rpeak_secs = rpeak_secs[np.where((rpeak_secs >= secs[0]) & (rpeak_secs < secs[-1]))[0]]
                 for r in seg_rpeak_secs:
-                    ax.axvspan(r-0.01, r+0.01, color='green', alpha=0.7)
+                    ax.axvspan(r - 0.01, r + 0.01, color="green", alpha=0.7)
             ax.set_xlim(secs[0], secs[-1])
             ax.set_ylim(-y_range, y_range)
-            ax.set_xlabel('Time [s]')
-            ax.set_ylabel('Voltage [μV]')
+            ax.set_xlabel("Time [s]")
+            ax.set_ylabel("Voltage [μV]")
             plt.show()
-
 
 
 if __name__ == "__main__":
     from .utils import dict_to_str, str2bool
+
     ap = argparse.ArgumentParser(
         description="preprocess CPSC2020 data",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument(
-        "-d", "--db-dir",
-        type=str, required=True,
+        "-d",
+        "--db-dir",
+        type=str,
+        required=True,
         help="directory where the database is stored",
         dest="db_dir",
     )
     ap.add_argument(
-        "-w", "--working-dir",
-        type=str, default=None,
+        "-w",
+        "--working-dir",
+        type=str,
+        default=None,
         help="working directory",
         dest="working_dir",
     )
     ap.add_argument(
-        "-p", "--preproc",
-        type=str, default="baseline,bandpass",
+        "-p",
+        "--preproc",
+        type=str,
+        default="baseline,bandpass",
         help="preprocesses to perform, separated by ','",
         dest="preproc",
     )
     ap.add_argument(
-        "-r", "--rec",
-        type=str, default=None,
+        "-r",
+        "--rec",
+        type=str,
+        default=None,
         help="records (name or numbering) to perform preprocesses, separated by ','; if not set, all records will be preprocessed",
         dest="records",
     )
     ap.add_argument(
-        "-a", "--augment",
-        type=str2bool, default=True,
+        "-a",
+        "--augment",
+        type=str2bool,
+        default=True,
         help="whether or not using annotations to augment the rpeaks detected by algorithm",
         dest="augment",
     )
     ap.add_argument(
-        "-v", "--verbose",
-        type=int, default=2,
+        "-v",
+        "--verbose",
+        type=int,
+        default=2,
         help="verbosity",
         dest="verbose",
     )

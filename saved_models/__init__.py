@@ -1,14 +1,14 @@
 """
 """
+
 import os
-from typing import Union, Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 from torch import nn
 
-from model import ECG_CRNN_CPSC2020, ECG_SEQ_LAB_NET_CPSC2020
 from cfg import ModelCfg
-
+from model import ECG_CRNN_CPSC2020, ECG_SEQ_LAB_NET_CPSC2020
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,8 +18,8 @@ __all__ = [
 ]
 
 
-def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
-    """ finished, checked,
+def load_model(which: str = "both") -> Union[nn.Module, Tuple[nn.Module, ...]]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -43,10 +43,7 @@ def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
             input_len=4000,
             config=crnn_cfg,
         )
-        crnn_state_dict = torch.load(
-            os.path.join(_BASE_DIR, "crnn_10s.pth"),
-            map_location=device
-        )
+        crnn_state_dict = torch.load(os.path.join(_BASE_DIR, "crnn_10s.pth"), map_location=device)
         crnn_state_dict["clf.lin_0.weight"] = crnn_state_dict.pop("clf.weight")
         crnn_state_dict["clf.lin_0.bias"] = crnn_state_dict.pop("clf.bias")
         crnn_model.load_state_dict(crnn_state_dict)
@@ -61,10 +58,7 @@ def load_model(which:str="both") -> Union[nn.Module, Tuple[nn.Module,...]]:
             input_len=4000,
             config=seq_lab_cfg,
         )
-        seq_lab_state_dict = torch.load(
-            os.path.join(_BASE_DIR, "seq_lab_10s.pth"),
-            map_location=device
-        )
+        seq_lab_state_dict = torch.load(os.path.join(_BASE_DIR, "seq_lab_10s.pth"), map_location=device)
         seq_lab_model.load_state_dict(seq_lab_state_dict)
         seq_lab_model.eval()
         if _which == "seq_lab":

@@ -1,19 +1,20 @@
 """
 """
+
 from numbers import Real
 from typing import Tuple
 
 import numpy as np
 import xgboost as xgb
-
-from cfg import FeatureCfg
-from signal_processing.ecg_preproc import preprocess_signal, parallel_preprocess_signal
-from signal_processing.ecg_features import compute_ecg_features
 from models.load_model import load_model
+
 import utils
+from cfg import FeatureCfg
+from signal_processing.ecg_features import compute_ecg_features
+from signal_processing.ecg_preproc import parallel_preprocess_signal, preprocess_signal
 
 
-def CPSC2020_challenge(ECG:np.ndarray, fs:Real=400) -> Tuple[np.ndarray,np.ndarray]:
+def CPSC2020_challenge(ECG: np.ndarray, fs: Real = 400) -> Tuple[np.ndarray, np.ndarray]:
     """
     % This function can be used for events 1 and 2. Participants are free to modify any
     % components of the code. However the function prototype must stay the same
@@ -41,13 +42,13 @@ def CPSC2020_challenge(ECG:np.ndarray, fs:Real=400) -> Tuple[np.ndarray,np.ndarr
     #    ====== arrhythmias detection =======
     sig = np.array(ECG).copy().flatten()
     pps = parallel_preprocess_signal(sig, fs)  # use default config in `cfg`
-    filtered_ecg = pps['filtered_ecg']
-    rpeaks = pps['rpeaks']
-    filtered_rpeaks = rpeaks[np.where( (rpeaks>=FeatureCfg.beat_winL) & (rpeaks<len(sig)-FeatureCfg.beat_winR) )[0]]
+    filtered_ecg = pps["filtered_ecg"]
+    rpeaks = pps["rpeaks"]
+    filtered_rpeaks = rpeaks[np.where((rpeaks >= FeatureCfg.beat_winL) & (rpeaks < len(sig) - FeatureCfg.beat_winR))[0]]
 
     features = compute_ecg_features(filtered_ecg, filtered_rpeaks)
 
-    model = load_model(field='ml')
+    model = load_model(field="ml")
     # if model is None:
     #     model = train()
 
@@ -62,9 +63,6 @@ def CPSC2020_challenge(ECG:np.ndarray, fs:Real=400) -> Tuple[np.ndarray,np.ndarr
     else:
         y_pred = model.predict(features)
 
-    S_pos, V_pos = utils.pred_to_indices(
-        y_pred, filtered_rpeaks,
-        class_map=FeatureCfg.class_map
-    )
+    S_pos, V_pos = utils.pred_to_indices(y_pred, filtered_rpeaks, class_map=FeatureCfg.class_map)
 
     return S_pos, V_pos

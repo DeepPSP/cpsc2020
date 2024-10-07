@@ -1,20 +1,24 @@
 """
 utility functions, most can be found in https://github.com/DeepPSP/utils
 """
-import os, sys, re, logging
-import time, datetime
-from io import StringIO
-from functools import reduce
+
+import datetime
+import logging
+import os
+import re
+import sys
+import time
 from copy import deepcopy
+from functools import reduce
+from io import StringIO
 from itertools import repeat
-from numbers import Real, Number
-from typing import Union, Optional, List, Tuple, Dict, Sequence, NoReturn
+from numbers import Number, Real
+from typing import Dict, List, NoReturn, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.utils.class_weight import compute_class_weight
 from easydict import EasyDict as ED
-
+from sklearn.utils.class_weight import compute_class_weight
 
 __all__ = [
     "dict_to_str",
@@ -31,7 +35,9 @@ __all__ = [
     "mask_to_intervals",
     "list_sum",
     "compute_local_average",
-    "gen_gaussian_noise", "gen_sinusoidal_noise", "gen_baseline_wander",
+    "gen_gaussian_noise",
+    "gen_sinusoidal_noise",
+    "gen_baseline_wander",
     "get_record_list_recursive3",
     "init_logger",
 ]
@@ -42,8 +48,8 @@ Interval = Union[List[Real], Tuple[Real], type(EMPTY_SET)]
 GeneralizedInterval = Union[List[Interval], Tuple[Interval], type(EMPTY_SET)]
 
 
-def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=True) -> GeneralizedInterval:
-    """ finished, checked,
+def intervals_union(interval_list: GeneralizedInterval, join_book_endeds: bool = True) -> GeneralizedInterval:
+    """finished, checked,
 
     find the union (ordered and non-intersecting) of all the intervals in `interval_list`,
     which is a list of intervals in the form [a,b], where a,b need not be ordered
@@ -54,7 +60,7 @@ def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=Tru
         the list of intervals to calculate their union
     join_book_endeds: bool, default True,
         join the book-ended intervals into one (e.g. [[1,2],[2,3]] into [1,3]) or not
-    
+
     Returns:
     --------
     processed: GeneralizedInterval,
@@ -84,11 +90,11 @@ def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=Tru
                     new_intervals.append([next_start, next_end])
             elif this_end == next_start:
                 # the case where two consecutive intervals are book-ended
-                # concatenate if `join_book_endeds` is True, 
+                # concatenate if `join_book_endeds` is True,
                 # or one interval degenerates (to a single point)
                 if (this_start == this_end or next_start == next_end) or join_book_endeds:
                     new_intervals.append([this_start, max(this_end, next_end)])
-                    new_intervals += processed[idx + 2:]
+                    new_intervals += processed[idx + 2 :]
                     merge_flag = True
                     processed = new_intervals
                     break
@@ -98,7 +104,7 @@ def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=Tru
                         new_intervals.append([next_start, next_end])
             else:
                 new_intervals.append([this_start, max(this_end, next_end)])
-                new_intervals += processed[idx + 2:]
+                new_intervals += processed[idx + 2 :]
                 merge_flag = True
                 processed = new_intervals
                 break
@@ -106,8 +112,10 @@ def intervals_union(interval_list:GeneralizedInterval, join_book_endeds:bool=Tru
     return processed
 
 
-def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, split_threshold:Real, traceback:bool=False, **kwargs) -> Tuple[GeneralizedInterval,list]:
-    """ finished, checked,
+def get_optimal_covering(
+    total_interval: Interval, to_cover: list, min_len: Real, split_threshold: Real, traceback: bool = False, **kwargs
+) -> Tuple[GeneralizedInterval, list]:
+    """finished, checked,
 
     compute an optimal covering (disjoint union of intervals) that covers `to_cover` such that
     each interval in the covering is of length at least `min_len`,
@@ -142,12 +150,12 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
             that each interval in the covering covers
     """
     start_time = time.time()
-    verbose = kwargs.get('verbose', 0)
+    verbose = kwargs.get("verbose", 0)
     tmp = sorted(total_interval)
     tot_start, tot_end = tmp[0], tmp[-1]
 
     if verbose >= 1:
-        print(f'total_interval = {total_interval}, with_length = {tot_end-tot_start}')
+        print(f"total_interval = {total_interval}, with_length = {tot_end-tot_start}")
 
     if tot_end - tot_start < min_len:
         ret = [[tot_start, tot_end]]
@@ -158,14 +166,12 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
         if isinstance(item, list):
             to_cover_intervals.append(item)
         else:
-            to_cover_intervals.append(
-                [max(tot_start, item-min_len//2), min(tot_end, item+min_len//2)]
-            )
+            to_cover_intervals.append([max(tot_start, item - min_len // 2), min(tot_end, item + min_len // 2)])
     if traceback:
         replica_for_traceback = deepcopy(to_cover_intervals)
 
     if verbose >= 2:
-        print(f'to_cover_intervals after all converted to intervals = {to_cover_intervals}')
+        print(f"to_cover_intervals after all converted to intervals = {to_cover_intervals}")
 
         # elif isinstance(item, int):
         #     to_cover_intervals.append([item, item+1])
@@ -175,12 +181,12 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
 
     for interval in to_cover_intervals:
         interval.sort()
-    
+
     interval_sort_key = lambda i: i[0]
     to_cover_intervals.sort(key=interval_sort_key)
 
     if verbose >= 2:
-        print(f'to_cover_intervals after sorted = {to_cover_intervals}')
+        print(f"to_cover_intervals after sorted = {to_cover_intervals}")
 
     # if to_cover_intervals[0][0] < tot_start or to_cover_intervals[-1][-1] > tot_end:
     #     raise IndexError("some item in to_cover list exceeds the range of total_interval")
@@ -196,7 +202,7 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
     to_cover_intervals[-1][0] = min(to_cover_intervals[-1][0], tot_end - min_len)
 
     if verbose >= 2:
-        print(f'`to_cover_intervals` after two tails adjusted to {to_cover_intervals}')
+        print(f"`to_cover_intervals` after two tails adjusted to {to_cover_intervals}")
 
     # merge intervals whose distances (might be negative) are less than `split_threshold`
     merge_flag = True
@@ -212,7 +218,7 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
                 if split_threshold == (next_start - next_end) == 0 or split_threshold == (this_start - this_end) == 0:
                     # the case where split_threshold ==0 and the degenerate case should be dealth with separately
                     new_intervals.append([this_start, max(this_end, next_end)])
-                    new_intervals += to_cover_intervals[idx + 2:]
+                    new_intervals += to_cover_intervals[idx + 2 :]
                     merge_flag = True
                     to_cover_intervals = new_intervals
                     break
@@ -222,12 +228,12 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
                         new_intervals.append([next_start, next_end])
             else:
                 new_intervals.append([this_start, max(this_end, next_end)])
-                new_intervals += to_cover_intervals[idx + 2:]
+                new_intervals += to_cover_intervals[idx + 2 :]
                 merge_flag = True
                 to_cover_intervals = new_intervals
                 break
     if verbose >= 2:
-        print(f'`to_cover_intervals` after merging intervals whose gaps < split_threshold are {to_cover_intervals}')
+        print(f"`to_cover_intervals` after merging intervals whose gaps < split_threshold are {to_cover_intervals}")
 
     # currently, distance between any two intervals in `to_cover_intervals` are larger than `split_threshold`
     # but any interval except the head and tail might has length less than `min_len`
@@ -236,18 +242,18 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
     if len(to_cover_intervals) == 1:
         # NOTE: here, there's only one `to_cover_intervals`,
         # whose length should be at least `min_len`
-        mid_pt = (to_cover_intervals[0][0]+to_cover_intervals[0][-1]) // 2
+        mid_pt = (to_cover_intervals[0][0] + to_cover_intervals[0][-1]) // 2
         half_len = min_len // 2
         if mid_pt - tot_start < half_len:
             ret_start = tot_start
-            ret_end = min(tot_end, max(tot_start+min_len, to_cover_intervals[0][-1]))
+            ret_end = min(tot_end, max(tot_start + min_len, to_cover_intervals[0][-1]))
             ret = [[ret_start, ret_end]]
         else:
-            ret_start = max(tot_start, min(to_cover_intervals[0][0], mid_pt-half_len))
-            ret_end = min(tot_end, max(mid_pt-half_len+min_len, to_cover_intervals[0][-1]))
+            ret_start = max(tot_start, min(to_cover_intervals[0][0], mid_pt - half_len))
+            ret_end = min(tot_end, max(mid_pt - half_len + min_len, to_cover_intervals[0][-1]))
             ret = [[ret_start, ret_end]]
 
-    start = min(to_cover_intervals[0][0], to_cover_intervals[0][-1]-min_len)
+    start = min(to_cover_intervals[0][0], to_cover_intervals[0][-1] - min_len)
 
     for idx, item in enumerate(to_cover_intervals[:-1]):
         # print('item', item)
@@ -281,15 +287,17 @@ def get_optimal_covering(total_interval:Interval, to_cover:list, min_len:Real, s
                 if len_itc > 0 or (len_itc == 0 and item_prime[-1] - item_prime[0] == 0):
                     record.append(idx)
             ret_traceback.append(record)
-    
+
     if verbose >= 1:
-        print(f'the final result of get_optimal_covering is ret = {ret}, ret_traceback = {ret_traceback}, the whole process used {time.time()-start_time} second(s)')
-    
+        print(
+            f"the final result of get_optimal_covering is ret = {ret}, ret_traceback = {ret_traceback}, the whole process used {time.time()-start_time} second(s)"
+        )
+
     return ret, ret_traceback
 
 
-def intervals_intersection(interval_list:GeneralizedInterval, drop_degenerate:bool=True) -> Interval:
-    """ finished, checked,
+def intervals_intersection(interval_list: GeneralizedInterval, drop_degenerate: bool = True) -> Interval:
+    """finished, checked,
 
     calculate the intersection of all intervals in interval_list
 
@@ -299,7 +307,7 @@ def intervals_intersection(interval_list:GeneralizedInterval, drop_degenerate:bo
         the list of intervals to yield intersection
     drop_degenerate: bool, default True,
         whether or not drop the degenerate intervals, i.e. intervals with length 0
-    
+
     Returns:
     --------
     its: Interval,
@@ -318,8 +326,8 @@ def intervals_intersection(interval_list:GeneralizedInterval, drop_degenerate:bo
     return its
 
 
-def in_interval(val:Real, interval:Interval, left_closed:bool=True, right_closed:bool=False) -> bool:
-    """ finished, checked,
+def in_interval(val: Real, interval: Interval, left_closed: bool = True, right_closed: bool = False) -> bool:
+    """finished, checked,
 
     check whether val is inside interval or not
 
@@ -336,9 +344,9 @@ def in_interval(val:Real, interval:Interval, left_closed:bool=True, right_closed
     """
     itv = sorted(interval)
     if left_closed:
-        is_in = (itv[0] <= val)
+        is_in = itv[0] <= val
     else:
-        is_in = (itv[0] < val)
+        is_in = itv[0] < val
     if right_closed:
         is_in = is_in and (val <= itv[-1])
     else:
@@ -346,8 +354,10 @@ def in_interval(val:Real, interval:Interval, left_closed:bool=True, right_closed
     return is_in
 
 
-def in_generalized_interval(val:Real, generalized_interval:GeneralizedInterval, left_closed:bool=True, right_closed:bool=False) -> bool:
-    """ finished, checked,
+def in_generalized_interval(
+    val: Real, generalized_interval: GeneralizedInterval, left_closed: bool = True, right_closed: bool = False
+) -> bool:
+    """finished, checked,
 
     check whether val is inside generalized_interval or not
 
@@ -370,8 +380,8 @@ def in_generalized_interval(val:Real, generalized_interval:GeneralizedInterval, 
     return is_in
 
 
-def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) -> NoReturn:
-    """ not finished
+def plot_single_lead_ecg(s: np.ndarray, fs: Real, use_idx: bool = False, **kwargs) -> NoReturn:
+    """not finished
 
     single lead ECG plot,
 
@@ -391,7 +401,7 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
 
     contributors: Jeethan, and WEN Hao
     """
-    if 'plt' not in dir():
+    if "plt" not in dir():
         import matplotlib.pyplot as plt
     default_fig_sz = 120
     line_len = fs * 25  # 25 seconds
@@ -400,41 +410,43 @@ def plot_single_lead_ecg(s:np.ndarray, fs:Real, use_idx:bool=False, **kwargs) ->
     if residue > 0:
         nb_lines += 1
     for idx in range(nb_lines):
-        idx_start = idx*line_len
-        idx_end = min((idx+1)*line_len, len(s))
+        idx_start = idx * line_len
+        idx_end = min((idx + 1) * line_len, len(s))
         c = s[idx_start:idx_end]
         secs = np.arange(idx_start, idx_end)
         if not use_idx:
             secs = secs / fs
         mvs = np.array(c) * 0.001
-        fig_sz = int(round(default_fig_sz * (idx_end-idx_start)/line_len))
+        fig_sz = int(round(default_fig_sz * (idx_end - idx_start) / line_len))
         fig, ax = plt.subplots(figsize=(fig_sz, 6))
-        ax.plot(secs, mvs, c='black')
+        ax.plot(secs, mvs, c="black")
 
-        ax.axhline(y=0, linestyle='-', linewidth='1.0', color='red')
+        ax.axhline(y=0, linestyle="-", linewidth="1.0", color="red")
         ax.xaxis.set_major_locator(plt.MultipleLocator(0.2))
         ax.xaxis.set_minor_locator(plt.MultipleLocator(0.04))
         ax.yaxis.set_major_locator(plt.MultipleLocator(0.5))
         ax.yaxis.set_minor_locator(plt.MultipleLocator(0.1))
-        ax.grid(which='major', linestyle='-', linewidth='0.5', color='red')
-        ax.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
+        ax.grid(which="major", linestyle="-", linewidth="0.5", color="red")
+        ax.grid(which="minor", linestyle=":", linewidth="0.5", color="black")
         if waves:
             for w, w_indices in waves.items():
-                epoch_w = [wi-idx_start for wi in w_indices if idx_start <= wi < idx_end]
+                epoch_w = [wi - idx_start for wi in w_indices if idx_start <= wi < idx_end]
                 for wi in epoch_w:
-                    ax.axvline(wi, linestyle='dashed', linewidth=0.7, color='magenta')
+                    ax.axvline(wi, linestyle="dashed", linewidth=0.7, color="magenta")
         ax.set_xlim(secs[0], secs[-1])
         ax.set_ylim(-1.5, 1.5)
         if use_idx:
-            plt.xlabel('Samples')
+            plt.xlabel("Samples")
         else:
-            plt.xlabel('Time [s]')
-        plt.ylabel('Voltage [mV]')
+            plt.xlabel("Time [s]")
+        plt.ylabel("Voltage [mV]")
         plt.show()
 
 
-def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[float],np.ndarray,dict]='balanced') -> np.ndarray:
-    """ finished, checked,
+def class_weight_to_sample_weight(
+    y: np.ndarray, class_weight: Union[str, List[float], np.ndarray, dict] = "balanced"
+) -> np.ndarray:
+    """finished, checked,
 
     transform class weight to sample weight
 
@@ -444,7 +456,7 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
         the label (class) of each sample
     class_weight: str, or list, or ndarray, or dict, default 'balanced',
         the weight for each sample class,
-        if is 'balanced', the class weight will automatically be given by 
+        if is 'balanced', the class weight will automatically be given by
         if `y` is of string type, then `class_weight` should be a dict,
         if `y` is of numeric type, and `class_weight` is array_like,
         then the labels (`y`) should be continuous and start from 0
@@ -452,17 +464,18 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
     if not class_weight:
         sample_weight = np.ones_like(y, dtype=float)
         return sample_weight
-    
+
     try:
         sample_weight = y.copy().astype(int)
     except:
         sample_weight = y.copy()
-        assert isinstance(class_weight, dict) or class_weight.lower()=='balanced', \
-            "if `y` are of type str, then class_weight should be 'balanced' or a dict"
-    
-    if isinstance(class_weight, str) and class_weight.lower() == 'balanced':
+        assert (
+            isinstance(class_weight, dict) or class_weight.lower() == "balanced"
+        ), "if `y` are of type str, then class_weight should be 'balanced' or a dict"
+
+    if isinstance(class_weight, str) and class_weight.lower() == "balanced":
         classes = np.unique(y).tolist()
-        cw = compute_class_weight('balanced', classes=classes, y=y)
+        cw = compute_class_weight("balanced", classes=classes, y=y)
         trans_func = lambda s: cw[classes.index(s)]
     else:
         trans_func = lambda s: class_weight[s]
@@ -471,8 +484,8 @@ def class_weight_to_sample_weight(y:np.ndarray, class_weight:Union[str,List[floa
     return sample_weight
 
 
-def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, class_map:dict) -> Tuple[np.ndarray, np.ndarray]:
-    """ finished, checked,
+def pred_to_indices(y_pred: np.ndarray, rpeaks: np.ndarray, class_map: dict) -> Tuple[np.ndarray, np.ndarray]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -496,16 +509,16 @@ def pred_to_indices(y_pred:np.ndarray, rpeaks:np.ndarray, class_map:dict) -> Tup
     pred_arr = {}
     if isinstance(y_pred[0], Real):
         for c in classes:
-            pred_arr[c] = rpeaks[np.where(y_pred==class_map[c])[0]]
+            pred_arr[c] = rpeaks[np.where(y_pred == class_map[c])[0]]
     else:  # of string type
         for c in classes:
-            pred_arr[c] = rpeaks[np.where(y_pred==c)[0]]
+            pred_arr[c] = rpeaks[np.where(y_pred == c)[0]]
     S_pos, V_pos = pred_arr["S"], pred_arr["V"]
     return S_pos, V_pos
 
 
-def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:int=4) -> str:
-    """ finished, checked,
+def dict_to_str(d: Union[dict, list, tuple], current_depth: int = 1, indent_spaces: int = 4) -> str:
+    """finished, checked,
 
     convert a (possibly) nested dict into a `str` of json-like formatted form,
     this nested dict might also contain lists or tuples of dict (and of str, int, etc.)
@@ -529,15 +542,18 @@ def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:i
         s = f"{{}}" if isinstance(d, dict) else f"[]"
         return s
     # flat_types = (Number, bool, str,)
-    flat_types = (Number, bool,)
+    flat_types = (
+        Number,
+        bool,
+    )
     flat_sep = ", "
     s = "\n"
-    unit_indent = " "*indent_spaces
-    prefix = unit_indent*current_depth
+    unit_indent = " " * indent_spaces
+    prefix = unit_indent * current_depth
     if isinstance(d, (list, tuple)):
         if all([isinstance(v, flat_types) for v in d]):
             len_per_line = 110
-            current_len = len(prefix) + 1  # + 1 for a comma 
+            current_len = len(prefix) + 1  # + 1 for a comma
             val = []
             for idx, v in enumerate(d):
                 add_v = f"\042{v}\042" if isinstance(v, str) else str(v)
@@ -568,13 +584,13 @@ def dict_to_str(d:Union[dict, list, tuple], current_depth:int=1, indent_spaces:i
             else:
                 val = f"\042{v}\042" if isinstance(v, str) else v
                 s += f"{prefix}{key}: {val}\n"
-    s += unit_indent*(current_depth-1)
+    s += unit_indent * (current_depth - 1)
     s = f"{{{s}}}" if isinstance(d, dict) else f"[{s}]"
     return s
 
 
-def str2bool(v:Union[str, bool]) -> bool:
-    """ finished, checked,
+def str2bool(v: Union[str, bool]) -> bool:
+    """finished, checked,
 
     converts a 'boolean' value possibly in the format of str to bool
 
@@ -593,27 +609,26 @@ def str2bool(v:Union[str, bool]) -> bool:
     https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     """
     if isinstance(v, bool):
-       b = v
-    elif v.lower() in ('yes', 'true', 't', 'y', '1'):
+        b = v
+    elif v.lower() in ("yes", "true", "t", "y", "1"):
         b = True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+    elif v.lower() in ("no", "false", "f", "n", "0"):
         b = False
     else:
-        raise ValueError('Boolean value expected.')
+        raise ValueError("Boolean value expected.")
     return b
 
 
-def get_date_str(fmt:Optional[str]=None):
-    """
-    """
+def get_date_str(fmt: Optional[str] = None):
+    """ """
     now = datetime.datetime.now()
-    _fmt = fmt or '%Y-%m-%d-%H-%M-%S'
+    _fmt = fmt or "%Y-%m-%d-%H-%M-%S"
     ds = now.strftime(_fmt)
     return ds
 
 
-def mask_to_intervals(mask:np.ndarray, vals:Optional[Union[int,Sequence[int]]]=None) -> Union[list, dict]:
-    """ finished, checked,
+def mask_to_intervals(mask: np.ndarray, vals: Optional[Union[int, Sequence[int]]] = None) -> Union[list, dict]:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -637,33 +652,30 @@ def mask_to_intervals(mask:np.ndarray, vals:Optional[Union[int,Sequence[int]]]=N
         _vals = vals
     # assert set(_vals) & set(mask) == set(_vals)
 
-    intervals = {v:[] for v in _vals}
+    intervals = {v: [] for v in _vals}
     for v in _vals:
-        valid_inds = np.where(np.array(mask)==v)[0]
+        valid_inds = np.where(np.array(mask) == v)[0]
         if len(valid_inds) == 0:
             continue
-        split_indices = np.where(np.diff(valid_inds)>1)[0]
-        split_indices = split_indices.tolist() + (split_indices+1).tolist()
-        split_indices = sorted([0] + split_indices + [len(valid_inds)-1])
-        for idx in range(len(split_indices)//2):
-            intervals[v].append(
-                [valid_inds[split_indices[2*idx]], valid_inds[split_indices[2*idx+1]]+1]
-            )
-    
+        split_indices = np.where(np.diff(valid_inds) > 1)[0]
+        split_indices = split_indices.tolist() + (split_indices + 1).tolist()
+        split_indices = sorted([0] + split_indices + [len(valid_inds) - 1])
+        for idx in range(len(split_indices) // 2):
+            intervals[v].append([valid_inds[split_indices[2 * idx]], valid_inds[split_indices[2 * idx + 1]] + 1])
+
     if isinstance(vals, int):
         intervals = intervals[vals]
 
     return intervals
 
 
-def list_sum(l:Sequence[list]) -> list:
-    """ finished, checked,
-    """
-    return reduce(lambda a,b: a+b, l, [])
+def list_sum(l: Sequence[list]) -> list:
+    """finished, checked,"""
+    return reduce(lambda a, b: a + b, l, [])
 
 
-def compute_local_average(arr:Union[Sequence,np.ndarray], radius:int) -> np.ndarray:
-    """ finished, checked,
+def compute_local_average(arr: Union[Sequence, np.ndarray], radius: int) -> np.ndarray:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -671,7 +683,7 @@ def compute_local_average(arr:Union[Sequence,np.ndarray], radius:int) -> np.ndar
         1d array
     radius: int,
         radius for computing average
-    
+
     Returns:
     --------
     res: ndarray,
@@ -681,24 +693,22 @@ def compute_local_average(arr:Union[Sequence,np.ndarray], radius:int) -> np.ndar
     if radius >= len(_arr) - 1:
         res = np.full(_arr.shape, fill_value=np.mean(_arr))
         return res
-    window = 2*radius + 1
+    window = 2 * radius + 1
     if window >= len(_arr):
-        head = np.array([np.mean(_arr[:i+radius+1]) for i in range(radius)])
-        tail = np.array([np.mean(_arr[i-radius:]) for i in range(radius,len(_arr))])
+        head = np.array([np.mean(_arr[: i + radius + 1]) for i in range(radius)])
+        tail = np.array([np.mean(_arr[i - radius :]) for i in range(radius, len(_arr))])
         res = np.concatenate((head, tail))
         return res
-    body = np.vstack(
-        [np.concatenate((np.zeros((i,)), _arr, np.zeros((window-1-i,)))) for i in range(window)]
-    )
-    body = np.mean(body,axis=0)[2*radius:-2*radius]
-    head = np.array([np.mean(_arr[:i+radius+1]) for i in range(radius)])
-    tail = np.array([np.mean(_arr[i-2*radius:]) for i in range(radius)])
+    body = np.vstack([np.concatenate((np.zeros((i,)), _arr, np.zeros((window - 1 - i,)))) for i in range(window)])
+    body = np.mean(body, axis=0)[2 * radius : -2 * radius]
+    head = np.array([np.mean(_arr[: i + radius + 1]) for i in range(radius)])
+    tail = np.array([np.mean(_arr[i - 2 * radius :]) for i in range(radius)])
     res = np.concatenate((head, body, tail))
     return res
 
 
-def gen_gaussian_noise(siglen:int, mean:Real=0, std:Real=0) -> np.ndarray:
-    """ finished, checked,
+def gen_gaussian_noise(siglen: int, mean: Real = 0, std: Real = 0) -> np.ndarray:
+    """finished, checked,
 
     generate 1d Gaussian noise of given length, mean, and standard deviation
 
@@ -720,8 +730,10 @@ def gen_gaussian_noise(siglen:int, mean:Real=0, std:Real=0) -> np.ndarray:
     return gn
 
 
-def gen_sinusoidal_noise(siglen:int, start_phase:Real, end_phase:Real, amplitude:Real, amplitude_mean:Real=0, amplitude_std:Real=0) -> np.ndarray:
-    """ finished, checked,
+def gen_sinusoidal_noise(
+    siglen: int, start_phase: Real, end_phase: Real, amplitude: Real, amplitude_mean: Real = 0, amplitude_std: Real = 0
+) -> np.ndarray:
+    """finished, checked,
 
     generate 1d sinusoidal noise of given length, amplitude, start phase, and end phase
 
@@ -751,8 +763,15 @@ def gen_sinusoidal_noise(siglen:int, start_phase:Real, end_phase:Real, amplitude
     return sn
 
 
-def gen_baseline_wander(siglen:int, fs:Real, bw_fs:Union[Real,Sequence[Real]], amplitude:Union[Real,Sequence[Real]], amplitude_mean:Real=0, amplitude_std:Real=0) -> np.ndarray:
-    """ finished, checked,
+def gen_baseline_wander(
+    siglen: int,
+    fs: Real,
+    bw_fs: Union[Real, Sequence[Real]],
+    amplitude: Union[Real, Sequence[Real]],
+    amplitude_mean: Real = 0,
+    amplitude_std: Real = 0,
+) -> np.ndarray:
+    """finished, checked,
 
     generate 1d baseline wander of given length, amplitude, and frequency
 
@@ -790,16 +809,16 @@ def gen_baseline_wander(siglen:int, fs:Real, bw_fs:Union[Real,Sequence[Real]], a
     else:
         _amplitude = amplitude
     assert len(_bw_fs) == len(_amplitude)
-    duration = (siglen / fs)
+    duration = siglen / fs
     for bf, a in zip(_bw_fs, _amplitude):
-        start_phase = np.random.randint(0,360)
+        start_phase = np.random.randint(0, 360)
         end_phase = duration * bf * 360 + start_phase
         bw += gen_sinusoidal_noise(siglen, start_phase, end_phase, a, 0, 0)
     return bw
 
 
-def get_record_list_recursive3(db_dir:str, rec_patterns:Union[str,Dict[str,str]]) -> Union[List[str], Dict[str, List[str]]]:
-    """ finished, checked,
+def get_record_list_recursive3(db_dir: str, rec_patterns: Union[str, Dict[str, str]]) -> Union[List[str], Dict[str, List[str]]]:
+    """finished, checked,
 
     get the list of records in `db_dir` recursively,
     for example, there are two folders 'patient1', 'patient2' in `db_dir`,
@@ -823,7 +842,7 @@ def get_record_list_recursive3(db_dir:str, rec_patterns:Union[str,Dict[str,str]]
     if isinstance(rec_patterns, str):
         res = []
     elif isinstance(rec_patterns, dict):
-        res = {k:[] for k in rec_patterns.keys()}
+        res = {k: [] for k in rec_patterns.keys()}
     db_dir = os.path.join(db_dir, "tmp").replace("tmp", "")  # make sure `db_dir` ends with a sep
     roots = [db_dir]
     while len(roots) > 0:
@@ -848,8 +867,8 @@ def get_record_list_recursive3(db_dir:str, rec_patterns:Union[str,Dict[str,str]]
     return res
 
 
-def init_logger(log_dir:str, log_file:Optional[str]=None, mode:str='a', verbose:int=0) -> logging.Logger:
-    """ finished, checked,
+def init_logger(log_dir: str, log_file: Optional[str] = None, mode: str = "a", verbose: int = 0) -> logging.Logger:
+    """finished, checked,
 
     Parameters:
     -----------
@@ -867,15 +886,15 @@ def init_logger(log_dir:str, log_file:Optional[str]=None, mode:str='a', verbose:
     logger: Logger
     """
     if log_dir is None:
-        log_dir = '~/temp/log/'
+        log_dir = "~/temp/log/"
     if log_file is None:
-        log_file = f'log_{get_date_str()}.txt'
+        log_file = f"log_{get_date_str()}.txt"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_file = os.path.join(log_dir, log_file)
-    print(f'log file path: {log_file}')
+    print(f"log file path: {log_file}")
 
-    logger = logging.getLogger('ECG-CRNN')
+    logger = logging.getLogger("ECG-CRNN")
 
     c_handler = logging.StreamHandler(sys.stdout)
     f_handler = logging.FileHandler(log_file)
@@ -896,8 +915,8 @@ def init_logger(log_dir:str, log_file:Optional[str]=None, mode:str='a', verbose:
         f_handler.setLevel(logging.WARNING)
         logger.setLevel(logging.WARNING)
 
-    c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    c_format = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    f_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     c_handler.setFormatter(c_format)
     f_handler.setFormatter(f_format)
 
@@ -907,7 +926,9 @@ def init_logger(log_dir:str, log_file:Optional[str]=None, mode:str='a', verbose:
     return logger
 
 
-CPSC_STATS = pd.read_csv(StringIO("""rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
+CPSC_STATS = pd.read_csv(
+    StringIO(
+        """rec,AF,len_h,N_beats,V_beats,S_beats,total_beats
 A01,No,25.89,109062,0,24,109086
 A02,Yes,22.83,98936,4554,0,103490
 A03,Yes,24.70,137249,382,0,137631
@@ -917,12 +938,19 @@ A06,No,24.59,77621,0,6,77627
 A07,No,23.11,73325,15150,3481,91956
 A08,Yes,25.46,115518,2793,0,118311
 A09,No,25.84,88229,2,1462,89693
-A10,No,23.64,72821,169,9071,82061"""))
+A10,No,23.64,72821,169,9071,82061"""
+    )
+)
 
 
 # columns truth, rows pred
-OFFICIAL_LOSS_DF = pd.read_csv(StringIO(""",N_true,S_true,V_true
+OFFICIAL_LOSS_DF = pd.read_csv(
+    StringIO(
+        """,N_true,S_true,V_true
 N_pred,0,5,5
 S_pred,1,0,5
-V_pred,1,5,0"""), index_col=0)
+V_pred,1,5,0"""
+    ),
+    index_col=0,
+)
 OFFICIAL_LOSS_MAT = OFFICIAL_LOSS_DF.values

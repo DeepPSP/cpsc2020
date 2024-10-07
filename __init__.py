@@ -7,9 +7,12 @@ Possible methods:
 4. sequence labeling (or even "segmentation" using UNet) model
 5. more?
 """
-import os, sys
+
+import os
+import sys
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -13,4 +13,3 @@ WORKDIR /cpsc2020
 
 ## Do not edit if you have a requirements.txt
 RUN pip install -r requirements.txt
-

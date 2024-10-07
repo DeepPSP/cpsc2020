@@ -7,7 +7,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from saved_models import load_model
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 2
 seq_len = 4000
