@@ -1,5 +1,4 @@
-"""
-"""
+""" """
 
 import argparse
 import logging
@@ -436,8 +435,7 @@ def evaluate_crnn(
         head_labels = all_labels[:head_num, ...]
         head_labels_classes = [np.array(classes)[np.where(row)] for row in head_labels]
         for n in range(head_num):
-            print(
-                f"""
+            print(f"""
             ----------------------------------------------
             scalar prediction:    {[round(n, 3) for n in head_scalar_preds[n].tolist()]}
             binary prediction:    {head_bin_preds[n].tolist()}
@@ -445,8 +443,7 @@ def evaluate_crnn(
             predicted classes:    {head_preds_classes[n].tolist()}
             label classes:        {head_labels_classes[n].tolist()}
             ----------------------------------------------
-            """
-            )
+            """)
 
     auroc, auprc, accuracy, f_measure, f_beta_measure, g_beta_measure = eval_score(
         classes=classes,
