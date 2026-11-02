@@ -12,7 +12,7 @@ from typing import Optional, Tuple, Union
 try:
     from keras.models import Model, model_from_json
 except:
-    from tensorflow.keras.models import model_from_json, Model
+    from tensorflow.keras.models import Model, model_from_json
 
 import torch
 from torch import nn
